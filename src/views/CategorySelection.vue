@@ -26,14 +26,31 @@
         <MDBListGroupItem
           v-for="(x, i) in categories"
           class="tablebtn"
-          @click="selectCategory(i)"
+          @click="selectCategory(i, null)"
           ><MDBIcon icon="box" />&nbsp;&nbsp;
           {{ x.nombre }}
           <div class="inUseDiv">
             <span style="font-size: 0.7rem; font-style: italic"
-              >{{ x.arrayTeclas?.length }} productos</span
+              >{{ !subMenus ? x.arrayTeclas?.length + "productos" : "" }}
+            </span>
+          </div>
+          <MDBListGroup
+            class="tableList"
+            v-if="subMenus && selectedSubcategory == i"
+          >
+            <MDBListGroupItem
+              v-for="(z, n) in x.arraySubmenus"
+              class="tablebtnSubCategory"
+              @click="selectCategory(i, n)"
+              ><MDBIcon icon="box" />&nbsp;&nbsp;
+              {{ z.nombre }}
+              <div class="inUseDiv">
+                <span style="font-size: 0.7rem; font-style: italic"
+                  >{{ z.arrayTeclas?.length }} productos</span
+                >
+              </div></MDBListGroupItem
             >
-          </div></MDBListGroupItem
+          </MDBListGroup></MDBListGroupItem
         >
       </MDBListGroup>
     </div>
@@ -70,7 +87,9 @@ export default {
     );
     const selectTable = computed(() => store.state.Tables.selectedTable);
     const categories = computed(() => store.state.Categories.arrayCategories);
+    const subMenus = ref(!categories.arrayTeclas?.length);
     const actualPage = computed(() => route.currentRoute.value.path);
+    const selectedSubcategory = ref(-1);
 
     const selectOtherEmployer = () => {
       router.push("/employer");
@@ -79,12 +98,13 @@ export default {
       router.push("/tableselection");
     };
 
-    const selectCategory = (i) => {
+    const selectCategory = (i, x) => {
+      if (subMenus && x == null) return (selectedSubcategory.value = i);
       router.push("/productselection");
-      store.dispatch(
-        "Categories/setSelectedCategoryMutation",
-        categories.value[i]
-      );
+      let cat = subMenus
+        ? categories.value[i].arraySubmenus[x]
+        : categories.value[i];
+      store.dispatch("Categories/setSelectedCategoryMutation", cat);
     };
 
     function setTotalTable() {
@@ -101,10 +121,12 @@ export default {
     return {
       actualPage,
       selectOtherEmployer,
+      selectedSubcategory,
       router,
       selectOtherTable,
       selectTable,
       selectCategory,
+      subMenus,
       SelectEmployer,
       totalTable,
       setTotalTable,
@@ -135,6 +157,11 @@ export default {
 
 .tablebtn {
   background-color: #ffffff69;
+  padding: 5%;
+}
+
+.tablebtnSubCategory {
+  background-color: rgb(255 255 255 / 26%);
   padding: 5%;
 }
 .employer {

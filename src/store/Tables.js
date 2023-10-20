@@ -12,7 +12,9 @@ export default {
     arrayTables(state, payload) {
       state.arrayTables = payload.filter((table) => table.indexMesa != null);
       if (state.indexTable != null) {
-        state.selectedTable = state.arrayTables[state.indexTable];
+        state.selectedTable = state.arrayTables.find(
+          (x) => x.indexMesa == state.indexTable
+        );
       }
     },
     async setTable(state, payload) {

@@ -191,7 +191,6 @@ export default {
     onMounted(() => {
       totalTable.value = 0;
       setTotalTable();
-      console.log(SelectEmployer.value);
       if (SelectEmployer.value == null) {
         router.push("/");
       }

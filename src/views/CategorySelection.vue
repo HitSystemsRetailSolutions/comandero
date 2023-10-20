@@ -31,7 +31,7 @@
           {{ x.nombre }}
           <div class="inUseDiv">
             <span style="font-size: 0.7rem; font-style: italic"
-              >{{ x.arrayTeclas.length }} productos</span
+              >{{ x.arrayTeclas?.length }} productos</span
             >
           </div></MDBListGroupItem
         >

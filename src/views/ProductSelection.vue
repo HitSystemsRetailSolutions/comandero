@@ -145,21 +145,6 @@ export default {
         nombre: x.nombreArticulo,
         menu: products.value.nombre,
       });
-      if (
-        selectTable.value.lista.filter(
-          (products) => products.idArticulo == x.idArticle
-        ).length > 0
-      ) {
-        for (let i = 0; i < selectTable.value.lista.length; i++) {
-          if (selectTable.value.lista[i].idArticulo == x.idArticle) {
-            selectTable.value.lista[i].unidades += 1;
-            totalTable.value += x.precioConIva;
-          }
-        }
-      } else {
-        store.dispatch("Tables/addProduct", x);
-        totalTable.value += x.precioConIva;
-      }
     };
     const removeProduct = async (x, i) => {
       let z = selectTable.value.lista.filter(
@@ -167,12 +152,6 @@ export default {
       );
       if (z.length > 0) {
         if (z[0].unidades > 1) {
-          for (let i = 0; i < selectTable.value.lista.length; i++) {
-            if (selectTable.value.lista[i].idArticulo == x.idArticle) {
-              selectTable.value.lista[i].unidades -= 1;
-              totalTable.value -= x.precioConIva;
-            }
-          }
           await axios.post("teclado/clickTeclaArticulo", {
             idArticulo: x.idArticle,
             gramos: 0,

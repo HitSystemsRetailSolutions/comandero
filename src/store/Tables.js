@@ -20,19 +20,7 @@ export default {
       state.indexTable = payload.indexMesa;
       await router.push("/categoryselection");
     },
-    async addProduct(state, payload) {
-      state.selectedTable.lista.push({
-        arraySuplementos: null,
-        gramos: null,
-        idArticulo: payload.idArticle,
-        nombre: payload.nombreArticulo,
-        promocion: null,
-        puntos: null,
-        regalo: false,
-        subtotal: payload.precioConIva,
-        unidades: 1,
-      });
-    },
+    async addProduct(state, payload) {},
     async removeProduct(state, payload) {
       axios
         .post("cestas/borrarItemCesta", {

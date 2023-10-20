@@ -11,7 +11,6 @@ export default {
   mutations: {
     setArrayCategoriesMutation(state, payload) {
       state.arrayCategories = payload;
-      console.log(payload);
     },
     setSelectedCategoryMutation(state, payload) {
       state.selectedCategory = payload;

@@ -5,7 +5,7 @@ import Swal from "sweetalert2";
 import { data } from "autoprefixer";
 const socket = io("http://" + store.state.TocGameURL + ":5051");
 
-/* Eze 4.0 */
+/* 
 socket.on("cargarConfiguracion", (parametros) => {
   try {
     if (parametros) {
@@ -17,8 +17,8 @@ socket.on("cargarConfiguracion", (parametros) => {
     Swal.fire("Oops...", err.message, "error");
   }
 });
-
-/* Eze 4.0 */
+*/
+/* Uri */
 socket.on("cargarTrabajadores", (arrayTrabajadores) => {
   try {
     if (arrayTrabajadores) {
@@ -31,7 +31,7 @@ socket.on("cargarTrabajadores", (arrayTrabajadores) => {
   }
 });
 
-/* Eze 4.0 */
+/* Uri */
 socket.on("cargarCestas", (arrayCestas) => {
   try {
     if (arrayCestas) {
@@ -44,7 +44,7 @@ socket.on("cargarCestas", (arrayCestas) => {
   }
 });
 
-/* Eze 4.0 */
+/* Uri 
 socket.on("cargarVentas", (arrayTickets) => {
   try {
     if (arrayTickets) {
@@ -56,8 +56,8 @@ socket.on("cargarVentas", (arrayTickets) => {
     Swal.fire("Oops...", err.message, "error");
   }
 });
-
-/* Eze 4.0 */
+*/
+/* Uri */
 socket.on("cargarTeclado", (teclado) => {
   try {
     if (teclado) {

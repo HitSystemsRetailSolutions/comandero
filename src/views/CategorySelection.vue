@@ -31,7 +31,7 @@
           {{ x.nombre }}
           <div class="inUseDiv">
             <span style="font-size: 0.7rem; font-style: italic"
-              >{{ !subMenus ? x.arrayTeclas?.length + "productos" : "" }}
+              >{{ !subMenus ? x.arrayTeclas?.length + " productos" : "" }}
             </span>
           </div>
           <MDBListGroup
@@ -87,7 +87,7 @@ export default {
     );
     const selectTable = computed(() => store.state.Tables.selectedTable);
     const categories = computed(() => store.state.Categories.arrayCategories);
-    const subMenus = ref(!categories.arrayTeclas?.length);
+    const subMenus = ref(null);
     const actualPage = computed(() => route.currentRoute.value.path);
     const selectedSubcategory = ref(-1);
 
@@ -99,12 +99,13 @@ export default {
     };
 
     const selectCategory = (i, x) => {
-      if (subMenus && x == null) return (selectedSubcategory.value = i);
-      router.push("/productselection");
-      let cat = subMenus
+      if (subMenus.value && x == null) return (selectedSubcategory.value = i);
+      let cat = subMenus.value
         ? categories.value[i].arraySubmenus[x]
         : categories.value[i];
+
       store.dispatch("Categories/setSelectedCategoryMutation", cat);
+      router.push("/productselection");
     };
 
     function setTotalTable() {
@@ -116,6 +117,9 @@ export default {
     onMounted(() => {
       setTotalTable();
       if (!SelectEmployer.value) router.push("/");
+
+      if (subMenus.value == null)
+        subMenus.value = categories.value[0]?.arrayTeclas?.length == undefined;
     });
 
     return {

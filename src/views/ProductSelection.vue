@@ -24,7 +24,17 @@
         ><div class="ticketBtn">
           <div>
             <MDBIcon icon="hand-holding-usd" />&nbsp;&nbsp;
-            <span>{{ totalTable.toFixed(2) }}€</span>
+            <span
+              >{{
+                (
+                  selectTable.detalleIva.importe1 +
+                  selectTable.detalleIva.importe2 +
+                  selectTable.detalleIva.importe3 +
+                  selectTable.detalleIva.importe4 +
+                  selectTable.detalleIva.importe5
+                ).toFixed(2)
+              }}€</span
+            >
           </div>
           <span style="font-size: 0.9rem; font-style: italic"
             >Info. de mesa</span
@@ -125,12 +135,6 @@ export default {
       router.push("/categoryselection");
     };
 
-    function setTotalTable() {
-      let x = selectTable.value.detalleIva;
-      totalTable.value =
-        x.importe1 + x.importe2 + x.importe3 + x.importe4 + x.importe5;
-    }
-
     const addProduct = async (x, i) => {
       await axios.post("teclado/clickTeclaArticulo", {
         idArticulo: x.idArticle,
@@ -190,7 +194,6 @@ export default {
 
     onMounted(() => {
       totalTable.value = 0;
-      setTotalTable();
       if (SelectEmployer.value == null) {
         router.push("/");
       }
@@ -202,7 +205,6 @@ export default {
       router,
       selectOtherTable,
       selectOtherCategory,
-      setTotalTable,
       removeProduct,
       hideInfo,
       selectTable,

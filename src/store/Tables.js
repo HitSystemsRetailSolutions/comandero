@@ -5,14 +5,19 @@ export default {
   namespaced: true,
   state: {
     arrayTables: [],
+    indexTable: null,
     selectedTable: [],
   },
   mutations: {
     arrayTables(state, payload) {
       state.arrayTables = payload.filter((table) => table.indexMesa != null);
+      if (state.indexTable != null) {
+        state.selectedTable = state.arrayTables[state.indexTable];
+      }
     },
     async setTable(state, payload) {
       state.selectedTable = payload;
+      state.indexTable = payload.indexMesa;
       await router.push("/categoryselection");
     },
     async addProduct(state, payload) {

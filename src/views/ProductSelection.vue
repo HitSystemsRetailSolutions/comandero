@@ -43,6 +43,7 @@
       </MDBListGroupItem>
     </MDBListGroup>
     <hr />
+
     <div class="listDiv">
       <MDBListGroup class="tableList">
         <MDBListGroupItem @click="selectOtherCategory" class="employer"
@@ -84,18 +85,73 @@
               @click="addProduct(x, i)"
               style="font-size: 6vmin"
               icon="plus"
-            /></div
-        ></MDBListGroupItem>
+            />
+          </div>
+        </MDBListGroupItem>
       </MDBListGroup>
     </div>
   </div>
+  <MDBModal
+    id="suplModal"
+    tabindex="-1"
+    labelledby="suplModal"
+    v-model="suplModal"
+    :staticBackdrop="true"
+    size="xl"
+    style="background-color: #fff9f2"
+  >
+    <MDBModalHeader style="background-color: #fff9f2">
+      Selecciona el suplemento
+    </MDBModalHeader>
+    <MDBModalBody style="background-color: #fff9f2">
+      <MDBListGroup class="tablebtn" style="background-color: #fff9f2">
+        <MDBListGroupItem
+          style="background-color: #fff9f2"
+          v-for="(x, y) in suplArticle"
+          @click="x.selected = !x.selected"
+          :style="x.selected ? 'background-color: #00800036' : ''"
+        >
+          <div
+            style="
+              height: 2.5rem;
+              display: flex;
+              justify-content: space-between;
+              font-size: 1.2rem;
+            "
+          >
+            <div>
+              <MDBIcon
+                icon="check"
+                style="color: green"
+                v-if="x.selected == true"
+              ></MDBIcon
+              >&nbsp;&nbsp;<span>{{ x.nombre }} </span>
+            </div>
+
+            <span>{{ x.precioConIva }} €</span>
+          </div>
+        </MDBListGroupItem></MDBListGroup
+      ></MDBModalBody
+    >
+    <MDBModalFooter style="background-color: #fff9f2">
+      <MDBBtn color="error">Cancelar</MDBBtn>
+      <MDBBtn color="success" @click="suplModal = false">Añadir</MDBBtn>
+    </MDBModalFooter>
+  </MDBModal>
 </template>
 <script>
 import {
+  MDBCheckbox,
   MDBFooter,
   MDBIcon,
   MDBListGroup,
   MDBListGroupItem,
+  MDBModal,
+  MDBModalBody,
+  MDBModalFooter,
+  MDBModalHeader,
+  MDBBtn,
+  MDBPopconfirm,
 } from "mdb-vue-ui-kit";
 
 import { useStore } from "vuex";
@@ -111,13 +167,23 @@ export default {
     MDBFooter,
     MDBIcon,
     MDBListGroup,
+    MDBPopconfirm,
+    MDBBtn,
     MDBListGroupItem,
+    MDBModal,
+    MDBModalHeader,
+    MDBModalBody,
+    MDBCheckbox,
+    MDBModalFooter,
   },
   setup() {
     const store = useStore();
     const route = useRouter();
     const totalTable = ref(0);
     const hideInfo = ref(false);
+    const suplModal = ref(false);
+    const categories = computed(() => store.state.Categories.arrayCategories);
+    const suplArticle = ref(null);
     const SelectEmployer = computed(
       () => store.state.Employers.selectedEmployer
     );
@@ -136,6 +202,16 @@ export default {
     };
 
     const addProduct = async (x, i) => {
+      suplModal.value = true;
+      if (x?.suplementos.length > 0) {
+        let sup = x.suplementos;
+        const res = await axios.post("articulos/getSuplementos", {
+          arrayIdSuplementos: sup,
+        });
+        console.log(res.data, sup);
+        suplArticle.value = res.data;
+        return;
+      }
       await axios.post("teclado/clickTeclaArticulo", {
         idArticulo: x.idArticle,
         gramos: 0,
@@ -186,10 +262,13 @@ export default {
       selectOtherCategory,
       removeProduct,
       hideInfo,
+      categories,
       selectTable,
       addProduct,
       totalTable,
+      suplModal,
       SelectEmployer,
+      suplArticle,
       products,
     };
   },

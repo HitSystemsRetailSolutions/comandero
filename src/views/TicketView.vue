@@ -80,14 +80,14 @@
       <MDBBtn
         outline="warning"
         style="width: 95%; margin-bottom: 3%"
-        @click="router.push('/ticketview')"
+        @click="cobrar('EFECTIVO')"
         >Cobrar con efectivo&nbsp;&nbsp; <MDBIcon icon="euro-sign"></MDBIcon>
       </MDBBtn>
 
       <MDBBtn
         outline="primary"
         style="width: 95%; margin-bottom: 5%"
-        @click="router.push('/ticketview')"
+        @click="cobrar('DATAFONO_3G')"
         >Cobrar con tarjeta&nbsp;&nbsp; <MDBIcon icon="credit-card"></MDBIcon>
       </MDBBtn>
     </div>
@@ -108,7 +108,8 @@ import { ref, computed, onMounted } from "vue";
 import { io } from "socket.io-client";
 import { useRouter } from "vue-router";
 import router from "@/router";
-
+import Swal from "sweetalert2";
+import axios from "axios";
 export default {
   name: "MenuPrincipalView",
   components: {
@@ -147,6 +148,45 @@ export default {
     const selectOtherTable = () => {
       router.push("/tableselection");
     };
+
+    const getTotal = () => {
+      return (
+        selectedTable.value.detalleIva.importe1 +
+        selectedTable.value.detalleIva.importe2 +
+        selectedTable.value.detalleIva.importe3 +
+        selectedTable.value.detalleIva.importe4 +
+        selectedTable.value.detalleIva.importe5
+      );
+    };
+
+    async function cobrar(fm) {
+      try {
+        const resultado = await axios.post("tickets/crearTicket", {
+          total: getTotal(),
+          idCesta: selectedTable.value._id,
+          idTrabajador: SelectEmployer.value._id,
+          tipo: fm,
+          tkrsData: {
+            cantidadTkrs: 0,
+            formaPago: "EFECTIVO",
+          },
+        });
+
+        if (!resultado.data) {
+          throw Error("No se ha podido crear el ticket");
+        } else {
+          Swal.fire({
+            icon: "success",
+            title: "Venta registrada correctamente",
+            showConfirmButton: false,
+            timer: 1000,
+          });
+        }
+      } catch (err) {
+        Swal.fire("Oops...", err.message, "error");
+      }
+    }
+
     onMounted(() => {
       if (tables.value.length == 0) {
         router.push("/");
@@ -157,6 +197,7 @@ export default {
       selectedTable,
       actualPage,
       selectOtherEmployer,
+      cobrar,
       router,
       hideInfo,
       selectOtherTable,

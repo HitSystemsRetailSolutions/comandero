@@ -73,16 +73,26 @@
             &nbsp;&nbsp;<span>
               <b
                 >x{{
-                  selectTable.lista.filter(
+                  (selectTable.lista.filter(
                     (products) => products.idArticulo == x.idArticle
-                  )[0]?.unidades || 0
-                }}</b
-              ></span
+                  )[0]?.arraySuplementos?.length > 0
+                    ? selectTable.lista.filter(
+                        (products) => products.idArticulo == x.idArticle
+                      ).length
+                    : selectTable.lista.filter(
+                        (products) => products.idArticulo == x.idArticle
+                      )[0]?.unidades) || 0
+                }}
+              </b></span
             >
           </div>
           <div class="inUseDivL">
             <MDBIcon
-              @click="addProduct(x, i)"
+              @click="
+                x?.suplementos?.length > 0
+                  ? selectSuplements(x, i)
+                  : addProduct(x, i)
+              "
               style="font-size: 6vmin"
               icon="plus"
             />
@@ -134,8 +144,15 @@
       ></MDBModalBody
     >
     <MDBModalFooter style="background-color: #fff9f2">
-      <MDBBtn color="error">Cancelar</MDBBtn>
-      <MDBBtn color="success" @click="suplModal = false">Añadir</MDBBtn>
+      <MDBBtn color="error" @click="suplModal = false">Cancelar</MDBBtn>
+      <MDBBtn
+        color="success"
+        @click="
+          addProduct(suplSelected, 0);
+          suplModal = false;
+        "
+        >Añadir</MDBBtn
+      >
     </MDBModalFooter>
   </MDBModal>
 </template>
@@ -184,6 +201,7 @@ export default {
     const suplModal = ref(false);
     const categories = computed(() => store.state.Categories.arrayCategories);
     const suplArticle = ref(null);
+    const suplSelected = ref(null);
     const SelectEmployer = computed(
       () => store.state.Employers.selectedEmployer
     );
@@ -201,23 +219,26 @@ export default {
       router.push("/categoryselection");
     };
 
-    const addProduct = async (x, i) => {
-      suplModal.value = true;
-      if (x?.suplementos.length > 0) {
+    const selectSuplements = async (x, i) => {
+      if (x?.suplementos?.length > 0) {
+        suplSelected.value = x;
+        suplModal.value = true;
         let sup = x.suplementos;
         const res = await axios.post("articulos/getSuplementos", {
           arrayIdSuplementos: sup,
         });
-        console.log(res.data, sup);
         suplArticle.value = res.data;
-        return;
       }
+    };
+
+    const addProduct = async (x, i) => {
       await axios.post("teclado/clickTeclaArticulo", {
         idArticulo: x.idArticle,
         gramos: 0,
         idCesta: selectTable.value._id,
         unidades: 1,
-        arraySuplementos: null,
+        arraySuplementos:
+          suplArticle.value?.filter((supl) => supl.selected == true) ?? null,
         nombre: x.nombreArticulo,
         menu: products.value.nombre,
       });
@@ -264,11 +285,13 @@ export default {
       hideInfo,
       categories,
       selectTable,
+      suplSelected,
       addProduct,
       totalTable,
       suplModal,
       SelectEmployer,
       suplArticle,
+      selectSuplements,
       products,
     };
   },

@@ -21,11 +21,9 @@
         ><MDBIcon icon="user-tag" />&nbsp;&nbsp; {{ x.nombre }}
         <div class="timeEmployer">
           <span style="font-size: 0.8rem; font-style: italic"
-            >Fichado hace:</span
+            >Estado actual:</span
           >
-          <span style="font-size: 0.7rem; font-style: italic"
-            >2 Horas, 30 minutos</span
-          >
+          <span style="font-size: 0.7rem; font-style: italic">Fichado</span>
         </div></MDBListGroupItem
       >
     </MDBListGroup>

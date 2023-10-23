@@ -1,6 +1,7 @@
 import axios from "axios";
 import Swal from "sweetalert2";
 import router from "@/router";
+import Employers from "./Employers";
 export default {
   namespaced: true,
   state: {
@@ -20,7 +21,14 @@ export default {
     async setTable(state, payload) {
       state.selectedTable = payload;
       state.indexTable = payload.indexMesa;
-      await router.push("/categoryselection");
+      await axios
+        .post("cestas/cambiarCestaTrabajador", {
+          idCesta: state.selectedTable._id,
+          idTrabajador: Employers.state.selectedEmployer._id,
+        })
+        .then(async (res) => {
+          await router.push("/categoryselection");
+        });
     },
     async addProduct(state, payload) {},
     async removeProduct(state, payload) {

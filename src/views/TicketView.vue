@@ -181,6 +181,7 @@ export default {
             showConfirmButton: false,
             timer: 1000,
           });
+          router.push("/tableselection");
         }
       } catch (err) {
         Swal.fire("Oops...", err.message, "error");

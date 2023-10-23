@@ -88,6 +88,7 @@ export default {
   width: 100%;
   margin-top: 4%;
   height: 100%;
+  margin-bottom: 5%;
 }
 
 .tablebtn {

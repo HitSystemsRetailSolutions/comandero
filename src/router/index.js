@@ -6,16 +6,7 @@ const routes = [
     name: "Loader",
     component: LoaderComponent,
   },
-  {
-    path: "/installWizard",
-    name: "Install Wizard",
-    component: () => import("../components/InstallWizard.vue"),
-  },
-  {
-    path: "/tecnico",
-    name: "Tecnico",
-    component: () => import("../views/TecnicoView.vue"),
-  },
+
   {
     path: "/employer",
     name: "employer",
@@ -38,6 +29,12 @@ const routes = [
     path: "/productselection",
     name: "productselection",
     component: () => import("../views/ProductSelection.vue"),
+    children: [],
+  },
+  {
+    path: "/ticketview",
+    name: "ticketview",
+    component: () => import("../views/TicketView.vue"),
     children: [],
   },
 ];

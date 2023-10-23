@@ -20,7 +20,11 @@
         ><MDBIcon icon="shopping-basket" />&nbsp;&nbsp; Mesa
         {{ selectTable.indexMesa + 1 }}
       </MDBListGroupItem>
-      <MDBListGroupItem style="width: 97%" class="employer" v-if="!hideInfo"
+      <MDBListGroupItem
+        style="width: 97%"
+        class="employer"
+        v-if="!hideInfo"
+        @click="router.push('/ticketview')"
         ><div class="ticketBtn">
           <div>
             <MDBIcon icon="hand-holding-usd" />&nbsp;&nbsp;

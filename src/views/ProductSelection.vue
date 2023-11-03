@@ -18,7 +18,8 @@
         v-if="!hideInfo"
         class="employer"
         ><MDBIcon icon="shopping-basket" />&nbsp;&nbsp; Mesa
-        {{ selectTable.indexMesa + 1 }}
+        {{ selectTable.indexMesa + 1 }} |
+        {{ selectTable.comensales }} comensales
       </MDBListGroupItem>
       <MDBListGroupItem
         style="width: 97%"

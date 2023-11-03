@@ -37,6 +37,12 @@ const routes = [
     component: () => import("../views/TicketView.vue"),
     children: [],
   },
+  {
+    path: "/clientsInTableSelection",
+    name: "clientsInTableSelection",
+    component: () => import("../views/clientsInTableSelection.vue"),
+    children: [],
+  },
 ];
 
 const router = createRouter({

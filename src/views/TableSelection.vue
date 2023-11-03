@@ -60,8 +60,9 @@ export default {
     const tables = computed(() => store.state.Tables.arrayTables);
     const actualPage = computed(() => route.currentRoute.value.path);
 
-    const selectTable = (x) => {
-      store.dispatch("Tables/setSelectedTable", x);
+    const selectTable = async (x) => {
+      await store.dispatch("Tables/setSelectedTable", x);
+      router.push("/clientsInTableSelection");
     };
     const selectOtherEmployer = () => {
       router.push("/employer");

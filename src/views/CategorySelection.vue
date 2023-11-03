@@ -6,7 +6,8 @@
       </MDBListGroupItem>
       <MDBListGroupItem @click="selectOtherTable" class="employer"
         ><MDBIcon icon="shopping-basket" />&nbsp;&nbsp; Mesa
-        {{ selectTable.indexMesa + 1 }}
+        {{ selectTable.indexMesa + 1 }} |
+        {{ selectTable.comensales }} comensales
       </MDBListGroupItem>
       <MDBListGroupItem class="employer" @click="router.push('/ticketview')"
         ><div class="ticketBtn">

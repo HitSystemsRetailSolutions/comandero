@@ -27,7 +27,7 @@ export default {
           idTrabajador: Employers.state.selectedEmployer._id,
         })
         .then(async (res) => {
-          await router.push("/categoryselection");
+          // await router.push("/categoryselection");
         });
     },
     async addProduct(state, payload) {},

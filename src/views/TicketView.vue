@@ -1,12 +1,16 @@
 <template>
   <div>
     <MDBListGroup class="employerList">
-      <MDBListGroupItem
-        @click="selectOtherTable"
-        v-if="!hideInfo"
-        class="employer"
+      <MDBListGroupItem @click="selectOtherTable" class="employer"
         ><MDBIcon icon="shopping-basket" />&nbsp;&nbsp; Mesa
         {{ selectedTable.indexMesa + 1 }}
+      </MDBListGroupItem>
+      <MDBListGroupItem
+        class="employer"
+        @click="sendToPrepare"
+        v-bind:disabled="selectedTable.lista.length == 0"
+        :style="selectedTable.lista.length == 0 ? 'opacity: 0.5' : ''"
+        ><MDBIcon icon="print" />&nbsp;&nbsp; Preparar
       </MDBListGroupItem>
     </MDBListGroup>
     <hr />
@@ -17,6 +21,7 @@
             <th scope="col">Uds.</th>
             <th scope="col">Producto</th>
             <th scope="col">€</th>
+
             <th scope="col">Opts.</th>
           </tr>
         </thead>
@@ -30,7 +35,15 @@
           <tr v-for="(x, i) in selectedTable.lista">
             <th scope="row">x{{ x.unidades }}</th>
             <td>
-              <span class="nameItem"> {{ x.nombre }}</span>
+              <span class="nameItem">
+                <MDBIcon
+                  style="font-size: 0.6rem; color: darkslategray"
+                  icon="print"
+                  v-if="x.impresora"
+                  >&nbsp;&nbsp;</MDBIcon
+                >{{ x.nombre }}</span
+              >
+
               <tr v-for="(z, y) in x.arraySuplementos" class="suplements">
                 <td style="overflow: hidden; white-space: nowrap">
                   &nbsp;&nbsp;<i> > {{ z.nombre }}</i>
@@ -188,12 +201,31 @@ export default {
       }
     }
 
+    const sendToPrepare = async () => {
+      let ticketsWithPrinter = selectedTable.value.lista.filter(
+        (x) => x.impresora
+      );
+      const res = await axios.post("impresora/imprimirTicketComandero", {
+        products: ticketsWithPrinter,
+        table: selectedTable.value.indexMesa + 1,
+        worker: SelectEmployer.value.nombre,
+      });
+      if (res.data)
+        Swal.fire({
+          icon: "success",
+          title: "Se ha enviado el ticket a imprimir",
+          showConfirmButton: false,
+          timer: 1000,
+        });
+    };
+
     onMounted(() => {
       if (tables.value.length == 0) {
         router.push("/");
       }
       console.log(selectedTable.value);
     });
+
     return {
       selectedTable,
       actualPage,
@@ -201,6 +233,7 @@ export default {
       cobrar,
       router,
       hideInfo,
+      sendToPrepare,
       selectOtherTable,
       removeProduct,
       tables,

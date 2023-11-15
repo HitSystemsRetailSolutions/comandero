@@ -44,7 +44,10 @@
                 >{{ x.nombre }}</span
               >
 
-              <tr v-for="(z, y) in x.arraySuplementos" class="suplements">
+              <tr
+                v-for="(z, y) in x.arraySuplementos"
+                class="suplements nameSubItem"
+              >
                 <td style="overflow: hidden; white-space: nowrap">
                   &nbsp;&nbsp;<i> > {{ z.nombre }}</i>
                 </td>
@@ -209,6 +212,7 @@ export default {
         products: ticketsWithPrinter,
         table: selectedTable.value.indexMesa + 1,
         worker: SelectEmployer.value.nombre,
+        clients: selectedTable.value.comensales,
       });
       if (res.data)
         Swal.fire({
@@ -269,6 +273,13 @@ export default {
   overflow: hidden;
   white-space: nowrap;
   width: 8rem;
+  display: block;
+  text-overflow: ellipsis;
+}
+.nameSubItem {
+  overflow: hidden;
+  white-space: nowrap;
+  width: 6rem;
   display: block;
   text-overflow: ellipsis;
 }

@@ -32,7 +32,11 @@
             <td>0€</td>
             <td>Vacío</td>
           </tr>
-          <tr v-for="(x, i) in selectedTable.lista">
+          <tr
+            v-for="(x, i) in selectedTable.lista"
+            v-on:click="selectProduct(i)"
+            :style="actProd == i ? 'background-color: #f6ebdf;' : ''"
+          >
             <th scope="row">x{{ x.unidades }}</th>
             <td>
               <span class="nameItem">
@@ -146,7 +150,7 @@ export default {
     const tables = computed(() => store.state.Tables.arrayTables);
     let selectedTable = computed(() => store.state.Tables.selectedTable);
     const actualPage = computed(() => route.currentRoute.value.path);
-
+    const actProd = ref(null);
     const selectOtherEmployer = () => {
       router.push("/employer");
     };
@@ -174,6 +178,33 @@ export default {
         selectedTable.value.detalleIva.importe5
       );
     };
+
+    const selectProduct = async (x) => {
+      if (actProd.value == x)
+        if (await deleteProduct(selectedTable.value.lista[x].nombre)) {
+          actProd.value = -1;
+          return removeProduct(selectedTable.value.lista[x], x);
+        }
+      actProd.value = x;
+      console.log(x);
+    };
+
+    function deleteProduct(x) {
+      return Swal.fire({
+        title: "¿Desea eliminar '" + x + "' de la lista? ",
+        html: `El producto seleccionado será eliminado de la cesta.`,
+        showCancelButton: true,
+        confirmButtonText: "Eliminar",
+        cancelButtonText: "Cancelar",
+        confirmButtonColor: "red",
+        cancelButtonColor: "green",
+        iconColor: "red",
+        icon: "warning",
+        backdrop: "rgba(255,0,0,0.4)",
+      }).then((result) => {
+        return result.isConfirmed;
+      });
+    }
 
     async function cobrar(fm) {
       try {
@@ -238,10 +269,12 @@ export default {
       router,
       hideInfo,
       sendToPrepare,
+      selectProduct,
       selectOtherTable,
       removeProduct,
       tables,
       SelectEmployer,
+      actProd,
     };
   },
 };

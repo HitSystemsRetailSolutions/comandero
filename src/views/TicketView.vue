@@ -66,7 +66,7 @@
               </tr>
             </td>
             <td>
-              &nbsp;&nbsp;&nbsp;<MDBIcon
+              &nbsp;<MDBIcon
                 style="font-size: 4vmin"
                 @click="removeProduct(x, i)"
                 icon="trash-alt"
@@ -81,7 +81,7 @@
       <span
         style="
           font-size: 3vh;
-          bottom: 12.5vh;
+          bottom: 13.5vh;
           margin-left: 2%;
           position: absolute;
         "
@@ -286,11 +286,6 @@ export default {
   margin-top: 4%;
   height: 100%;
 }
-.tableList {
-  width: 100%;
-  margin-top: 4%;
-  height: 100%;
-}
 
 .suplements {
   color: gray;
@@ -300,12 +295,12 @@ export default {
   overflow: scroll;
   max-height: 55vh;
   overflow-x: hidden;
-  margin-left: -1.3rem;
+  margin-left: -1.4rem;
 }
 .nameItem {
   overflow: hidden;
   white-space: nowrap;
-  width: 8rem;
+  width: 14vh;
   display: block;
   text-overflow: ellipsis;
 }
@@ -317,28 +312,8 @@ export default {
   text-overflow: ellipsis;
 }
 
-.hideInfo {
-  background-color: #ffffff69;
-  padding: 5%;
-  align-self: center;
-  width: 100%;
-}
-
-.tablebtn {
-  background-color: #ffffff69;
-  padding: 5%;
-}
 .employer {
   background-color: #ffffff69;
   padding: 5%;
-}
-
-.inUseDiv {
-  display: flex;
-  flex-direction: column;
-  right: 5%;
-  position: absolute;
-  align-items: center;
-  top: 30%;
 }
 </style>

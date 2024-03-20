@@ -31,6 +31,20 @@ export default {
         });
     },
     async addProduct(state, payload) {},
+    async setProductPrinted(state, payload) {
+      console.log(state.arrayTables);
+      for (let i = 0; i < state.arrayTables.length; i++) {
+        if (state.arrayTables[i]._id == state.selectedTable._id) {
+          for (let j = 0; j < state.arrayTables[i].lista.length; j++) {
+            state.arrayTables[i].lista[j].printed = true;
+            console.log("hola", j, state.arrayTables[i].lista[j]);
+            for (let k = 0; k < state.selectedTable.lista.length; k++) {
+              state.selectedTable.lista[k].printed = true;
+            }
+          }
+        }
+      }
+    },
     async removeProduct(state, payload) {
       axios
         .post("cestas/borrarItemCesta", {
@@ -65,6 +79,9 @@ export default {
     },
     removeProduct({ commit }, data) {
       commit("removeProduct", data);
+    },
+    setProductPrinted({ commit }, data) {
+      commit("setProductPrinted", data);
     },
   },
 };

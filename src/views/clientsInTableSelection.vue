@@ -117,7 +117,9 @@ export default {
     };
 
     onMounted(() => {
-      clientsInTable.value = selectTable.value?.comensales || 1;
+      clientsInTable.value = selectTable.value?.comensales;
+      if (clientsInTable.value) router.push("/categoryselection");
+      clientsInTable.value = 1;
     });
 
     const confirmClients = async () => {

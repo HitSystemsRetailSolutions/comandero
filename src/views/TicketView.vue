@@ -94,12 +94,12 @@
 
   <div>
     <MDBListGroup class="employerList">
-      <MDBListGroupItem @click="selectOtherTable" class="employer"
-        ><MDBIcon icon="shopping-basket" />&nbsp;&nbsp; Mesa
+      <MDBListGroupItem @click="selectOtherTable" class="employer">
+        <MDBIcon icon="shopping-basket" />&nbsp;&nbsp; Mesa
         {{ selectedTable.indexMesa + 1 }}
       </MDBListGroupItem>
-      <MDBListGroupItem @click="changeClients" class="employer"
-        ><MDBIcon icon="user-tie" />&nbsp;&nbsp;
+      <MDBListGroupItem @click="changeClients" class="employer">
+        <MDBIcon icon="user-tie" />&nbsp;&nbsp;
         {{ selectedTable.comensales }} comensales
       </MDBListGroupItem>
       <MDBListGroupItem
@@ -107,7 +107,8 @@
         @click="sendToPrepare"
         v-bind:disabled="selectedTable.lista.length == 0"
         :style="selectedTable.lista.length == 0 ? 'opacity: 0.5' : ''"
-        ><MDBIcon icon="print" />&nbsp;&nbsp; Preparar
+      >
+        <MDBIcon icon="print" />&nbsp;&nbsp; Preparar
       </MDBListGroupItem>
     </MDBListGroup>
     <hr />
@@ -124,7 +125,9 @@
           margin-left: 5%;
         "
       >
-        <span><MDBIcon icon="shopping-basket"></MDBIcon></span>
+        <span>
+          <MDBIcon icon="shopping-basket"></MDBIcon>
+        </span>
         <span>No hay productos en esta cesta</span>
       </div>
       <MDBTable
@@ -155,8 +158,8 @@
                   icon="print"
                   v-if="x.impresora"
                   >&nbsp;&nbsp;</MDBIcon
-                >{{ x.nombre }}</span
-              >
+                >{{ x.nombre }}
+              </span>
 
               <tr
                 v-for="(z, y) in x.arraySuplementos"
@@ -195,7 +198,8 @@
           margin-left: 2%;
           position: absolute;
         "
-        ><MDBIcon icon="hand-holding-usd" />&nbsp;&nbsp;Total:
+      >
+        <MDBIcon icon="hand-holding-usd" />&nbsp;&nbsp;Total:
         {{
           (
             selectedTable.detalleIva.importe1 +
@@ -204,8 +208,8 @@
             selectedTable.detalleIva.importe4 +
             selectedTable.detalleIva.importe5
           ).toFixed(2)
-        }}€</span
-      >
+        }}€
+      </span>
 
       <MDBBtn
         outline="warning"
@@ -437,20 +441,14 @@ export default {
           selectedTable.value.lista[i].impresora &&
           !selectedTable.value.lista[i].printed
         ) {
-          ticketsWithPrinter.push(selectedTable.value.lista[i]);
-          await store.dispatch(
-            "Tables/setProductPrinted",
-            selectedTable.value.lista[i]
-          );
+          ticketsWithPrinter.push(selectedTable.value.lista[i].idArticulo);
           selectedTable.value.lista[i].printed = true;
         }
       }
       console.log(ticketsWithPrinter);
-      const res = await axios.post("impresora/imprimirTicketComandero", {
-        products: ticketsWithPrinter,
-        table: selectedTable.value.indexMesa + 1,
-        worker: SelectEmployer.value.nombre,
-        clients: selectedTable.value.comensales,
+      const res = await axios.post("cestas/setArticuloImprimido", {
+        idCesta: selectedTable.value._id,
+        articulos: ticketsWithPrinter,
       });
       if (res.data)
         Swal.fire({
@@ -464,6 +462,9 @@ export default {
     onMounted(() => {
       if (tables.value.length == 0) {
         router.push("/");
+      }
+      if (selectedTable.value.lista.length == 0) {
+        router.push("/tableselection");
       }
     });
 
@@ -509,6 +510,7 @@ export default {
   align-items: center;
   justify-content: center;
 }
+
 .divBotonesModal {
   display: flex;
   justify-content: space-between;
@@ -521,8 +523,10 @@ export default {
   overflow: scroll;
   max-height: 55vh;
   overflow-x: hidden;
+  scrollbar-width: none;
   margin-left: -1.4rem;
 }
+
 .nameItem {
   overflow: hidden;
   white-space: nowrap;
@@ -530,6 +534,7 @@ export default {
   display: block;
   text-overflow: ellipsis;
 }
+
 .nameSubItem {
   overflow: hidden;
   white-space: nowrap;

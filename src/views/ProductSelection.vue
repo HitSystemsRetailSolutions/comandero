@@ -278,6 +278,11 @@ export default {
       if (SelectEmployer.value == null) {
         router.push("/");
       }
+      products.value.arrayTeclas.sort((a, b) => {
+          if (a.nombreArticulo < b.nombreArticulo) return -1;
+          if (a.nombreArticulo > b.nombreArticulo) return 1;
+          return 0;
+      })
     });
 
     return {

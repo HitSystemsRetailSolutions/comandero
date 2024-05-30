@@ -436,27 +436,34 @@ export default {
 
     const sendToPrepare = async () => {
       let ticketsWithPrinter = [];
-      for (let i = 0; i < selectedTable.value.lista.length; i++) {
-        if (
-          selectedTable.value.lista[i].impresora &&
-          !selectedTable.value.lista[i].printed
-        ) {
-          ticketsWithPrinter.push(selectedTable.value.lista[i].idArticulo);
-          selectedTable.value.lista[i].printed = true;
-        }
-      }
       console.log(ticketsWithPrinter);
       const res = await axios.post("cestas/setArticuloImprimido", {
         idCesta: selectedTable.value._id,
         articulos: ticketsWithPrinter,
       });
-      if (res.data)
+      const res2 = await axios.post("impresora/imprimirTicketComandero", {
+        products: ticketsWithPrinter,
+        table: selectedTable.value.indexMesa + 1,
+        worker: SelectEmployer.value.nombre,
+        clients: selectedTable.value.comensales,
+      });
+      if (res.data && res2.data) {
+        for (let i = 0; i < selectedTable.value.lista.length; i++) {
+          if (
+            selectedTable.value.lista[i].impresora &&
+            !selectedTable.value.lista[i].printed
+          ) {
+            ticketsWithPrinter.push(selectedTable.value.lista[i].idArticulo);
+            selectedTable.value.lista[i].printed = true;
+          }
+        }
         Swal.fire({
           icon: "success",
           title: "Se ha enviado el ticket a imprimir",
           showConfirmButton: false,
           timer: 1000,
         });
+      }
     };
 
     onMounted(() => {

@@ -27,7 +27,13 @@
             </div>
             <div class="divBotonesModal">
               <MDBIcon
-                @click="addProduct(selectedTable.lista[EditProductModalInfo])"
+                @click="
+                  addProduct(
+                    selectedTable.lista[EditProductModalInfo],
+                    null,
+                    false
+                  )
+                "
                 style="font-size: 5vmin"
                 icon="plus"
               />
@@ -40,7 +46,13 @@
                 icon="trash-alt"
               />
               <MDBIcon
-                @click="restProduct(selectedTable.lista[EditProductModalInfo])"
+                @click="
+                  restProduct(
+                    selectedTable.lista[EditProductModalInfo],
+                    null,
+                    false
+                  )
+                "
                 style="font-size: 5vmin"
                 :style="
                   selectedTable.lista[EditProductModalInfo].unidades == 1
@@ -279,7 +291,7 @@ export default {
       router.push("/employer");
     };
 
-    const addProduct = async (x, i) => {
+    const addProduct = async (x, i, printedStatus) => {
       await axios.post("teclado/clickTeclaArticulo", {
         idArticulo: x.idArticulo,
         gramos: x.gramos ?? 0,
@@ -289,10 +301,15 @@ export default {
         nombre: x.nombre,
         menu: "",
       });
+      await axios.post("cestas/setArticuloImprimido", {
+        idCesta: selectedTable.value._id,
+        articulos: [x.idArticulo],
+        printed: printedStatus,
+      });
       return true;
     };
 
-    const restProduct = async (x, i) => {
+    const restProduct = async (x, i, printedStatus) => {
       let z = selectedTable.value.lista.filter(
         (products) =>
           products.idArticulo == x.idArticulo &&
@@ -311,6 +328,11 @@ export default {
             menu: "",
           });
         }
+        await axios.post("cestas/setArticuloImprimido", {
+          idCesta: selectedTable.value._id,
+          articulos: [x.idArticulo],
+          printed: printedStatus,
+        });
       }
     };
 
@@ -436,32 +458,48 @@ export default {
 
     const sendToPrepare = async () => {
       let ticketsWithPrinter = [];
-      console.log(ticketsWithPrinter);
-      const res = await axios.post("cestas/setArticuloImprimido", {
-        idCesta: selectedTable.value._id,
-        articulos: ticketsWithPrinter,
-      });
-      const res2 = await axios.post("impresora/imprimirTicketComandero", {
-        products: ticketsWithPrinter,
-        table: selectedTable.value.indexMesa + 1,
-        worker: SelectEmployer.value.nombre,
-        clients: selectedTable.value.comensales,
-      });
-      if (res.data && res2.data) {
-        for (let i = 0; i < selectedTable.value.lista.length; i++) {
-          if (
-            selectedTable.value.lista[i].impresora &&
-            !selectedTable.value.lista[i].printed
-          ) {
-            ticketsWithPrinter.push(selectedTable.value.lista[i].idArticulo);
-            selectedTable.value.lista[i].printed = true;
-          }
+      for (let i = 0; i < selectedTable.value.lista.length; i++) {
+        if (
+          selectedTable.value.lista[i].impresora &&
+          !selectedTable.value.lista[i].printed
+        ) {
+          ticketsWithPrinter.push(selectedTable.value.lista[i]);
+          selectedTable.value.lista[i].printed = true;
         }
+      }
+      if (ticketsWithPrinter.length > 0) {
+        try {
+          const res = await axios.post("cestas/setArticuloImprimido", {
+            idCesta: selectedTable.value._id,
+            articulos: ticketsWithPrinter.map((item) => item.idArticulo),
+            printed: true,
+          });
+          const res2 = await axios.post("impresora/imprimirTicketComandero", {
+            products: ticketsWithPrinter,
+            table: selectedTable.value.indexMesa + 1,
+            worker: SelectEmployer.value.nombre,
+            clients: selectedTable.value.comensales,
+          });
+          if (res.data && res2.data) {
+            Swal.fire({
+              icon: "success",
+              title: "Se ha enviado el ticket a imprimir",
+              showConfirmButton: false,
+              timer: 1000,
+            });
+          } else {
+            throw new Error("Error al enviar a imprimir");
+          }
+        } catch (error) {
+          console.error("Error:", error);
+          Swal.fire("Oops...", "No se ha podido enviar a imprimir", "error");
+        }
+      } else {
         Swal.fire({
-          icon: "success",
-          title: "Se ha enviado el ticket a imprimir",
+          icon: "info",
+          title: "No hay productos para enviar a imprimir",
           showConfirmButton: false,
-          timer: 1000,
+          timer: 600,
         });
       }
     };

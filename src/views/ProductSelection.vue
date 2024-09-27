@@ -246,7 +246,7 @@ export default {
           suplArticle.value?.filter((supl) => supl.selected == true) ?? null,
         nombre: x.nombreArticulo,
         menu: products.value.nombre,
-      }, { headers: { "X-Source-Program": "COMANDERO" ,"article": x.nombreArticulo, "worker": SelectEmployer.value.nombre} });
+      }, { headers: { "X-Source-Program": "COMANDERO" ,"article": encodeURIComponent(x.nombreArticulo), "worker": encodeURIComponent(SelectEmployer.value.nombre)} });
     };
     const removeProduct = async (x, i) => {
       let z = selectTable.value.lista.filter(

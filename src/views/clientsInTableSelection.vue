@@ -1,77 +1,110 @@
 <template>
   <div>
+    <!-- Encabezado con información del empleado y mesa -->
     <MDBListGroup class="employerList">
-      <MDBListGroupItem @click="selectOtherEmployer" class="employer"
-        ><MDBIcon icon="user-tag" />&nbsp;&nbsp; {{ SelectEmployer.nombre }}
+      <MDBListGroupItem @click="selectOtherEmployer" class="employer">
+        <div class="header-content">
+          <MDBIcon icon="user-tag" class="header-icon" />
+          <span class="header-text">{{ SelectEmployer.nombre }}</span>
+          <MDBIcon icon="chevron-right" class="nav-icon" />
+        </div>
       </MDBListGroupItem>
-      <MDBListGroupItem @click="selectOtherTable" class="employer"
-        ><MDBIcon icon="shopping-basket" />&nbsp;&nbsp; Mesa
-        {{ selectTable.indexMesa + 1 }}
+      <MDBListGroupItem @click="selectOtherTable" class="employer">
+        <div class="header-content">
+          <MDBIcon icon="shopping-basket" class="header-icon" />
+          <span class="header-text">Mesa {{ selectTable.indexMesa + 1 }}</span>
+          <MDBIcon icon="chevron-right" class="nav-icon" />
+        </div>
       </MDBListGroupItem>
     </MDBListGroup>
-    <hr />
-    <div>
-      <div class="btnClients">
-        <MDBIcon
-          icon="backward"
+
+    <hr class="section-divider" />
+
+    <!-- Controles de cantidad mejorados -->
+    <div class="clients-selector">
+      <div class="selector-title">
+        <MDBIcon icon="users" class="title-icon" />
+        <h3>Número de comensales</h3>
+      </div>
+
+      <div class="quick-controls">
+        <button
+          class="control-btn control-btn-large"
           @click="
             clientsInTable -= 5;
             clientsManager();
           "
-        />
-        <MDBIcon
-          icon="minus"
+          :disabled="clientsInTable <= 5"
+        >
+          <MDBIcon icon="backward" />
+          <span>-5</span>
+        </button>
+
+        <button
+          class="control-btn"
           @click="
             clientsInTable--;
             clientsManager();
           "
-        />
-        <MDBIcon
-          icon="plus"
+          :disabled="clientsInTable <= 1"
+        >
+          <MDBIcon icon="minus" />
+        </button>
+
+        <div class="clients-display">
+          <span class="clients-number">{{ clientsInTable }}</span>
+          <span class="clients-label">comensales</span>
+        </div>
+
+        <button
+          class="control-btn"
           @click="
             clientsInTable++;
             clientsManager();
           "
-        />
-        <MDBIcon
-          icon="forward"
+        >
+          <MDBIcon icon="plus" />
+        </button>
+
+        <button
+          class="control-btn control-btn-large"
           @click="
             clientsInTable += 5;
             clientsManager();
           "
-        />
-      </div>
-      <div style="text-align: center">
-        <span style="font-size: 3vh; margin-top: 5%"
-          >{{ clientsInTable }} clientes en la mesa
-          {{ selectTable.indexMesa + 1 }}</span
         >
+          <MDBIcon icon="forward" />
+          <span>+5</span>
+        </button>
       </div>
 
-      <hr />
-      <div class="divClients">
-        <div v-for="i in clientsInTable" style="padding: 3%" class="client">
-          <MDBIcon icon="user-tie" />
-          <p class="clientNum">
-            {{ i }}
-          </p>
+      <div class="table-info">
+        <span>Mesa {{ selectTable.indexMesa + 1 }}</span>
+      </div>
+    </div>
+
+    <hr class="section-divider" />
+
+    <!-- Visualización de avatares mejorada -->
+    <div class="divClients">
+      <div v-for="i in clientsInTable" :key="i" class="client">
+        <div class="client-avatar">
+          <MDBIcon icon="user-tie" class="client-icon" />
+          <span class="clientNum">{{ i }}</span>
         </div>
       </div>
-      <MDBIcon
-        icon="check"
-        @click="confirmClients()"
-        style="
-          position: fixed;
-          bottom: 2%;
-          right: 6%;
-          color: darkslategray;
-          font-size: 6vh;
-          text-shadow: -3px -2px 7px lightgray;
-        "
-      />
+    </div>
+
+    <!-- Botón de confirmación mejorado -->
+    <div class="confirm-section">
+      <button class="confirm-btn" @click="confirmClients()">
+        <MDBIcon icon="check" class="confirm-icon" />
+        <span>Confirmar comensales</span>
+      </button>
     </div>
   </div>
 </template>
+
 <script>
 import {
   MDBFooter,
@@ -110,6 +143,10 @@ export default {
       router.push("/employer");
     };
 
+    const selectOtherTable = () => {
+      router.push("/tableselection");
+    };
+
     const clientsManager = () => {
       if (clientsInTable.value < 1) {
         clientsInTable.value = 1;
@@ -138,8 +175,8 @@ export default {
       selectTable,
       confirmClients,
       actualPage,
-      selectTable,
       selectOtherEmployer,
+      selectOtherTable,
       router,
       tables,
       SelectEmployer,
@@ -156,55 +193,269 @@ export default {
   margin-top: 4%;
   height: 100%;
 }
-.tableList {
-  width: 100%;
-  margin-top: 4%;
-  height: 100%;
-  margin-bottom: 5%;
-}
 
-.tablebtn {
-  background-color: #ffffff69;
-  padding: 5%;
-}
 .employer {
   background-color: #ffffff69;
+  padding: 0;
+  border: none;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background-color: #ffffff80;
+  }
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
   padding: 5%;
+  gap: 15px;
+}
+
+.header-icon {
+  font-size: 1.1rem;
+  color: #6c757d;
+  min-width: 18px;
+}
+
+.header-text {
+  flex: 1;
+  font-size: 1rem;
+  font-weight: 500;
+  color: #333;
+}
+
+.nav-icon {
+  color: #6c757d;
+  font-size: 0.9rem;
+}
+
+.section-divider {
+  margin: 20px 0;
+  border: none;
+  height: 1px;
+  background: linear-gradient(to right, transparent, #dee2e6, transparent);
+}
+
+.clients-selector {
+  padding: 0 5%;
+  margin-bottom: 20px;
+}
+
+.selector-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  justify-content: center;
+}
+
+.title-icon {
+  font-size: 1.2rem;
+  color: #6c757d;
+}
+
+.selector-title h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #333;
+  margin: 0;
+}
+
+.quick-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.control-btn {
+  background-color: #ffffff69;
+  border: none;
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  color: #333;
+  transition: all 0.2s ease;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background-color: #ffffff80;
+    transform: scale(1.05);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &.control-btn-large {
+    width: 60px;
+    height: 60px;
+    flex-direction: column;
+    gap: 2px;
+
+    span {
+      font-size: 0.7rem;
+      font-weight: 600;
+    }
+  }
+}
+
+.clients-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px 20px;
+  background-color: #ffffff80;
+  border-radius: 15px;
+  min-width: 80px;
+}
+
+.clients-number {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #333;
+  line-height: 1;
+}
+
+.clients-label {
+  font-size: 0.8rem;
+  color: #6c757d;
+  font-weight: 500;
+}
+
+.table-info {
+  text-align: center;
+  font-size: 1rem;
+  color: #6c757d;
+  font-weight: 500;
 }
 
 .divClients {
-  font-size: 6vh;
   display: flex;
   justify-content: center;
   align-items: center;
-  max-height: 50vh;
-  overflow-y: scroll;
-  margin-top: 7vh;
-  flex-direction: row;
+  max-height: 40vh;
+  overflow-y: auto;
+  margin: 20px 0;
   flex-wrap: wrap;
+  gap: 15px;
+  padding: 0 5%;
 }
+
 .client {
-  padding: 3%;
-  display: flex;
-  align-items: flex-start;
-  flex-direction: row;
-  position: relative;
-  justify-content: center;
-}
-.clientNum {
-  font-size: 1rem;
-  position: absolute;
-  right: 0px;
-  bottom: 6%;
-  margin-bottom: 0px;
-  color: white;
-  text-shadow: 1px 1px black;
-  -webkit-text-stroke: 0.2px black;
-}
-.btnClients {
   display: flex;
   align-items: center;
-  justify-content: space-evenly;
-  font-size: 5vh;
+  justify-content: center;
+}
+
+.client-avatar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 60px;
+  background-color: #ffffff69;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background-color: #ffffff80;
+    transform: scale(1.05);
+  }
+}
+
+.client-icon {
+  font-size: 2rem;
+  color: #6c757d;
+}
+
+.clientNum {
+  position: absolute;
+  bottom: -5px;
+  right: -5px;
+  background-color: #333;
+  color: white;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 600;
+  border: 2px solid white;
+}
+
+.confirm-section {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+}
+
+.confirm-btn {
+  background-color: #ffffff80;
+  border: none;
+  border-radius: 25px;
+  padding: 15px 25px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #333;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+
+  &:hover {
+    background-color: #ffffff95;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+  }
+}
+
+.confirm-icon {
+  font-size: 1.2rem;
+  color: #28a745;
+}
+
+// Responsive adjustments
+@media (max-width: 768px) {
+  .quick-controls {
+    gap: 10px;
+  }
+
+  .control-btn {
+    width: 45px;
+    height: 45px;
+
+    &.control-btn-large {
+      width: 55px;
+      height: 55px;
+    }
+  }
+
+  .clients-number {
+    font-size: 1.8rem;
+  }
+
+  .client-avatar {
+    width: 55px;
+    height: 55px;
+  }
+
+  .client-icon {
+    font-size: 1.8rem;
+  }
 }
 </style>

@@ -1,35 +1,42 @@
 <template>
-  <!--  <MDBFooter class="bottomMenu" :text="['center']">
-    
-    <div class="text-center p-3">
-      <div class="ButtonsResponsive">
-        <MDBIcon icon="home" />
-        <MDBIcon icon="user-tag" />
-        <MDBIcon icon="border-all" />
-        <MDBIcon icon="shopping-basket" />
-      </div>
-    </div>
-    
-  </MDBFooter> -->
-  <br />
+  <!-- Título de sección -->
+  <div class="section-header">
+    <MDBIcon icon="users" class="section-icon" />
+    <h3 class="section-title">Seleccionar Empleado</h3>
+  </div>
+
   <div class="listDiv">
     <MDBListGroup class="employersList">
       <MDBListGroupItem
         v-for="(x, i) in employers"
+        :key="i"
         class="employer"
         @click="SelectEmployer(i)"
-        ><MDBIcon icon="user-tag" />&nbsp;&nbsp; {{ x.nombre }}
-        <div class="timeEmployer">
-          <span style="font-size: 0.8rem; font-style: italic"
-            >Estado actual:</span
-          >
-          <span style="font-size: 0.7rem; font-style: italic">Fichado</span>
-        </div></MDBListGroupItem
       >
+        <div class="employer-content">
+          <div class="employer-main-info">
+            <MDBIcon icon="user-tag" class="employer-icon" />
+            <div class="employer-info">
+              <span class="employer-name">{{ x.nombre }}</span>
+            </div>
+          </div>
+
+          <div class="employer-status">
+            <div class="status-badge">
+              <MDBIcon icon="clock" class="status-icon" />
+              <div class="status-info">
+                <span class="status-label">Estado actual:</span>
+                <span class="status-value">Fichado</span>
+              </div>
+            </div>
+            <MDBIcon icon="chevron-right" class="nav-arrow" />
+          </div>
+        </div>
+      </MDBListGroupItem>
     </MDBListGroup>
   </div>
-  <br />
 </template>
+
 <script>
 import {
   MDBFooter,
@@ -76,9 +83,29 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-.listDiv {
-  top: 2rem;
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 5% 25px 5%;
 }
+
+.section-icon {
+  font-size: 1.3rem;
+  color: #6c757d;
+}
+
+.section-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #333;
+  margin: 0;
+}
+
+.listDiv {
+  padding: 0 5%;
+}
+
 .employersList {
   width: 100%;
   height: 100%;
@@ -86,19 +113,113 @@ export default {
 
 .employer {
   background-color: #ffffff69;
-  padding: 5%;
+  padding: 0;
+  border: none;
+  margin-bottom: 8px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background-color: #ffffff80;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
 }
 
-.timeEmployer {
+.employer-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5%;
+  min-height: 65px;
+}
+
+.employer-main-info {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  flex: 1;
+}
+
+.employer-icon {
+  font-size: 1.2rem;
+  color: #6c757d;
+  min-width: 20px;
+}
+
+.employer-info {
   display: flex;
   flex-direction: column;
-  right: 5%;
-  position: absolute;
-  align-items: center;
-  top: 20%;
 }
+
+.employer-name {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.employer-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.status-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background-color: rgba(40, 167, 69, 0.1);
+  border-radius: 20px;
+}
+
+.status-icon {
+  font-size: 0.8rem;
+  color: #28a745;
+}
+
+.status-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.status-label {
+  font-size: 0.75rem;
+  color: #6c757d;
+  font-style: italic;
+  line-height: 1;
+}
+
+.status-value {
+  font-size: 0.8rem;
+  color: #28a745;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.nav-arrow {
+  color: #6c757d;
+  font-size: 0.9rem;
+}
+
 .titleEmployersSelector {
   margin-top: 5%;
   font-size: 7vw;
+}
+
+// Responsive adjustments
+@media (max-width: 768px) {
+  .employer-content {
+    min-height: 70px;
+  }
+
+  .employer-name {
+    font-size: 1.2rem;
+  }
+
+  .status-badge {
+    padding: 10px 14px;
+  }
 }
 </style>

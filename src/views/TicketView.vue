@@ -1,32 +1,40 @@
 <template>
+  <!-- Modal de edición de producto mejorado -->
   <MDBModal
     id="openEditProductModal"
     tabindex="-1"
     labelledby="openEditProductModal"
     v-model="openEditProductModal"
     :staticBackdrop="true"
-    size="xl"
-    style="background-color: #fff9f2"
+    size="lg"
+    class="edit-product-modal"
   >
-    <MDBModalHeader style="background-color: #fff9f2">
-      <span style="font-size: 3vh; margin-top: 5%"
-        ><b>{{ selectedTable.lista[EditProductModalInfo].nombre }}</b></span
-      >
+    <MDBModalHeader class="modal-header-custom">
+      <div class="modal-title-custom">
+        <MDBIcon icon="edit" />
+        <span>{{ selectedTable.lista[EditProductModalInfo]?.nombre }}</span>
+      </div>
     </MDBModalHeader>
-    <MDBModalBody style="background-color: #fff9f2">
-      <div>
-        <div>
-          <span style="font-size: 2.5vh; margin-top: 5%"><b>Unidades</b></span>
-          <hr />
-          <div class="divUnidadesModal">
-            <div>
-              <span style="font-size: 4vh; margin-top: 5%">
-                <b>{{ selectedTable.lista[EditProductModalInfo].unidades }}</b>
-                uds.
-              </span>
+    <MDBModalBody class="modal-body-custom">
+      <div class="product-edit-container">
+        <!-- Sección de unidades -->
+        <div class="units-section">
+          <div class="section-header">
+            <MDBIcon icon="calculator" />
+            <span class="section-title">Unidades</span>
+          </div>
+
+          <div class="units-display">
+            <div class="current-units">
+              <span class="units-number">{{
+                selectedTable.lista[EditProductModalInfo]?.unidades
+              }}</span>
+              <span class="units-label">uds.</span>
             </div>
-            <div class="divBotonesModal">
-              <MDBIcon
+
+            <div class="units-controls">
+              <div
+                class="control-btn add-btn"
                 @click="
                   addProduct(
                     selectedTable.lista[EditProductModalInfo],
@@ -34,18 +42,20 @@
                     false
                   )
                 "
-                style="font-size: 5vmin"
-                icon="plus"
-              />
-              <MDBIcon
+              >
+                <MDBIcon icon="plus" />
+              </div>
+              <div
+                class="control-btn remove-btn"
                 @click="
                   removeProduct(selectedTable.lista[EditProductModalInfo]);
                   openEditProductModal = false;
                 "
-                style="font-size: 5vmin"
-                icon="trash-alt"
-              />
-              <MDBIcon
+              >
+                <MDBIcon icon="trash-alt" />
+              </div>
+              <div
+                class="control-btn minus-btn"
                 @click="
                   restProduct(
                     selectedTable.lista[EditProductModalInfo],
@@ -53,192 +63,296 @@
                     false
                   )
                 "
-                style="font-size: 5vmin"
-                :style="
-                  selectedTable.lista[EditProductModalInfo].unidades == 1
-                    ? 'color: gray; opacity: 0.5; cursor: not-allowed;'
-                    : ''
-                "
-                icon="minus"
-              />
+                :class="{
+                  disabled:
+                    selectedTable.lista[EditProductModalInfo]?.unidades == 1,
+                }"
+              >
+                <MDBIcon icon="minus" />
+              </div>
             </div>
           </div>
-          <hr />
-          <div
-            v-if="selectedTable.lista[EditProductModalInfo].arraySuplementos"
-          >
-            <span style="font-size: 2.5vh; margin-top: 5%"
-              ><b>Suplementos</b></span
-            >
-            <hr />
+        </div>
+
+        <!-- Sección de suplementos -->
+        <div
+          v-if="selectedTable.lista[EditProductModalInfo]?.arraySuplementos"
+          class="supplements-section"
+        >
+          <div class="section-header">
+            <MDBIcon icon="plus-circle" />
+            <span class="section-title">Suplementos</span>
+          </div>
+
+          <div class="supplements-list">
             <div
               v-for="(x, i) in selectedTable.lista[EditProductModalInfo]
                 .arraySuplementos"
+              :key="i"
+              class="supplement-item"
             >
-              <div
-                style="
-                  display: flex;
-                  justify-content: space-between;
-                  margin-left: 5%;
-                  margin-right: 5%;
-                  margin-top: 3%;
-                  align-items: center;
-                "
-              >
-                <span style="font-size: 2.2vh; color: gray; font-style: italic"
-                  >> {{ x.nombre }}</span
-                >
-                <MDBIcon
-                  @click="removeSuplement(i)"
-                  style="font-size: 5vmin"
-                  icon="trash-alt"
-                />
+              <div class="supplement-info">
+                <MDBIcon icon="arrow-right" class="supplement-icon" />
+                <span class="supplement-name">{{ x.nombre }}</span>
+              </div>
+              <div class="supplement-remove" @click="removeSuplement(i)">
+                <MDBIcon icon="trash-alt" />
               </div>
             </div>
           </div>
         </div>
       </div>
     </MDBModalBody>
-    <MDBModalFooter style="background-color: #fff9f2">
-      <MDBBtn @click="openEditProductModal = false">Cerrar</MDBBtn>
+    <MDBModalFooter class="modal-footer-custom">
+      <MDBBtn
+        color="secondary"
+        @click="openEditProductModal = false"
+        class="close-btn"
+      >
+        <MDBIcon icon="times" />
+        Cerrar
+      </MDBBtn>
     </MDBModalFooter>
   </MDBModal>
 
-  <div>
-    <MDBListGroup class="employerList">
-      <MDBListGroupItem @click="selectOtherTable" class="employer">
-        <MDBIcon icon="shopping-basket" />&nbsp;&nbsp; Mesa
-        {{ selectedTable.indexMesa + 1 }}
-      </MDBListGroupItem>
-      <MDBListGroupItem @click="changeClients" class="employer">
-        <MDBIcon icon="user-tie" />&nbsp;&nbsp;
-        {{ selectedTable.comensales }} comensales
-      </MDBListGroupItem>
-      <MDBListGroupItem
-        class="employer"
-        @click="sendToPrepare"
-        v-bind:disabled="selectedTable.lista.length == 0"
-        :style="selectedTable.lista.length == 0 ? 'opacity: 0.5' : ''"
-      >
-        <MDBIcon icon="print" />&nbsp;&nbsp; Preparar
-      </MDBListGroupItem>
-    </MDBListGroup>
-    <hr />
-    <div class="listDiv">
-      <div
-        v-if="selectedTable.lista.length == 0"
-        style="
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          font-size: 2rem;
-          text-align: center;
-          margin: auto;
-          margin-left: 5%;
-        "
-      >
-        <span>
-          <MDBIcon icon="shopping-basket"></MDBIcon>
-        </span>
-        <span>No hay productos en esta cesta</span>
+  <!-- Modal de método de pago -->
+  <MDBModal
+    id="paymentModal"
+    tabindex="-1"
+    labelledby="paymentModal"
+    v-model="paymentModal"
+    :staticBackdrop="true"
+    size="md"
+    class="payment-modal"
+  >
+    <MDBModalHeader class="payment-modal-header">
+      <div class="payment-modal-title">
+        <MDBIcon icon="credit-card" />
+        <span>Seleccionar método de pago</span>
       </div>
-      <MDBTable
-        style="transform: scale(0.95); margin-top: -1.5vh"
-        v-if="selectedTable.lista.length > 0"
+    </MDBModalHeader>
+    <MDBModalBody class="payment-modal-body">
+      <div class="payment-total">
+        <div class="total-label">Total a cobrar:</div>
+        <div class="total-amount">
+          {{
+            (
+              selectedTable.detalleIva.importe1 +
+              selectedTable.detalleIva.importe2 +
+              selectedTable.detalleIva.importe3 +
+              selectedTable.detalleIva.importe4 +
+              selectedTable.detalleIva.importe5
+            ).toFixed(2)
+          }}€
+        </div>
+      </div>
+
+      <div class="payment-methods">
+        <div class="payment-option" @click="cobrar('EFECTIVO')">
+          <div class="payment-icon cash">
+            <MDBIcon icon="euro-sign" />
+          </div>
+          <div class="payment-info">
+            <div class="payment-name">Efectivo</div>
+            <div class="payment-desc">Pago en metálico</div>
+          </div>
+          <MDBIcon icon="chevron-right" class="arrow-icon" />
+        </div>
+
+        <div class="payment-option" @click="cobrar('DATAFONO_3G')">
+          <div class="payment-icon card">
+            <MDBIcon icon="credit-card" />
+          </div>
+          <div class="payment-info">
+            <div class="payment-name">Tarjeta</div>
+            <div class="payment-desc">Pago con tarjeta</div>
+          </div>
+          <MDBIcon icon="chevron-right" class="arrow-icon" />
+        </div>
+      </div>
+    </MDBModalBody>
+    <MDBModalFooter class="payment-modal-footer">
+      <MDBBtn
+        color="secondary"
+        @click="paymentModal = false"
+        class="cancel-payment-btn"
       >
-        <thead>
-          <tr>
-            <th scope="col">Uds.</th>
-            <th scope="col">Producto</th>
-            <th scope="col">€</th>
+        <MDBIcon icon="times" />
+        Cancelar
+      </MDBBtn>
+    </MDBModalFooter>
+  </MDBModal>
 
-            <!-- <th scope="col">Opts.</th>-->
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="(x, i) in selectedTable.lista"
-            v-on:click="selectProduct(i)"
-            :style="actProd == i ? 'background-color: #f6ebdf;' : ''"
-          >
-            <th scope="row">x{{ x.unidades }}</th>
-            <td>
-              <span class="nameItem">
-                <MDBIcon
-                  style="font-size: 0.6rem; color: darkslategray"
-                  :style="x?.printed ? 'color: green' : ''"
-                  icon="print"
-                  v-if="x.impresora"
-                  >&nbsp;&nbsp;</MDBIcon
-                >{{ x.nombre }}
-              </span>
-
-              <tr
-                v-for="(z, y) in x.arraySuplementos"
-                class="suplements nameSubItem"
-              >
-                <td style="overflow: hidden; white-space: nowrap">
-                  &nbsp;&nbsp;<i> > {{ z.nombre }}</i>
-                </td>
-              </tr>
-            </td>
-            <td>
-              {{ x.subtotal.toFixed(2) }}€
-              <tr v-for="(z, y) in x.arraySuplementos" class="suplements">
-                <td>
-                  <i> {{ z.precioConIva.toFixed(2) }}€</i>
-                </td>
-              </tr>
-            </td>
-            <!-- <td>
-              &nbsp;<MDBIcon
-                style="font-size: 4vmin"
-                @click="removeProduct(x, i)"
-                icon="trash-alt"
-              />
-            </td> -->
-          </tr>
-        </tbody>
-      </MDBTable>
+  <!-- Contenido principal -->
+  <div class="ticket-view">
+    <!-- Header con información de la mesa -->
+    <div class="table-header">
+      <MDBListGroup class="header-list">
+        <MDBListGroupItem @click="selectOtherTable" class="header-item">
+          <div class="header-content">
+            <MDBIcon icon="shopping-basket" class="header-icon" />
+            <span class="header-text"
+              >Mesa {{ selectedTable.indexMesa + 1 }}</span
+            >
+          </div>
+        </MDBListGroupItem>
+        <MDBListGroupItem @click="changeClients" class="header-item">
+          <div class="header-content">
+            <MDBIcon icon="user-tie" class="header-icon" />
+            <span class="header-text"
+              >{{ selectedTable.comensales }} comensales</span
+            >
+          </div>
+        </MDBListGroupItem>
+        <MDBListGroupItem
+          class="header-item prepare-item"
+          @click="sendToPrepare"
+          :class="{ disabled: selectedTable.lista.length == 0 }"
+        >
+          <div class="header-content">
+            <MDBIcon icon="print" class="header-icon" />
+            <span class="header-text">Preparar</span>
+          </div>
+        </MDBListGroupItem>
+      </MDBListGroup>
     </div>
-    <hr />
-    <div style="position: fixed; bottom: 0">
-      <span
-        style="
-          font-size: 3vh;
-          bottom: 13.5vh;
-          margin-left: 2%;
-          position: absolute;
-        "
+
+    <div class="section-divider"></div>
+
+    <!-- Lista de productos -->
+    <div class="products-container">
+      <!-- Estado vacío -->
+      <div v-if="selectedTable.lista.length == 0" class="empty-state">
+        <div class="empty-icon">
+          <MDBIcon icon="shopping-basket" />
+        </div>
+        <div class="empty-text">No hay productos en esta cesta</div>
+        <div class="empty-subtext">Añade productos desde el menú</div>
+      </div>
+
+      <!-- Tabla de productos responsive -->
+      <div
+        v-if="selectedTable.lista.length > 0"
+        class="products-table-container"
       >
-        <MDBIcon icon="hand-holding-usd" />&nbsp;&nbsp;Total:
-        {{
-          (
-            selectedTable.detalleIva.importe1 +
-            selectedTable.detalleIva.importe2 +
-            selectedTable.detalleIva.importe3 +
-            selectedTable.detalleIva.importe4 +
-            selectedTable.detalleIva.importe5
-          ).toFixed(2)
-        }}€
-      </span>
+        <div class="table-header-row">
+          <div class="col-units">Uds.</div>
+          <div class="col-product">Producto</div>
+          <div class="col-price">Precio</div>
+        </div>
 
-      <MDBBtn
-        outline="warning"
-        style="width: 95%; margin-bottom: 3%"
-        @click="cobrar('EFECTIVO')"
-        >Cobrar con efectivo&nbsp;&nbsp; <MDBIcon icon="euro-sign"></MDBIcon>
-      </MDBBtn>
+        <div class="table-body">
+          <div
+            v-for="(x, i) in selectedTable.lista"
+            :key="i"
+            class="product-row"
+            @click="selectProduct(i)"
+            :class="{ selected: actProd == i }"
+          >
+            <div class="col-units">
+              <span class="units-badge">x{{ x.unidades }}</span>
+            </div>
 
-      <MDBBtn
-        outline="primary"
-        style="width: 95%; margin-bottom: 5%"
-        @click="cobrar('DATAFONO_3G')"
-        >Cobrar con tarjeta&nbsp;&nbsp; <MDBIcon icon="credit-card"></MDBIcon>
-      </MDBBtn>
+            <div class="col-product">
+              <div class="product-main">
+                <MDBIcon
+                  v-if="x.impresora"
+                  icon="print"
+                  class="print-icon"
+                  :class="{ printed: x?.printed }"
+                />
+                <span class="product-name">{{ x.nombre }}</span>
+              </div>
+
+              <div v-if="x.promocion" class="supplements">
+                <div
+                  v-for="(z, y) in x.promocion.grupos"
+                  :key="y"
+                  class="supplement-row"
+                >
+                  <div v-for="(v, h) in z" :key="y" class="supplement-row">
+                    <span class="supplement-text">→ {{ v.nombre }}</span>
+                    <div
+                      v-for="(p, q) in v.suplementosPorArticulo"
+                      :key="y"
+                      class="supplement-row"
+                    >
+                      <div
+                        v-for="(a, b) in p.suplementos"
+                        :key="y"
+                        class="subsupplement-row"
+                      >
+                        <span class="supplement-text">➥ {{ a.nombre }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div v-if="x.arraySuplementos" class="supplements">
+                <div
+                  v-for="(z, y) in x.arraySuplementos"
+                  :key="y"
+                  class="supplement-row"
+                >
+                  <span class="supplement-text">→ {{ z.nombre }}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-price">
+              <div class="main-price">{{ x.subtotal.toFixed(2) }}€</div>
+              <div v-if="x.arraySuplementos" class="supplement-prices">
+                <div
+                  v-for="(z, y) in x.arraySuplementos"
+                  :key="y"
+                  class="supplement-price"
+                >
+                  {{ z.precioConIva.toFixed(2) }}€
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer con total y botón de cobrar -->
+    <div class="footer-container">
+      <div class="total-section">
+        <div class="total-info">
+          <MDBIcon icon="hand-holding-usd" class="total-icon" />
+          <span class="total-label">Total:</span>
+          <span class="total-amount">
+            {{
+              (
+                selectedTable.detalleIva.importe1 +
+                selectedTable.detalleIva.importe2 +
+                selectedTable.detalleIva.importe3 +
+                selectedTable.detalleIva.importe4 +
+                selectedTable.detalleIva.importe5
+              ).toFixed(2)
+            }}€
+          </span>
+        </div>
+      </div>
+
+      <div class="payment-section">
+        <MDBBtn
+          color="success"
+          size="lg"
+          class="payment-btn"
+          @click="paymentModal = true"
+          :disabled="selectedTable.lista.length == 0"
+        >
+          <MDBIcon icon="cash-register" />
+          Cobrar pedido
+        </MDBBtn>
+      </div>
     </div>
   </div>
 </template>
+
 <script>
 import {
   MDBBtn,
@@ -260,6 +374,7 @@ import { useRouter } from "vue-router";
 import router from "@/router";
 import Swal from "sweetalert2";
 import axios from "axios";
+
 export default {
   name: "MenuPrincipalView",
   components: {
@@ -285,8 +400,10 @@ export default {
     let selectedTable = computed(() => store.state.Tables.selectedTable);
     const actualPage = computed(() => route.currentRoute.value.path);
     const openEditProductModal = ref(false);
+    const paymentModal = ref(false);
     const EditProductModalInfo = ref(-1);
     const actProd = ref(null);
+
     const selectOtherEmployer = () => {
       router.push("/employer");
     };
@@ -414,11 +531,10 @@ export default {
             }, 10);
           });
       }, 100);
-
-      //EditProductModalInfo.value = selectedTable.value.lista.length - 1;
     };
 
     async function cobrar(fm) {
+      paymentModal.value = false;
       try {
         const resultado = await axios.post("tickets/crearTicket", {
           total: getTotal(),
@@ -511,6 +627,7 @@ export default {
       if (selectedTable.value.lista.length == 0) {
         router.push("/tableselection");
       }
+      console.log(selectedTable.value);
     });
 
     return {
@@ -523,6 +640,7 @@ export default {
       sendToPrepare,
       selectProduct,
       openEditProductModal,
+      paymentModal,
       selectOtherTable,
       removeProduct,
       tables,
@@ -539,57 +657,695 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-.employerList {
-  width: 100%;
-  margin-top: 4%;
-  height: 100%;
+.ticket-view {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  padding: 0;
 }
 
-.suplements {
-  color: gray;
+// Header styles
+.table-header {
+  padding: 15px;
 }
 
-.divUnidadesModal {
+.header-list {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.header-item {
+  background-color: #ffffff69;
+  border-radius: 10px;
+  flex: 1;
+  min-width: 120px;
+  transition: all 0.3s ease;
+  cursor: pointer;
+
+  &:hover {
+    background-color: #ffffff80;
+    transform: translateY(-1px);
+  }
+
+  &.prepare-item {
+    background-color: #e8f5e8;
+
+    &.disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+
+      &:hover {
+        transform: none;
+        background-color: #e8f5e8;
+      }
+    }
+  }
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 15px;
+}
+
+.header-icon {
+  font-size: 1.1rem;
+  color: #666;
+  min-width: 20px;
+}
+
+.header-text {
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.section-divider {
+  height: 2px;
+  background: linear-gradient(90deg, #e9ecef 0%, #dee2e6 50%, #e9ecef 100%);
+  margin: 0 15px;
+}
+
+// Products container
+.products-container {
+  flex: 1;
+  padding: 15px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+// Empty state
+.empty-state {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  flex: 1;
+  text-align: center;
+  color: #6c757d;
 }
 
-.divBotonesModal {
+.empty-icon {
+  font-size: 4rem;
+  margin-bottom: 20px;
+  opacity: 0.5;
+}
+
+.empty-text {
+  font-size: 1.3rem;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.empty-subtext {
+  font-size: 1rem;
+  opacity: 0.7;
+}
+
+// Responsive table
+.products-table-container {
+  flex: 1;
+  overflow: hidden;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 10%;
-  width: 50%;
+  flex-direction: column;
 }
 
-.listDiv {
-  overflow: scroll;
-  max-height: 55vh;
-  overflow-x: hidden;
+.table-header-row {
+  display: grid;
+  grid-template-columns: 80px 1fr 100px;
+  gap: 15px;
+  padding: 12px 15px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  font-weight: 600;
+  color: #495057;
+  margin-bottom: 10px;
+  border-bottom: 2px solid #dee2e6;
+}
+
+.table-body {
+  flex: 1;
+  overflow-y: auto;
   scrollbar-width: none;
-  margin-left: -1.4rem;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
-.nameItem {
-  overflow: hidden;
-  white-space: nowrap;
-  width: 24vh;
-  display: block;
-  text-overflow: ellipsis;
-}
-
-.nameSubItem {
-  overflow: hidden;
-  white-space: nowrap;
-  width: 6rem;
-  display: block;
-  text-overflow: ellipsis;
-}
-
-.employer {
+.product-row {
+  display: grid;
+  grid-template-columns: 80px 1fr 100px;
+  gap: 15px;
+  padding: 15px;
   background-color: #ffffff69;
-  padding: 5%;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+
+  &:hover {
+    background-color: #ffffff80;
+    border-color: #dee2e6;
+    transform: translateY(-1px);
+  }
+
+  &.selected {
+    background-color: #f6ebdf;
+    border-color: #ffc107;
+  }
+}
+
+.col-units {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.units-badge {
+  background-color: #007bff;
+  color: white;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  min-width: 40px;
+  text-align: center;
+}
+
+.col-product {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.product-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.print-icon {
+  font-size: 0.8rem;
+  color: #6c757d;
+
+  &.printed {
+    color: #28a745;
+  }
+}
+
+.product-name {
+  font-size: 1rem;
+  font-weight: 500;
+  color: #333;
+  word-break: break-word;
+}
+
+.supplements {
+  margin-left: 20px;
+}
+
+.supplement-row {
+  margin-bottom: 4px;
+}
+.subsupplement-row {
+  margin-bottom: 4px;
+  margin-left: 15px;
+}
+
+.supplement-text {
+  font-size: 0.85rem;
+  color: #6c757d;
+  font-style: italic;
+}
+
+.col-price {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.main-price {
+  font-size: 1rem;
+  font-weight: bold;
+  color: #28a745;
+}
+
+.supplement-prices {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.supplement-price {
+  font-size: 0.8rem;
+  color: #6c757d;
+  font-style: italic;
+}
+
+// Footer
+.footer-container {
+  background-color: #f8f9fa;
+  border-top: 2px solid #dee2e6;
+  padding: 20px 15px;
+}
+
+.total-section {
+  margin-bottom: 15px;
+}
+
+.total-info {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 15px;
+  background-color: #ffffff;
+  border-radius: 10px;
+  border: 2px solid #e9ecef;
+}
+
+.total-icon {
+  font-size: 1.3rem;
+  color: #28a745;
+}
+
+.total-label {
+  font-size: 1.6rem;
+  font-weight: 500;
+  color: #495057;
+}
+
+.total-amount {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #28a745;
+}
+
+.payment-section {
+  display: flex;
+  justify-content: center;
+}
+
+.payment-btn {
+  width: 100%;
+  max-width: 300px;
+  padding: 15px 30px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: center;
+  transition: all 0.3s ease;
+
+  &:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+// Modal styles
+.edit-product-modal,
+.payment-modal {
+  .modal-header-custom,
+  .payment-modal-header {
+    background-color: #f8f9fa;
+    border-bottom: 2px solid #e9ecef;
+    padding: 20px;
+  }
+
+  .modal-title-custom,
+  .payment-modal-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: #495057;
+  }
+
+  .modal-body-custom,
+  .payment-modal-body {
+    background-color: #fff9f2;
+    padding: 25px;
+  }
+
+  .modal-footer-custom,
+  .payment-modal-footer {
+    background-color: #f8f9fa;
+    border-top: 2px solid #e9ecef;
+    padding: 15px 20px;
+  }
+}
+
+// Product edit modal
+.product-edit-container {
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #e9ecef;
+}
+
+.section-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #495057;
+}
+
+.units-section {
+  background-color: #ffffff;
+  padding: 20px;
+  border-radius: 10px;
+  border: 1px solid #e9ecef;
+}
+
+.units-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.current-units {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.units-number {
+  font-size: 3rem;
+  font-weight: bold;
+  color: #007bff;
+}
+
+.units-label {
+  font-size: 1.2rem;
+  color: #6c757d;
+}
+
+.units-controls {
+  display: flex;
+  gap: 15px;
+}
+
+.control-btn {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 1.5rem;
+
+  &.add-btn {
+    background-color: #28a745;
+    color: white;
+
+    &:hover {
+      background-color: #218838;
+      transform: scale(1.1);
+    }
+  }
+
+  &.remove-btn {
+    background-color: #dc3545;
+    color: white;
+
+    &:hover {
+      background-color: #c82333;
+      transform: scale(1.1);
+    }
+  }
+
+  &.minus-btn {
+    background-color: #ffc107;
+    color: #212529;
+
+    &:hover:not(.disabled) {
+      background-color: #e0a800;
+      transform: scale(1.1);
+    }
+
+    &.disabled {
+      background-color: #6c757d;
+      color: #ffffff;
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+}
+
+.supplements-section {
+  background-color: #ffffff;
+  padding: 20px;
+  border-radius: 10px;
+  border: 1px solid #e9ecef;
+}
+
+.supplements-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.supplement-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 15px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+.supplement-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.supplement-icon {
+  font-size: 0.9rem;
+  color: #6c757d;
+}
+
+.supplement-name {
+  font-size: 0.95rem;
+  color: #495057;
+  font-style: italic;
+}
+
+.supplement-remove {
+  padding: 8px;
+  border-radius: 50%;
+  background-color: #dc3545;
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+
+  &:hover {
+    background-color: #c82333;
+    transform: scale(1.1);
+  }
+}
+
+// Payment modal
+.payment-total {
+  text-align: center;
+  padding: 20px;
+  background-color: #ffffff;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  border: 2px solid #e9ecef;
+}
+
+.total-label {
+  font-size: 1.1rem;
+  color: #6c757d;
+}
+
+.total-amount {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #28a745;
+}
+
+.payment-methods {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.payment-option {
+  display: flex;
+  align-items: center;
+  padding: 20px;
+  background-color: #ffffff;
+  border-radius: 10px;
+  border: 2px solid #e9ecef;
+  cursor: pointer;
+  transition: all 0.3s ease;
+
+  &:hover {
+    border-color: #007bff;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.15);
+  }
+}
+
+.payment-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  margin-right: 20px;
+
+  &.cash {
+    background-color: #ffc107;
+    color: #212529;
+  }
+
+  &.card {
+    background-color: #007bff;
+    color: white;
+  }
+}
+
+.payment-info {
+  flex: 1;
+}
+
+.payment-name {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 4px;
+}
+
+.payment-desc {
+  font-size: 0.9rem;
+  color: #6c757d;
+}
+
+.arrow-icon {
+  font-size: 1.2rem;
+  color: #6c757d;
+}
+
+.close-btn,
+.cancel-payment-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 8px;
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  .header-list {
+    flex-direction: column;
+  }
+
+  .header-item {
+    min-width: auto;
+  }
+
+  .table-header-row,
+  .product-row {
+    grid-template-columns: 60px 1fr 80px;
+    gap: 10px;
+    padding: 12px 10px;
+  }
+
+  .units-number {
+    font-size: 2.5rem;
+  }
+
+  .units-controls {
+    gap: 10px;
+  }
+
+  .control-btn {
+    width: 50px;
+    height: 50px;
+    font-size: 1.3rem;
+  }
+
+  .payment-option {
+    padding: 15px;
+  }
+
+  .payment-icon {
+    width: 50px;
+    height: 50px;
+    font-size: 1.3rem;
+    margin-right: 15px;
+  }
+}
+
+@media (max-width: 480px) {
+  .ticket-view {
+    padding: 0;
+  }
+
+  .table-header,
+  .products-container,
+  .footer-container {
+    padding: 10px;
+  }
+
+  .table-header-row,
+  .product-row {
+    grid-template-columns: 50px 1fr 70px;
+    gap: 8px;
+    padding: 10px 8px;
+  }
+
+  .product-name {
+    font-size: 0.9rem;
+  }
+
+  .supplement-text {
+    font-size: 0.8rem;
+  }
+
+  .total-info {
+    padding: 12px;
+  }
+
+  .total-amount {
+    font-size: 1.3rem;
+  }
+
+  .payment-btn {
+    padding: 12px 20px;
+    font-size: 1rem;
+  }
 }
 </style>

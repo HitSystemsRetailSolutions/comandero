@@ -1,163 +1,205 @@
 <template>
   <div>
+    <!-- Header colapsible -->
     <MDBListGroup class="employerList">
-      <MDBListGroupItem class="hideInfo" @click="hideInfo = !hideInfo"
-        ><MDBIcon :icon="hideInfo ? 'angle-down' : 'angle-up'" />&nbsp;&nbsp;
-        {{ hideInfo ? "Mostrar " : "Esconder " }} información
-      </MDBListGroupItem>
-      <MDBListGroupItem
-        @click="selectOtherEmployer"
-        style="width: 97%"
-        v-if="!hideInfo"
-        class="employer"
-        ><MDBIcon icon="user-tag" />&nbsp;&nbsp; {{ SelectEmployer.nombre }}
-      </MDBListGroupItem>
-      <MDBListGroupItem
-        style="width: 97%"
-        @click="selectOtherTable"
-        v-if="!hideInfo"
-        class="employer"
-        ><MDBIcon icon="shopping-basket" />&nbsp;&nbsp; Mesa
-        {{ selectTable.indexMesa + 1 }} |
-        {{ selectTable.comensales }} comensales
-      </MDBListGroupItem>
-      <MDBListGroupItem
-        style="width: 97%"
-        class="employer"
-        v-if="!hideInfo"
-        @click="router.push('/ticketview')"
-        ><div class="ticketBtn">
-          <div>
-            <MDBIcon icon="hand-holding-usd" />&nbsp;&nbsp;
-            <span
-              >{{
-                (
-                  selectTable.detalleIva.importe1 +
-                  selectTable.detalleIva.importe2 +
-                  selectTable.detalleIva.importe3 +
-                  selectTable.detalleIva.importe4 +
-                  selectTable.detalleIva.importe5
-                ).toFixed(2)
-              }}€</span
-            >
-          </div>
-          <span style="font-size: 0.9rem; font-style: italic"
-            >Info. de mesa</span
+      <MDBListGroupItem class="info-toggle" @click="hideInfo = !hideInfo">
+        <div class="toggle-content">
+          <MDBIcon :icon="hideInfo ? 'eye' : 'eye-slash'" class="toggle-icon" />
+          <span class="toggle-text"
+            >{{ hideInfo ? "Mostrar" : "Ocultar" }} información</span
           >
+          <MDBIcon
+            :icon="hideInfo ? 'chevron-down' : 'chevron-up'"
+            class="chevron-icon"
+          />
         </div>
       </MDBListGroupItem>
-    </MDBListGroup>
-    <hr />
 
-    <div class="listDiv">
-      <MDBListGroup class="tableList">
-        <MDBListGroupItem @click="selectOtherCategory" class="employer"
-          ><MDBIcon icon="box" />&nbsp;&nbsp;
-          {{ products.nombre }}
+      <div v-if="!hideInfo" class="info-panel">
+        <MDBListGroupItem @click="selectOtherEmployer" class="info-item">
+          <div class="info-content">
+            <MDBIcon icon="user-tag" class="info-icon" />
+            <span class="info-text">{{ SelectEmployer.nombre }}</span>
+          </div>
         </MDBListGroupItem>
+        <MDBListGroupItem @click="selectOtherTable" class="info-item">
+          <div class="info-content">
+            <MDBIcon icon="shopping-basket" class="info-icon" />
+            <span class="info-text"
+              >Mesa {{ selectTable.indexMesa + 1 }} |
+              {{ selectTable.comensales }} comensales</span
+            >
+          </div>
+        </MDBListGroupItem>
+        <MDBListGroupItem
+          class="info-item ticket-info"
+          @click="router.push('/ticketview')"
+        >
+          <div class="ticketBtn">
+            <div class="ticket-amount">
+              <MDBIcon icon="hand-holding-usd" class="info-icon" />
+              <span class="amount-text">
+                {{
+                  (
+                    selectTable.detalleIva.importe1 +
+                    selectTable.detalleIva.importe2 +
+                    selectTable.detalleIva.importe3 +
+                    selectTable.detalleIva.importe4 +
+                    selectTable.detalleIva.importe5
+                  ).toFixed(2)
+                }}€
+              </span>
+            </div>
+            <span class="ticket-label">Ver ticket</span>
+          </div>
+        </MDBListGroupItem>
+      </div>
+    </MDBListGroup>
+
+    <div class="section-divider"></div>
+
+    <!-- Navegación de categoría -->
+    <div class="category-nav">
+      <MDBListGroupItem @click="selectOtherCategory" class="category-header">
+        <div class="category-nav-content">
+          <MDBIcon icon="arrow-left" class="back-icon" />
+          <div class="category-info">
+            <MDBIcon icon="folder-open" class="category-icon" />
+            <span class="category-name">{{ products.nombre }}</span>
+          </div>
+        </div>
+      </MDBListGroupItem>
+    </div>
+
+    <!-- Lista de productos mejorada -->
+    <div class="products-section">
+      <div class="products-header">
+        <MDBIcon icon="utensils" />
+        <span>Productos disponibles</span>
+        <span class="products-count">
+          {{ products.arrayTeclas.filter((prods) => prods.esSumable).length }}
+        </span>
+      </div>
+
+      <MDBListGroup class="products-list">
         <MDBListGroupItem
           v-for="(x, i) in products.arrayTeclas.filter(
             (prods) => prods.esSumable
           )"
-          class="tablebtn flex-product"
-          ><div class="inUseDivR">
-            <MDBIcon
-              @click="removeProduct(x, y)"
-              style="font-size: 6vmin"
-              icon="minus"
-            />
-          </div>
-          <div style="text-align: center">
-            <div>
-              <MDBIcon icon="tags" style="font-size: 3vmin" />&nbsp;&nbsp;
-              <span style="font-size: 4.3vmin">{{ x.nombreArticulo }}</span>
+          :key="i"
+          class="product-item"
+        >
+          <div class="product-card">
+            <!-- Botón quitar -->
+            <div
+              class="quantity-control remove-btn"
+              @click="removeProduct(x, i)"
+            >
+              <MDBIcon icon="minus" class="control-icon" />
             </div>
-            <span
-              ><i>{{ x.precioConIva }}€</i></span
-            >
-            &nbsp;&nbsp;<span>
-              <b
-                >x{{
-                  (selectTable.lista.filter(
-                    (products) => products.idArticulo == x.idArticle
-                  )[0]?.arraySuplementos?.length > 0
-                    ? selectTable.lista.filter(
+
+            <!-- Información del producto -->
+            <div class="product-info">
+              <div class="product-header">
+                <MDBIcon icon="utensils" class="product-icon" />
+                <span class="product-name">{{ x.nombreArticulo }}</span>
+              </div>
+              <div class="product-details">
+                <span class="product-price">{{ x.precioConIva }}€</span>
+                <div class="quantity-display">
+                  <span class="quantity-label">Cantidad:</span>
+                  <span class="quantity-value">
+                    {{
+                      (selectTable.lista.filter(
                         (products) => products.idArticulo == x.idArticle
-                      ).length
-                    : selectTable.lista.filter(
-                        (products) => products.idArticulo == x.idArticle
-                      )[0]?.unidades) || 0
-                }}
-              </b></span
-            >
-          </div>
-          <div class="inUseDivL">
-            <MDBIcon
+                      )[0]?.arraySuplementos?.length > 0
+                        ? selectTable.lista.filter(
+                            (products) => products.idArticulo == x.idArticle
+                          ).length
+                        : selectTable.lista.filter(
+                            (products) => products.idArticulo == x.idArticle
+                          )[0]?.unidades) || 0
+                    }}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Botón añadir -->
+            <div
+              class="quantity-control add-btn"
               @click="
                 x?.suplementos?.length > 0
                   ? selectSuplements(x, i)
                   : addProduct(x, i)
               "
-              style="font-size: 6vmin"
-              icon="plus"
-            />
+            >
+              <MDBIcon
+                :icon="x?.suplementos?.length > 0 ? 'plus-circle' : 'plus'"
+                class="control-icon"
+              />
+            </div>
           </div>
         </MDBListGroupItem>
       </MDBListGroup>
     </div>
   </div>
+
+  <!-- Modal de suplementos mejorado -->
   <MDBModal
     id="suplModal"
     tabindex="-1"
     labelledby="suplModal"
     v-model="suplModal"
     :staticBackdrop="true"
-    size="xl"
-    style="background-color: #fff9f2"
+    size="lg"
+    class="supplements-modal"
   >
-    <MDBModalHeader style="background-color: #fff9f2">
-      Selecciona el suplemento
+    <MDBModalHeader class="modal-header-custom">
+      <div class="modal-title-custom">
+        <MDBIcon icon="plus-circle" />
+        <span>Seleccionar suplementos</span>
+      </div>
     </MDBModalHeader>
-    <MDBModalBody style="background-color: #fff9f2">
-      <MDBListGroup class="tablebtn" style="background-color: #fff9f2">
+    <MDBModalBody class="modal-body-custom">
+      <MDBListGroup class="supplements-list">
         <MDBListGroupItem
-          style="background-color: #fff9f2"
           v-for="(x, y) in suplArticle"
+          :key="y"
           @click="x.selected = !x.selected"
-          :style="x.selected ? 'background-color: #00800036' : ''"
+          class="supplement-item"
+          :class="{ 'supplement-selected': x.selected }"
         >
-          <div
-            style="
-              height: 2.5rem;
-              display: flex;
-              justify-content: space-between;
-              font-size: 1.2rem;
-            "
-          >
-            <div>
+          <div class="supplement-content">
+            <div class="supplement-info">
               <MDBIcon
-                icon="check"
-                style="color: green"
-                v-if="x.selected == true"
-              ></MDBIcon
-              >&nbsp;&nbsp;<span>{{ x.nombre }} </span>
+                :icon="x.selected ? 'check-circle' : 'circle'"
+                class="selection-icon"
+                :class="{ selected: x.selected }"
+              />
+              <span class="supplement-name">{{ x.nombre }}</span>
             </div>
-
-            <span>{{ x.precioConIva }} €</span>
+            <span class="supplement-price">{{ x.precioConIva }}€</span>
           </div>
-        </MDBListGroupItem></MDBListGroup
-      ></MDBModalBody
-    >
-    <MDBModalFooter style="background-color: #fff9f2">
-      <MDBBtn color="error" @click="suplModal = false">Cancelar</MDBBtn>
+        </MDBListGroupItem>
+      </MDBListGroup>
+    </MDBModalBody>
+    <MDBModalFooter class="modal-footer-custom">
+      <MDBBtn color="secondary" @click="suplModal = false" class="cancel-btn">
+        <MDBIcon icon="times" />
+        Cancelar
+      </MDBBtn>
       <MDBBtn
         color="success"
         @click="
           addProduct(suplSelected, 0);
           suplModal = false;
         "
-        >Añadir</MDBBtn
+        class="confirm-btn"
       >
+        <MDBIcon icon="check" />
+        Añadir producto
+      </MDBBtn>
     </MDBModalFooter>
   </MDBModal>
 </template>
@@ -237,16 +279,26 @@ export default {
     };
 
     const addProduct = async (x, i) => {
-      await axios.post("teclado/clickTeclaArticulo", {
-        idArticulo: x.idArticle,
-        gramos: 0,
-        idCesta: selectTable.value._id,
-        unidades: 1,
-        arraySuplementos:
-          suplArticle.value?.filter((supl) => supl.selected == true) ?? null,
-        nombre: x.nombreArticulo,
-        menu: products.value.nombre,
-      }, { headers: { "X-Source-Program": "COMANDERO" ,"article": encodeURIComponent(x.nombreArticulo), "worker": encodeURIComponent(SelectEmployer.value.nombre)} });
+      await axios.post(
+        "teclado/clickTeclaArticulo",
+        {
+          idArticulo: x.idArticle,
+          gramos: 0,
+          idCesta: selectTable.value._id,
+          unidades: 1,
+          arraySuplementos:
+            suplArticle.value?.filter((supl) => supl.selected == true) ?? null,
+          nombre: x.nombreArticulo,
+          menu: products.value.nombre,
+        },
+        {
+          headers: {
+            "X-Source-Program": "COMANDERO",
+            article: encodeURIComponent(x.nombreArticulo),
+            worker: encodeURIComponent(SelectEmployer.value.nombre),
+          },
+        }
+      );
     };
     const removeProduct = async (x, i) => {
       let z = selectTable.value.lista.filter(
@@ -279,10 +331,10 @@ export default {
         router.push("/");
       }
       products.value.arrayTeclas.sort((a, b) => {
-          if (a.nombreArticulo < b.nombreArticulo) return -1;
-          if (a.nombreArticulo > b.nombreArticulo) return 1;
-          return 0;
-      })
+        if (a.nombreArticulo < b.nombreArticulo) return -1;
+        if (a.nombreArticulo > b.nombreArticulo) return 1;
+        return 0;
+      });
     });
 
     return {
@@ -311,50 +363,404 @@ export default {
 <style lang="scss" scoped>
 .employerList {
   width: 100%;
-  margin-top: 4%;
-  height: 100%;
-}
-.tableList {
-  width: 100%;
-  margin-top: 4%;
-  height: 100%;
+  margin-top: 2%;
 }
 
-.ticketBtn {
+.info-toggle {
+  background-color: #f8f9fa;
+  padding: 15px 20px;
+  border-radius: 10px;
+  border: 2px solid #e9ecef;
+  cursor: pointer;
+  transition: all 0.3s ease;
+
+  &:hover {
+    background-color: #e9ecef;
+    border-color: #dee2e6;
+  }
+}
+
+.toggle-content {
   display: flex;
-  flex-direction: row;
   align-items: center;
   justify-content: space-between;
 }
 
-.tablebtn {
-  background-color: #ffffff69;
-  padding: 5%;
+.toggle-icon {
+  font-size: 1.2rem;
+  color: #007bff;
 }
-.employer {
-  background-color: #ffffff69;
-  padding: 5%;
-  align-self: center;
-  width: 100%;
+
+.toggle-text {
+  font-weight: 500;
+  color: #495057;
 }
-.hideInfo {
+
+.chevron-icon {
+  font-size: 1rem;
+  color: #6c757d;
+  transition: transform 0.3s ease;
+}
+
+.info-panel {
+  margin-top: 10px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid #e9ecef;
+}
+
+.info-item {
   background-color: #ffffff69;
-  padding: 5%;
-  align-self: center;
+  padding: 12px 20px;
+  border-bottom: 1px solid #f1f3f4;
+  transition: background-color 0.2s ease;
+
+  &:hover {
+    background-color: #ffffff80;
+  }
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.info-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.info-icon {
+  font-size: 1.1rem;
+  color: #666;
+  min-width: 20px;
+}
+
+.info-text {
+  font-size: 0.95rem;
+}
+
+.ticket-info {
+  background-color: #f8f9fa !important;
+}
+
+.ticketBtn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   width: 100%;
 }
 
-.inUseDivR {
+.ticket-amount {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.amount-text {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #28a745;
+}
+
+.ticket-label {
+  font-size: 0.85rem;
+  font-style: italic;
+  color: #666;
+}
+
+.section-divider {
+  height: 3px;
+  background: linear-gradient(90deg, #e9ecef 0%, #dee2e6 50%, #e9ecef 100%);
+  margin: 20px 0;
+  border-radius: 2px;
+}
+
+.category-nav {
+  margin-bottom: 20px;
+}
+
+.category-header {
+  background-color: #ffffff69;
+  padding: 15px 20px;
+  border-radius: 10px;
+  border: 2px solid #e9ecef;
+  cursor: pointer;
+  transition: all 0.3s ease;
+
+  &:hover {
+    background-color: #ffffff80;
+    border-color: #007bff;
+    transform: translateY(-1px);
+  }
+}
+
+.category-nav-content {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.back-icon {
+  font-size: 1.2rem;
+  color: #007bff;
+}
+
+.category-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.category-icon {
+  font-size: 1.1rem;
+  color: #6c757d;
+}
+
+.category-name {
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: #333;
+}
+
+.products-section {
+  margin-top: 20px;
+}
+
+.products-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 15px 20px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  margin-bottom: 15px;
+  font-weight: 600;
+  color: #495057;
+  border-left: 4px solid #28a745;
+}
+
+.products-count {
+  background-color: #28a745;
+  color: white;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  margin-left: auto;
+}
+
+.products-list {
+  width: 100%;
+}
+
+.product-item {
+  background-color: #ffffff69;
+  margin-bottom: 10px;
+  border-radius: 12px;
+  padding: 0;
+  border: 1px solid transparent;
+  transition: all 0.3s ease;
+
+  &:hover {
+    background-color: #ffffff80;
+    border-color: #dee2e6;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+}
+
+.product-card {
+  display: flex;
+  align-items: center;
+  padding: 20px;
+  gap: 20px;
+}
+
+.quantity-control {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.3s ease;
+
+  &.remove-btn {
+    background-color: #dc3545;
+    color: white;
+
+    &:hover {
+      background-color: #c82333;
+      transform: scale(1.1);
+    }
+  }
+
+  &.add-btn {
+    background-color: #28a745;
+    color: white;
+
+    &:hover {
+      background-color: #218838;
+      transform: scale(1.1);
+    }
+  }
+}
+
+.control-icon {
+  font-size: 1.5rem;
+}
+
+.product-info {
+  flex: 1;
   display: flex;
   flex-direction: column;
-
-  align-items: center;
-  top: 30%;
+  gap: 8px;
 }
 
-.flex-product {
+.product-header {
   display: flex;
   align-items: center;
-  justify-content: space-around;
+  gap: 10px;
+}
+
+.product-icon {
+  font-size: 1.2rem;
+  color: #007bff;
+}
+
+.product-name {
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: #333;
+}
+
+.product-details {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.product-price {
+  font-size: 1rem;
+  font-weight: bold;
+  color: #28a745;
+}
+
+.quantity-display {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.quantity-label {
+  font-size: 0.9rem;
+  color: #6c757d;
+}
+
+.quantity-value {
+  background-color: #007bff;
+  color: white;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: bold;
+  min-width: 30px;
+  text-align: center;
+}
+
+// Modal styles
+.supplements-modal {
+  .modal-header-custom {
+    background-color: #f8f9fa;
+    border-bottom: 2px solid #e9ecef;
+  }
+
+  .modal-title-custom {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #495057;
+  }
+
+  .modal-body-custom {
+    background-color: #fff9f2;
+    padding: 20px;
+  }
+
+  .modal-footer-custom {
+    background-color: #f8f9fa;
+    border-top: 2px solid #e9ecef;
+    gap: 10px;
+  }
+}
+
+.supplements-list {
+  background-color: transparent;
+}
+
+.supplement-item {
+  background-color: #ffffff;
+  margin-bottom: 8px;
+  border-radius: 8px;
+  border: 2px solid #e9ecef;
+  cursor: pointer;
+  transition: all 0.3s ease;
+
+  &:hover {
+    border-color: #007bff;
+    transform: translateY(-1px);
+  }
+
+  &.supplement-selected {
+    background-color: #e7f3ff;
+    border-color: #007bff;
+  }
+}
+
+.supplement-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 15px 20px;
+}
+
+.supplement-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.selection-icon {
+  font-size: 1.3rem;
+  color: #dee2e6;
+  transition: color 0.3s ease;
+
+  &.selected {
+    color: #007bff;
+  }
+}
+
+.supplement-name {
+  font-size: 1rem;
+  color: #333;
+}
+
+.supplement-price {
+  font-size: 1rem;
+  font-weight: bold;
+  color: #28a745;
+}
+
+.cancel-btn,
+.confirm-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 500;
 }
 </style>

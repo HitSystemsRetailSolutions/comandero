@@ -30,7 +30,7 @@ export default {
           // await router.push("/categoryselection");
         });
     },
-    async addProduct(state, payload) { },
+    async addProduct(state, payload) {},
     async removeProduct(state, payload) {
       axios
         .post("cestas/borrarItemCesta", {

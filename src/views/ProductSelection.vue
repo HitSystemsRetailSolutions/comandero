@@ -189,11 +189,116 @@
         <MDBIcon icon="times" />
         Cancelar
       </MDBBtn>
+      <MDBBtn color="success" @click="confirmarSuplementos" class="confirm-btn">
+        <MDBIcon icon="check" />
+        Confirmar selección
+      </MDBBtn>
+    </MDBModalFooter>
+  </MDBModal>
+  <!-- Modal de suplementos para menus -->
+  <MDBModal
+    id="menuModal"
+    tabindex="-1"
+    labelledby="menuModal"
+    v-model="menuModal"
+    :staticBackdrop="true"
+    size="lg"
+    class="supplements-modal"
+  >
+    <MDBModalHeader class="modal-header-custom">
+      <div class="modal-title-custom">
+        <MDBIcon icon="plus-circle" />
+        <span>Completar {{ menuSelected?.nombreArticulo }}</span>
+      </div>
+    </MDBModalHeader>
+    <MDBModalBody class="modal-body -custom">
+      <MDBListGroup class="supplements-list">
+        <MDBListGroupItem
+          v-for="(suplementos, familia) in suplByFamily"
+          :key="familia"
+        >
+          <div class="d-flex align-items-center justify-content-between">
+            <h5 class="text-primary familia-header mb-0">{{ familia }}</h5>
+            <button
+              class="btn btn-link btn-toggle-familia p-0 d-flex align-items-center"
+              @click="toggleFamilia(familia)"
+              style="gap: 0.5rem"
+            >
+              <MDBIcon
+                :icon="familiasAbiertas[familia] ? 'eye-slash' : 'eye'"
+              />
+              <span>{{
+                familiasAbiertas[familia] ? "Ocultar" : "Mostrar"
+              }}</span>
+            </button>
+          </div>
+          <div
+            v-if="!familiasAbiertas[familia] && seleccionadoPorFamilia[familia]"
+            class="seleccionado-familia-resumen mb-2"
+          >
+            <span class="badge bg-primary">
+              <MDBIcon icon="check-circle" class="me-1" />
+              {{ seleccionadoPorFamilia[familia].nombre }}
+            </span>
+          </div>
+          <div v-show="familiasAbiertas[familia]" class="row mt-2">
+            <div
+              v-for="(suplemento, index) in suplementos"
+              :key="index"
+              :class="[
+                'mb-3',
+                suplementos.length === 1
+                  ? 'col-12'
+                  : suplementos.length === 2
+                  ? 'col-6'
+                  : suplementos.length === 3
+                  ? 'col-4'
+                  : 'col-6 col-md-3',
+              ]"
+            >
+              <button
+                class="btn w-100 h-100 btn-suple-familia"
+                :class="{
+                  selected:
+                    seleccionadoPorFamilia[familia]?.idArticulo ===
+                    (suplemento.idArticulo || suplemento._id),
+                }"
+                @click="setSeleccionFamilia(familia, suplemento)"
+                :disabled="suplemento.esSumable === false"
+              >
+                <span class="suple-btn-content">
+                  <MDBIcon
+                    :icon="
+                      seleccionadoPorFamilia[familia]?.idArticulo ===
+                      (suplemento.idArticulo || suplemento._id)
+                        ? 'check-circle'
+                        : 'circle'
+                    "
+                    class="selection-icon-by-family"
+                    :class="{
+                      selected:
+                        seleccionadoPorFamilia[familia]?.idArticulo ===
+                        (suplemento.idArticulo || suplemento._id),
+                    }"
+                  />
+                  <span class="suple-btn-nombre">{{ suplemento.nombre }}</span>
+                </span>
+              </button>
+            </div>
+          </div>
+        </MDBListGroupItem>
+      </MDBListGroup>
+    </MDBModalBody>
+    <MDBModalFooter class="modal-footer-custom">
+      <MDBBtn color="secondary" @click="menuModal = false" class="cancel-btn">
+        <MDBIcon icon="times" />
+        Cancelar
+      </MDBBtn>
       <MDBBtn
         color="success"
         @click="
-          addProduct(suplSelected, 0);
-          suplModal = false;
+          addProduct(menuSelected, 0);
+          menuModal = false;
         "
         class="confirm-btn"
       >
@@ -256,6 +361,43 @@ export default {
     let products = computed(() => store.state.Categories.selectedCategory);
     const actualPage = computed(() => route.currentRoute.value.path);
 
+    // Modal para articulo menu
+    const menuModal = ref(false);
+    const menuArticles = ref(null);
+    const menuSelected = ref(null);
+    const seleccionadoPorFamilia = ref({});
+    // Control de apertura/cierre de familias
+    const familiasAbiertas = ref({});
+    function toggleFamilia(familia) {
+      familiasAbiertas.value = {
+        ...familiasAbiertas.value,
+        [familia]: !familiasAbiertas.value[familia],
+      };
+    }
+    // Pending selection for supplement confirmation
+    const pendingFamilia = ref(null);
+    const pendingProducto = ref(null);
+
+    const suplByFamily = computed(() => {
+      const grupos = {};
+      if (!menuArticles.value) return grupos;
+      menuArticles.value.forEach((sup) => {
+        const familia = sup.familia || "Sin familia";
+        if (!grupos[familia]) grupos[familia] = [];
+        grupos[familia].push(sup);
+      });
+      // Ordenar familias alfabéticamente y los suplementos dentro de cada familia
+      const familiasOrdenadas = Object.keys(grupos).sort((a, b) =>
+        a.localeCompare(b)
+      );
+      const resultado = {};
+      familiasOrdenadas.forEach((fam) => {
+        resultado[fam] = grupos[fam].sort((a, b) =>
+          a.nombre.localeCompare(b.nombre)
+        );
+      });
+      return resultado;
+    });
     const selectOtherEmployer = () => {
       router.push("/employer");
     };
@@ -268,15 +410,100 @@ export default {
 
     const selectSuplements = async (x, i) => {
       if (x?.suplementos?.length > 0) {
-        suplSelected.value = x;
-        suplModal.value = true;
         let sup = x.suplementos;
         const res = await axios.post("articulos/getSuplementos", {
           arrayIdSuplementos: sup,
         });
-        suplArticle.value = res.data;
+        if (x?.esMenu) {
+          menuModal.value = true;
+          menuArticles.value = res.data;
+          menuSelected.value = x;
+        } else {
+          suplSelected.value = x;
+          suplModal.value = true;
+          suplArticle.value = res.data;
+        }
       }
     };
+
+    const familiaEnUso = ref("");
+    async function setSeleccionFamilia(familia, producto) {
+      console.log("Seleccionando familia:", familia, producto);
+      const tieneSuplementos =
+        producto.suplementos && producto.suplementos.length > 0;
+      const noEsSumable = !producto.esSumable;
+      familia = familia || familiaEnUso.value;
+      const idSel = seleccionadoPorFamilia.value[familia]?.idArticulo;
+      const idSup = producto.idArticulo ?? producto._id ?? null;
+      if (idSel === idSup) {
+        // Si ya está seleccionado, deselecciona
+        const copia = { ...seleccionadoPorFamilia.value };
+        delete copia[familia];
+        seleccionadoPorFamilia.value = copia;
+        familiaEnUso.value = "";
+        return;
+      }
+      if (tieneSuplementos) {
+        // Defer selection, open modal for supplements
+        const res = await axios.post("articulos/getSuplementos", {
+          arrayIdSuplementos: producto.suplementos,
+        });
+        if (res.data) {
+          pendingFamilia.value = familia;
+          pendingProducto.value = producto;
+          suplModal.value = true;
+          suplSelected.value = producto;
+
+          suplArticle.value = res.data;
+          // Optionally, fetch supplements if needed here
+          return;
+        }
+      }
+      // No supplements, select immediately
+      const obj = {
+        idArticulo: idSup,
+        nombre: producto.nombre ?? null,
+        arraySuplementos: producto.arraySuplementos ?? null,
+        unidades: producto.unidades ?? 1,
+        gramos: producto.gramos ?? null,
+      };
+      seleccionadoPorFamilia.value = {
+        ...seleccionadoPorFamilia.value,
+        [familia]: obj,
+      };
+      familiaEnUso.value = "";
+    }
+
+    function confirmarSuplementos() {
+      if (!pendingFamilia.value || !pendingProducto.value) {
+        addProduct(suplSelected.value, 0);
+        suplModal.value = false;
+        return;
+      }
+      const familia = pendingFamilia.value;
+      const producto = pendingProducto.value;
+      const idSup = producto.idArticulo ?? producto._id ?? null;
+      // Optionally, collect selected supplements here if needed
+      const arraySuplementos = suplArticle.value?.filter(
+        (supl) => supl.selected == true
+      );
+      const obj = {
+        idArticulo: idSup,
+        nombre: producto.nombre ?? null,
+        arraySuplementos: arraySuplementos ?? null,
+        unidades: producto.unidades ?? 1,
+        gramos: producto.gramos ?? null,
+      };
+      seleccionadoPorFamilia.value = {
+        ...seleccionadoPorFamilia.value,
+        [familia]: obj,
+      };
+      pendingFamilia.value = null;
+      pendingProducto.value = null;
+      suplModal.value = false;
+      familiaEnUso.value = "";
+      suplArticle.value = null;
+    }
 
     const addProduct = async (x, i) => {
       await axios.post(
@@ -290,6 +517,7 @@ export default {
             suplArticle.value?.filter((supl) => supl.selected == true) ?? null,
           nombre: x.nombreArticulo,
           menu: products.value.nombre,
+          articulosMenu: Object.values(seleccionadoPorFamilia.value),
         },
         {
           headers: {
@@ -299,6 +527,8 @@ export default {
           },
         }
       );
+      suplArticle.value = null;
+      seleccionadoPorFamilia.value = {};
     };
     const removeProduct = async (x, i) => {
       let z = selectTable.value.lista.filter(
@@ -355,6 +585,15 @@ export default {
       suplArticle,
       selectSuplements,
       products,
+      menuModal,
+      menuArticles,
+      menuSelected,
+      seleccionadoPorFamilia,
+      setSeleccionFamilia,
+      suplByFamily,
+      familiasAbiertas,
+      toggleFamilia,
+      confirmarSuplementos,
     };
   },
 };
@@ -743,6 +982,30 @@ export default {
   }
 }
 
+.btn-suple-familia {
+  .suple-btn-content {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    justify-content: flex-start;
+  }
+  .selection-icon-by-family {
+    font-size: 1rem;
+    color: #dee2e6;
+    transition: color 0.3s ease;
+    &.selected {
+      color: #007bff;
+    }
+  }
+  .suple-btn-nombre {
+    flex: 1 1 auto;
+    text-align: left;
+    white-space: normal;
+    word-break: break-word;
+  }
+}
+
 .supplement-name {
   font-size: 1rem;
   color: #333;
@@ -762,5 +1025,11 @@ export default {
   padding: 10px 20px;
   border-radius: 8px;
   font-weight: 500;
+}
+#suplModal {
+  z-index: 1200 !important;
+}
+#menuModal {
+  z-index: 1100 !important;
 }
 </style>

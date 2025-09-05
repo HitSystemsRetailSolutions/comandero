@@ -283,6 +283,9 @@
                   />
                   <span class="suple-btn-nombre">{{ suplemento.nombre }}</span>
                 </span>
+                <span v-if="!suplemento.esSumable"
+                  >*No aplicable, va a peso</span
+                >
               </button>
             </div>
           </div>
@@ -431,7 +434,6 @@ export default {
       console.log("Seleccionando familia:", familia, producto);
       const tieneSuplementos =
         producto.suplementos && producto.suplementos.length > 0;
-      const noEsSumable = !producto.esSumable;
       familia = familia || familiaEnUso.value;
       const idSel = seleccionadoPorFamilia.value[familia]?.idArticulo;
       const idSup = producto.idArticulo ?? producto._id ?? null;

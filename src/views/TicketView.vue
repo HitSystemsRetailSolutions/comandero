@@ -298,6 +298,46 @@
                   <span class="supplement-text">→ {{ z.nombre }}</span>
                 </div>
               </div>
+
+              <div v-if="x.articulosMenu" class="supplements">
+                <div
+                  v-for="(z, y) in x.articulosMenu"
+                  :key="y"
+                  class="supplement-row"
+                >
+                  <span class="supplement-text">{{ z.nombre }}</span>
+
+                  <!-- Subniveles -->
+                  <div
+                    v-if="z.arraySuplementos"
+                    class="supplements"
+                    style="margin-left: 20px"
+                  >
+                    <div
+                      v-for="(a, b) in z.arraySuplementos"
+                      :key="b"
+                      class="supplement-row"
+                    >
+                      <span class="supplement-text">→ {{ a.nombre }}</span>
+
+                      <!-- Sub-subniveles -->
+                      <div
+                        v-if="a.arraySuplementos"
+                        class="supplements"
+                        style="margin-left: 20px"
+                      >
+                        <div
+                          v-for="(c, d) in a.arraySuplementos"
+                          :key="d"
+                          class="supplement-row"
+                        >
+                          <span class="supplement-text">→ {{ c.nombre }}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div class="col-price">
@@ -474,10 +514,7 @@ export default {
           JSON.stringify(products.arraySuplementos) ==
             JSON.stringify(x.arraySuplementos)
       );
-      await store.dispatch(
-        "Tables/removeProduct",
-        selectedTable.value.lista.indexOf(z[0])
-      );
+      await store.dispatch("Tables/removeProduct", EditProductModalInfo.value);
       return x;
     };
 

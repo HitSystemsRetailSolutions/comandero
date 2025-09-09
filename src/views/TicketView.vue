@@ -259,9 +259,9 @@
                   v-if="x.impresora"
                   icon="print"
                   class="print-icon"
-                  :class="{ printed: x?.printed }"
+                  :class="{ printed: x?.printed == x.unidades }"
                 />
-                <span class="product-name">{{ x.nombre }}</span>
+                <span class="product-name">{{ x.nombre }} </span>
               </div>
 
               <div v-if="x.promocion" class="supplements">
@@ -458,11 +458,6 @@ export default {
         nombre: x.nombre,
         menu: "",
       });
-      await axios.post("cestas/setArticuloImprimido", {
-        idCesta: selectedTable.value._id,
-        articulos: [x.idArticulo],
-        printed: printedStatus,
-      });
       return true;
     };
 
@@ -485,11 +480,6 @@ export default {
             menu: "",
           });
         }
-        await axios.post("cestas/setArticuloImprimido", {
-          idCesta: selectedTable.value._id,
-          articulos: [x.idArticulo],
-          printed: printedStatus,
-        });
       }
     };
 
@@ -614,25 +604,26 @@ export default {
       for (let i = 0; i < selectedTable.value.lista.length; i++) {
         if (
           selectedTable.value.lista[i].impresora &&
-          !selectedTable.value.lista[i].printed
+          selectedTable.value.lista[i].printed !=
+            selectedTable.value.lista[i].unidades
         ) {
           ticketsWithPrinter.push(selectedTable.value.lista[i]);
-          selectedTable.value.lista[i].printed = true;
         }
       }
       if (ticketsWithPrinter.length > 0) {
         try {
-          const res = await axios.post("cestas/setArticuloImprimido", {
-            idCesta: selectedTable.value._id,
-            articulos: ticketsWithPrinter.map((item) => item.idArticulo),
-            printed: true,
-          });
           const res2 = await axios.post("impresora/imprimirTicketComandero", {
             products: ticketsWithPrinter,
             table: selectedTable.value.indexMesa + 1,
             worker: SelectEmployer.value.nombre,
             clients: selectedTable.value.comensales,
           });
+          const res = await axios.post("cestas/setArticuloImprimido", {
+            idCesta: selectedTable.value._id,
+            articulos: ticketsWithPrinter.map((item) => item.idArticulo),
+            printed: ticketsWithPrinter.map((item) => item.idArticulo).unidades,
+          });
+
           if (res.data && res2.data) {
             Swal.fire({
               icon: "success",
@@ -641,6 +632,7 @@ export default {
               timer: 1000,
             });
           } else {
+            console.log(res.data, res2.data);
             throw new Error("Error al enviar a imprimir");
           }
         } catch (error) {
@@ -887,7 +879,7 @@ export default {
 
 .print-icon {
   font-size: 0.8rem;
-  color: #6c757d;
+  color: #774040;
 
   &.printed {
     color: #28a745;

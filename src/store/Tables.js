@@ -11,12 +11,36 @@ export default {
   },
   mutations: {
     arrayTables(state, payload) {
-      state.arrayTables = payload.filter((table) => table.indexMesa != null);
-      if (state.indexTable != null) {
-        state.selectedTable = state.arrayTables.find(
-          (x) => x.indexMesa == state.indexTable
-        );
-      }
+      let arrayMesas = [];
+      axios
+        .get("mesas/getMesas")
+        .then((resMesas) => {
+          if (resMesas.data && resMesas.data.length === 50) {
+            arrayMesas = resMesas.data;
+
+            // Filtrar tablas que tienen indexMesa y añadir el nombre correspondiente
+            state.arrayTables = payload
+              .filter((table) => table.indexMesa != null)
+              .map((table) => {
+                const mesaConfig = arrayMesas[table.indexMesa];
+                return {
+                  ...table,
+                  nombre: mesaConfig?.nombre || `Mesa ${table.indexMesa + 1}`,
+                };
+              });
+
+            if (state.indexTable) {
+              state.selectedTable = state.arrayTables.find(
+                (x) => x.indexMesa == state.indexTable
+              );
+            }
+          } else {
+            throw Error("Error al obtener la configuración de mesas");
+          }
+        })
+        .catch((err) => {
+          Swal.fire("Oops...", err.message, "error");
+        });
     },
     async setTable(state, payload) {
       state.selectedTable = payload;

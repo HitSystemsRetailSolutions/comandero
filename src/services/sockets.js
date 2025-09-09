@@ -61,7 +61,6 @@ socket.on("cargarVentas", (arrayTickets) => {
 socket.on("cargarTeclado", (teclado) => {
   try {
     if (teclado) {
-      console.log(teclado);
       store.dispatch("Categories/setArrayCategoriesMutation", teclado);
     } else {
       throw Error("Error, teclado no es correcto");

@@ -431,7 +431,6 @@ export default {
 
     const familiaEnUso = ref("");
     async function setSeleccionFamilia(familia, producto) {
-      console.log("Seleccionando familia:", familia, producto);
       const tieneSuplementos =
         producto.suplementos && producto.suplementos.length > 0;
       familia = familia || familiaEnUso.value;

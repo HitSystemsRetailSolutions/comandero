@@ -40,7 +40,9 @@
                 :class="{ 'icon-in-use': x.lista.length > 0 }"
               />
               <div class="table-infos">
-                <span class="table-number">Mesa {{ x.indexMesa + 1 }}</span>
+                <span class="table-number">{{
+                  x.nombre ? x.nombre : "Mesa: " + x.indexMesa + 1
+                }}</span>
                 <span v-if="x.lista.length > 0" class="table-status"
                   >{{ x.lista.length }} producto(s)</span
                 >

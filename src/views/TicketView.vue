@@ -583,7 +583,6 @@ export default {
               cesta: selectedTable.value._id,
             })
             .then((res) => {
-              console.log(res);
               if (res) router.push("/categoryselection");
             });
           Swal.fire({
@@ -632,7 +631,6 @@ export default {
               timer: 1000,
             });
           } else {
-            console.log(res.data, res2.data);
             throw new Error("Error al enviar a imprimir");
           }
         } catch (error) {
@@ -656,7 +654,6 @@ export default {
       if (selectedTable.value.lista.length == 0) {
         router.push("/tableselection");
       }
-      console.log(selectedTable.value);
     });
 
     return {

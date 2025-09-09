@@ -1350,6 +1350,7 @@ export default {
 
 .table-info {
   flex: 1;
+  background-color: transparent;
 }
 
 .table-name {

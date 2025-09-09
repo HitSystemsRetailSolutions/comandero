@@ -183,6 +183,108 @@
     </MDBModalFooter>
   </MDBModal>
 
+  <!-- Modal de traspasar mesa -->
+  <MDBModal
+    id="transferModal"
+    tabindex="-1"
+    labelledby="transferModal"
+    v-model="transferModal"
+    :staticBackdrop="true"
+    size="md"
+    class="transfer-modal"
+  >
+    <MDBModalHeader class="transfer-modal-header">
+      <div class="transfer-modal-title">
+        <MDBIcon icon="exchange-alt" />
+        <span>Traspasar productos a otra mesa</span>
+      </div>
+    </MDBModalHeader>
+    <MDBModalBody class="transfer-modal-body">
+      <div class="transfer-info">
+        <div class="current-table-info">
+          <div class="info-label">Mesa actual:</div>
+          <div class="info-value">
+            {{ selectedTable.nombre || `Mesa ${selectedTable.indexMesa + 1}` }}
+          </div>
+        </div>
+        <div class="products-count">
+          <div class="count-label">Productos a traspasar:</div>
+          <div class="count-value">
+            {{ selectedTable.lista.length }} productos
+          </div>
+        </div>
+      </div>
+
+      <div class="tables-selection">
+        <div class="selection-title">
+          <MDBIcon icon="table" />
+          <span>Seleccionar mesa destino:</span>
+        </div>
+
+        <div class="tables-grid">
+          <div
+            v-for="table in availableTables"
+            :key="table._id"
+            class="table-option"
+            @click="selectTargetTable(table)"
+            :class="{ selected: selectedTargetTable?._id === table._id }"
+          >
+            <div class="table-icon">
+              <MDBIcon
+                :icon="
+                  table.lista && table.lista.length > 0 ? 'utensils' : 'table'
+                "
+              />
+            </div>
+            <div class="table-info">
+              <div class="table-name">
+                {{ table.nombre || `Mesa ${table.indexMesa + 1}` }}
+              </div>
+              <div
+                class="table-status"
+                :class="{ occupied: table.lista && table.lista.length > 0 }"
+              >
+                {{
+                  table.lista && table.lista.length > 0
+                    ? `${table.lista.length} productos`
+                    : "Libre"
+                }}
+              </div>
+            </div>
+            <div
+              v-if="table.lista && table.lista.length > 0"
+              class="warning-icon"
+            >
+              <MDBIcon icon="exclamation-triangle" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </MDBModalBody>
+    <MDBModalFooter class="transfer-modal-footer">
+      <MDBBtn
+        color="secondary"
+        @click="
+          transferModal = false;
+          selectedTargetTable = null;
+        "
+        class="cancel-transfer-btn"
+      >
+        <MDBIcon icon="times" />
+        Cancelar
+      </MDBBtn>
+      <MDBBtn
+        color="warning"
+        @click="confirmTransfer"
+        :disabled="!selectedTargetTable"
+        class="confirm-transfer-btn"
+      >
+        <MDBIcon icon="check" />
+        Confirmar traspaso
+      </MDBBtn>
+    </MDBModalFooter>
+  </MDBModal>
+
   <!-- Contenido principal -->
   <div class="ticket-view">
     <!-- Header con información de la mesa -->
@@ -388,6 +490,17 @@
           <MDBIcon icon="cash-register" />
           Cobrar pedido
         </MDBBtn>
+
+        <MDBBtn
+          color="warning"
+          size="lg"
+          class="transfer-btn"
+          @click="transferModal = true"
+          :disabled="selectedTable.lista.length == 0"
+        >
+          <MDBIcon icon="exchange-alt" />
+          Traspasar mesa
+        </MDBBtn>
       </div>
     </div>
   </div>
@@ -441,11 +554,96 @@ export default {
     const actualPage = computed(() => route.currentRoute.value.path);
     const openEditProductModal = ref(false);
     const paymentModal = ref(false);
+    const transferModal = ref(false);
     const EditProductModalInfo = ref(-1);
     const actProd = ref(null);
+    const selectedTargetTable = ref(null);
 
     const selectOtherEmployer = () => {
       router.push("/employer");
+    };
+
+    // Computed para mesas disponibles (excluyendo la mesa actual)
+    const availableTables = computed(() => {
+      return tables.value.filter(
+        (table) => table._id !== selectedTable.value._id
+      );
+    });
+
+    // Función para seleccionar mesa destino
+    const selectTargetTable = (table) => {
+      selectedTargetTable.value = table;
+    };
+
+    // Función para confirmar el traspaso
+    const confirmTransfer = async () => {
+      if (!selectedTargetTable.value) return;
+
+      // Si la mesa destino tiene productos, mostrar advertencia
+      if (
+        selectedTargetTable.value.lista &&
+        selectedTargetTable.value.lista.length > 0
+      ) {
+        const result = await Swal.fire({
+          title: "¡Atención!",
+          text: `La mesa "${
+            selectedTargetTable.value.nombre ||
+            `Mesa ${selectedTargetTable.value.indexMesa + 1}`
+          }" ya tiene productos. Debes vaciarla primero antes de traspasar.`,
+          icon: "warning",
+          showCancelButton: true,
+          confirmButtonText: "Entendido",
+          cancelButtonText: "Cancelar",
+        });
+        return;
+      }
+
+      try {
+        // Confirmar el traspaso
+        const result = await Swal.fire({
+          title: "¿Confirmar traspaso?",
+          text: `¿Estás seguro de traspasar todos los productos a "${
+            selectedTargetTable.value.nombre ||
+            `Mesa ${selectedTargetTable.value.indexMesa + 1}`
+          }"?`,
+          icon: "question",
+          showCancelButton: true,
+          confirmButtonText: "Sí, traspasar",
+          cancelButtonText: "Cancelar",
+        });
+
+        if (result.isConfirmed) {
+          // Realizar el traspaso
+          await axios.post("cestas/traspasarProductos", {
+            idCestaOrigen: selectedTable.value._id,
+            idCestaDestino: selectedTargetTable.value._id,
+            idTrabajador: SelectEmployer.value._id,
+          });
+
+          // Cerrar modal y limpiar selección
+          transferModal.value = false;
+          selectedTargetTable.value = null;
+
+          // Mostrar mensaje de éxito
+          Swal.fire({
+            icon: "success",
+            title: "Traspaso realizado",
+            text: "Los productos se han traspasado correctamente",
+            showConfirmButton: false,
+            timer: 1500,
+          });
+
+          // Redirigir a selección de mesa
+          router.push("/tableselection");
+        }
+      } catch (error) {
+        Swal.fire({
+          icon: "error",
+          title: "Error",
+          text:
+            error.response?.data?.message || "No se pudo realizar el traspaso",
+        });
+      }
     };
 
     const addProduct = async (x, i, printedStatus) => {
@@ -667,6 +865,7 @@ export default {
       selectProduct,
       openEditProductModal,
       paymentModal,
+      transferModal,
       selectOtherTable,
       removeProduct,
       tables,
@@ -677,6 +876,10 @@ export default {
       restProduct,
       addProduct,
       EditProductModalInfo,
+      selectedTargetTable,
+      availableTables,
+      selectTargetTable,
+      confirmTransfer,
     };
   },
 };
@@ -1004,16 +1207,19 @@ export default {
 
 // Modal styles
 .edit-product-modal,
-.payment-modal {
+.payment-modal,
+.transfer-modal {
   .modal-header-custom,
-  .payment-modal-header {
+  .payment-modal-header,
+  .transfer-modal-header {
     background-color: #f8f9fa;
     border-bottom: 2px solid #e9ecef;
     padding: 20px;
   }
 
   .modal-title-custom,
-  .payment-modal-title {
+  .payment-modal-title,
+  .transfer-modal-title {
     display: flex;
     align-items: center;
     gap: 12px;
@@ -1023,16 +1229,184 @@ export default {
   }
 
   .modal-body-custom,
-  .payment-modal-body {
+  .payment-modal-body,
+  .transfer-modal-body {
     background-color: #fff9f2;
     padding: 25px;
   }
 
   .modal-footer-custom,
-  .payment-modal-footer {
+  .payment-modal-footer,
+  .transfer-modal-footer {
     background-color: #f8f9fa;
     border-top: 2px solid #e9ecef;
     padding: 15px 20px;
+  }
+}
+
+// Transfer modal specific styles
+.transfer-info {
+  background-color: #ffffff;
+  padding: 20px;
+  border-radius: 10px;
+  border: 2px solid #e9ecef;
+  margin-bottom: 25px;
+}
+
+.current-table-info,
+.products-count {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.info-label,
+.count-label {
+  font-size: 1rem;
+  color: #6c757d;
+  font-weight: 500;
+}
+
+.info-value,
+.count-value {
+  font-size: 1.1rem;
+  color: #495057;
+  font-weight: 600;
+}
+
+.tables-selection {
+  .selection-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 15px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #495057;
+  }
+}
+
+.tables-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 5px;
+}
+
+.table-option {
+  display: flex;
+  align-items: center;
+  padding: 15px;
+  background-color: #ffffff;
+  border: 2px solid #e9ecef;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+
+  &:hover {
+    border-color: #ffc107;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 193, 7, 0.2);
+  }
+
+  &.selected {
+    border-color: #ffc107;
+    background-color: #fff9e6;
+    box-shadow: 0 4px 12px rgba(255, 193, 7, 0.3);
+  }
+}
+
+.table-icon {
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  background-color: #f8f9fa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 12px;
+  font-size: 1.2rem;
+  color: #6c757d;
+  transition: all 0.3s ease;
+
+  .table-option:hover & {
+    background-color: #ffc107;
+    color: #212529;
+  }
+
+  .table-option.selected & {
+    background-color: #ffc107;
+    color: #212529;
+  }
+}
+
+.table-info {
+  flex: 1;
+}
+
+.table-name {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 4px;
+}
+
+.table-status {
+  font-size: 0.85rem;
+  color: #6c757d;
+
+  &.occupied {
+    color: #dc3545;
+    font-weight: 500;
+  }
+}
+
+.warning-icon {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  background-color: #ffc107;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  color: #212529;
+}
+
+.cancel-transfer-btn,
+.confirm-transfer-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.confirm-transfer-btn {
+  &:hover:not(:disabled) {
+    box-shadow: 0 4px 12px rgba(255, 193, 7, 0.3);
   }
 }
 
@@ -1372,6 +1746,32 @@ export default {
   .payment-btn {
     padding: 12px 20px;
     font-size: 1rem;
+  }
+
+  // Transfer modal responsive
+  .tables-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .table-option {
+    padding: 12px;
+  }
+
+  .table-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 1.1rem;
+  }
+
+  .transfer-info {
+    padding: 15px;
+  }
+
+  .cancel-transfer-btn,
+  .confirm-transfer-btn {
+    padding: 10px 15px;
+    font-size: 0.9rem;
   }
 }
 </style>

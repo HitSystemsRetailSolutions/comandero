@@ -15,7 +15,13 @@
         <div class="header-content">
           <MDBIcon icon="shopping-basket" class="header-icon" />
           <span class="header-text"
-            >Mesa {{ selectTable.indexMesa + 1 }} |
+            >{{
+              selectTable.nombre
+                ? selectTable.nombre
+                : "Mesa " + (selectTable.indexMesa + 1)
+            }}
+            |
+
             {{ selectTable.comensales }} comensales</span
           >
         </div>

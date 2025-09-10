@@ -8,39 +8,53 @@ export default {
     arrayTables: [],
     indexTable: null,
     selectedTable: [],
+    mesas: [],
   },
   mutations: {
-    arrayTables(state, payload) {
-      let arrayMesas = [];
-      axios
-        .get("mesas/getMesas")
-        .then((resMesas) => {
-          if (resMesas.data && resMesas.data.length === 50) {
-            arrayMesas = resMesas.data;
+    async arrayTables(state, payload) {
+      // Solo cargar mesas si el array está vacío
+      if (state.mesas.length === 0) {
+        try {
+          const resMesas = await axios.get("mesas/getMesas");
+          state.mesas = resMesas.data;
+        } catch (error) {
+          console.error("Error cargando mesas:", error);
+        }
+      }
 
-            // Filtrar tablas que tienen indexMesa y añadir el nombre correspondiente
-            state.arrayTables = payload
-              .filter((table) => table.indexMesa != null)
-              .map((table) => {
-                const mesaConfig = arrayMesas[table.indexMesa];
-                return {
-                  ...table,
-                  nombre: mesaConfig?.nombre || `Mesa ${table.indexMesa + 1}`,
-                };
-              });
+      const filteredTables = payload.filter((table) => table.indexMesa != null);
 
-            if (state.indexTable) {
-              state.selectedTable = state.arrayTables.find(
-                (x) => x.indexMesa == state.indexTable
-              );
-            }
-          } else {
-            throw Error("Error al obtener la configuración de mesas");
-          }
-        })
-        .catch((err) => {
-          Swal.fire("Oops...", err.message, "error");
-        });
+      // Preservar propiedades locales importantes como 'printed'
+      const updatedTables = filteredTables.map((newTable) => {
+        const existingTable = state.arrayTables.find(
+          (t) => t._id === newTable._id
+        );
+        newTable.nombre = state.mesas.find(
+          (e) => e._id == newTable.indexMesa
+        ).nombre;
+        if (existingTable && existingTable.lista) {
+          // Preservar propiedades locales en los productos
+          newTable.lista = newTable.lista.map((newProduct) => {
+            const existingProduct = existingTable.lista.find(
+              (p) =>
+                p.idArticulo === newProduct.idArticulo &&
+                JSON.stringify(p.arraySuplementos) ===
+                  JSON.stringify(newProduct.arraySuplementos)
+            );
+
+            return newProduct;
+          });
+        }
+        return newTable;
+      });
+
+      state.arrayTables = updatedTables;
+      console.log(state.arrayTables);
+      if (state.indexTable != null) {
+        state.selectedTable = state.arrayTables.find(
+          (x) => x.indexMesa == state.indexTable
+        );
+      }
     },
     async setTable(state, payload) {
       state.selectedTable = payload;

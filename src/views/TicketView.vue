@@ -293,9 +293,11 @@
         <MDBListGroupItem @click="selectOtherTable" class="header-item">
           <div class="header-content">
             <MDBIcon icon="shopping-basket" class="header-icon" />
-            <span class="header-text"
-              >Mesa {{ selectedTable.indexMesa + 1 }}</span
-            >
+            <span class="header-text">{{
+              selectedTable.nombre
+                ? selectedTable.nombre
+                : "Mesa " + (selectedTable.indexMesa + 1)
+            }}</span>
           </div>
         </MDBListGroupItem>
         <MDBListGroupItem @click="changeClients" class="header-item">
@@ -811,7 +813,8 @@ export default {
         try {
           const res2 = await axios.post("impresora/imprimirTicketComandero", {
             products: ticketsWithPrinter,
-            table: selectedTable.value.indexMesa + 1,
+            table:
+              selectedTable.value.nombre || selectedTable.value.indexMesa + 1,
             worker: SelectEmployer.value.nombre,
             clients: selectedTable.value.comensales,
           });
@@ -1350,7 +1353,6 @@ export default {
 
 .table-info {
   flex: 1;
-  background-color: transparent;
 }
 
 .table-name {
@@ -1747,32 +1749,6 @@ export default {
   .payment-btn {
     padding: 12px 20px;
     font-size: 1rem;
-  }
-
-  // Transfer modal responsive
-  .tables-grid {
-    grid-template-columns: 1fr;
-    gap: 8px;
-  }
-
-  .table-option {
-    padding: 12px;
-  }
-
-  .table-icon {
-    width: 40px;
-    height: 40px;
-    font-size: 1.1rem;
-  }
-
-  .transfer-info {
-    padding: 15px;
-  }
-
-  .cancel-transfer-btn,
-  .confirm-transfer-btn {
-    padding: 10px 15px;
-    font-size: 0.9rem;
   }
 }
 </style>

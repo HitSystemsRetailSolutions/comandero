@@ -8,10 +8,48 @@ export default {
     arrayTables: [],
     indexTable: null,
     selectedTable: [],
+    mesas: [],
   },
   mutations: {
-    arrayTables(state, payload) {
-      state.arrayTables = payload.filter((table) => table.indexMesa != null);
+    async arrayTables(state, payload) {
+      // Solo cargar mesas si el array está vacío
+      if (state.mesas.length === 0) {
+        try {
+          const resMesas = await axios.get("mesas/getMesas");
+          state.mesas = resMesas.data;
+        } catch (error) {
+          console.error("Error cargando mesas:", error);
+        }
+      }
+
+      const filteredTables = payload.filter((table) => table.indexMesa != null);
+
+      // Preservar propiedades locales importantes como 'printed'
+      const updatedTables = filteredTables.map((newTable) => {
+        const existingTable = state.arrayTables.find(
+          (t) => t._id === newTable._id
+        );
+        newTable.nombre = state.mesas.find(
+          (e) => e._id == newTable.indexMesa
+        ).nombre;
+        if (existingTable && existingTable.lista) {
+          // Preservar propiedades locales en los productos
+          newTable.lista = newTable.lista.map((newProduct) => {
+            const existingProduct = existingTable.lista.find(
+              (p) =>
+                p.idArticulo === newProduct.idArticulo &&
+                JSON.stringify(p.arraySuplementos) ===
+                  JSON.stringify(newProduct.arraySuplementos)
+            );
+
+            return newProduct;
+          });
+        }
+        return newTable;
+      });
+
+      state.arrayTables = updatedTables;
+      console.log(state.arrayTables);
       if (state.indexTable != null) {
         state.selectedTable = state.arrayTables.find(
           (x) => x.indexMesa == state.indexTable

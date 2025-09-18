@@ -26,8 +26,12 @@
           <div class="info-content">
             <MDBIcon icon="shopping-basket" class="info-icon" />
             <span class="info-text"
-              >Mesa {{ selectTable.indexMesa + 1 }} |
-              {{ selectTable.comensales }} comensales</span
+              >{{
+                selectTable?.nombre
+                  ? selectTable.nombre
+                  : "Mesa " + (selectTable.indexMesa + 1)
+              }}
+              | {{ selectTable.comensales }} comensales</span
             >
           </div>
         </MDBListGroupItem>

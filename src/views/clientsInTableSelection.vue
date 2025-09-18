@@ -166,7 +166,6 @@ export default {
           cesta: selectTable.value._id,
         })
         .then((res) => {
-          console.log(res);
           if (res) router.push("/categoryselection");
         });
     };

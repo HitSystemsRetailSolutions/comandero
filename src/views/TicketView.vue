@@ -7,15 +7,15 @@
     v-model="openEditProductModal"
     :staticBackdrop="true"
     size="lg"
-    class="edit-product-modal"
+    class="edit-product-modal custom-edit-modal"
   >
-    <MDBModalHeader class="modal-header-custom">
+    <MDBModalHeader class="modal-header-custom sticky-header">
       <div class="modal-title-custom">
         <MDBIcon icon="edit" />
         <span>{{ selectedTable.lista[EditProductModalInfo]?.nombre }}</span>
       </div>
     </MDBModalHeader>
-    <MDBModalBody class="modal-body-custom">
+    <MDBModalBody class="modal-body-custom scrollable-modal-body">
       <div class="product-edit-container">
         <!-- Sección de unidades -->
         <div class="units-section">
@@ -101,9 +101,24 @@
             </div>
           </div>
         </div>
+
+        <!-- Sección de menú (solo si es menu) -->
+        <div
+          v-if="selectedTable.lista[EditProductModalInfo]?.articulosMenu"
+          class="units-section-menu"
+        >
+          <MenuModal
+            id="menuModal"
+            :menuSelected="selectedTable.lista[EditProductModalInfo]"
+            :suplByFamily="suplByFamily"
+            :initialSeleccionadoPorFamilia="menuSeleccionadoPorFamilia"
+            :closeBtn="false"
+            @aplicarCambios="onAplicarCambios"
+          />
+        </div>
       </div>
     </MDBModalBody>
-    <MDBModalFooter class="modal-footer-custom">
+    <MDBModalFooter class="modal-footer-custom sticky-footer">
       <MDBBtn
         color="secondary"
         @click="openEditProductModal = false"
@@ -529,7 +544,7 @@ import { useRouter } from "vue-router";
 import router from "@/router";
 import Swal from "sweetalert2";
 import axios from "axios";
-
+import MenuModal from "@/components/MenuModal.vue";
 export default {
   name: "MenuPrincipalView",
   components: {
@@ -543,6 +558,7 @@ export default {
     MDBModalHeader,
     MDBModalBody,
     MDBModalFooter,
+    MenuModal,
   },
   setup() {
     const store = useStore();
@@ -560,6 +576,64 @@ export default {
     const EditProductModalInfo = ref(-1);
     const actProd = ref(null);
     const selectedTargetTable = ref(null);
+
+    // menu
+    const menuArticles = ref(null);
+
+    const suplByFamily = computed(() => {
+      const grupos = {};
+      if (!menuArticles.value) return grupos;
+      menuArticles.value.forEach((sup) => {
+        const familia = sup.familia || "Sin familia";
+        if (!grupos[familia]) grupos[familia] = [];
+        grupos[familia].push(sup);
+      });
+      // Ordenar familias alfabéticamente y los suplementos dentro de cada familia
+      const familiasOrdenadas = Object.keys(grupos).sort((a, b) =>
+        a.localeCompare(b)
+      );
+      const resultado = {};
+      familiasOrdenadas.forEach((fam) => {
+        resultado[fam] = grupos[fam].sort((a, b) =>
+          a.nombre.localeCompare(b.nombre)
+        );
+      });
+      return resultado;
+    });
+
+    // Mapea articulosMenu a seleccionadoPorFamilia para MenuModal
+    const menuSeleccionadoPorFamilia = computed(() => {
+      const result = {};
+      const articulosMenu =
+        selectedTable.value.lista[EditProductModalInfo.value]?.articulosMenu;
+      const suplMap = {};
+      // Construir un mapa _id -> familia en suplByFamily
+      Object.entries(suplByFamily.value).forEach(([familia, sups]) => {
+        sups.forEach((sup) => {
+          suplMap[sup._id] = { familia, sup };
+        });
+      });
+      if (articulosMenu && Array.isArray(articulosMenu)) {
+        articulosMenu.forEach((art) => {
+          // Buscar el suplemento en suplByFamily por idArticulo === _id
+          const match = suplMap[art.idArticulo];
+          if (match) {
+            // Normalizar el objeto como espera el modal
+            const idSup = art.idArticulo ?? art._id ?? null;
+            const obj = {
+              idArticulo: idSup,
+              nombre: art.nombre ?? null,
+              arraySuplementos: art.arraySuplementos ?? null,
+              unidades: art.unidades ?? 1,
+              gramos: art.gramos ?? null,
+            };
+            result[match.familia] = obj;
+          }
+        });
+      }
+      console.log("menuSeleccionadoPorFamilia:", result);
+      return result;
+    });
 
     const selectOtherEmployer = () => {
       router.push("/employer");
@@ -724,6 +798,19 @@ export default {
 
     const selectProduct = async (x) => {
       if (actProd.value == x) {
+        if (selectedTable.value.lista[x]?.articulosMenu) {
+          console.log(
+            "Artículo es menú, cargando suplementos y abriendo modal..."
+          );
+          const infoArticle = await axios.post("articulos/getArticuloById", {
+            idArticulo: selectedTable.value.lista[x].idArticulo,
+          });
+          const res = await axios.post("articulos/getSuplementos", {
+            arrayIdSuplementos: infoArticle?.data?.suplementos,
+          });
+          menuArticles.value = res.data;
+          // logica pa enviar parametros al comp menu
+        }
         selectedTable.value.lista[x].id = x;
         EditProductModalInfo.value = x;
         openEditProductModal.value = true;
@@ -732,6 +819,17 @@ export default {
       actProd.value = x;
     };
 
+    async function onAplicarCambios(menu) {
+      const seleccionadoPorFamilia = Object.values(menu);
+      try {
+        const res = await axios.post("cestas/modificarArticuloMenu", {
+          idCesta: selectedTable.value._id,
+          articulosMenu: seleccionadoPorFamilia,
+          indexCesta: actProd.value,
+        });
+        console.log(res);
+      } catch (error) {}
+    }
     const removeSuplement = async (sup) => {
       openEditProductModal.value = false;
       let x = selectedTable.value.lista[EditProductModalInfo.value];
@@ -879,6 +977,10 @@ export default {
       restProduct,
       addProduct,
       EditProductModalInfo,
+      suplByFamily,
+      menuSeleccionadoPorFamilia,
+      menuArticles,
+      onAplicarCambios,
       selectedTargetTable,
       availableTables,
       selectTargetTable,
@@ -1442,6 +1544,13 @@ export default {
   border: 1px solid #e9ecef;
 }
 
+.units-section-menu {
+  background-color: #ffffff;
+
+  border-radius: 10px;
+  border: 1px solid #e9ecef;
+}
+
 .units-display {
   display: flex;
   flex-direction: column;
@@ -1750,5 +1859,32 @@ export default {
     padding: 12px 20px;
     font-size: 1rem;
   }
+}
+
+.menu-section {
+  background-color: #f8f9fa;
+}
+// --- MODAL DE EDICIÓN DE PRODUCTO ---
+.custom-edit-modal {
+  display: flex;
+  flex-direction: column;
+  max-height: 100vh;
+}
+.sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #fff;
+}
+.sticky-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  background: #fff;
+}
+.scrollable-modal-body {
+  overflow-y: auto;
+  max-height: calc(100vh - 120px); /* Ajusta según altura header+footer */
+  padding-bottom: 16px;
 }
 </style>

@@ -354,7 +354,6 @@ export default {
     }
 
     const addProduct = async (x, i) => {
-      console.log("addProduct-SelPorFam", seleccionadoPorFamilia.value);
       await axios.post(
         "teclado/clickTeclaArticulo",
         {

@@ -912,7 +912,8 @@ export default {
           const res2 = await axios.post("impresora/imprimirTicketComandero", {
             products: ticketsWithPrinter,
             table:
-              selectedTable.value.nombre || selectedTable.value.indexMesa + 1,
+              selectedTable.value.nombre ||
+              "TAULA: " + selectedTable.value.indexMesa + 1,
             worker: SelectEmployer.value.nombre,
             clients: selectedTable.value.comensales,
           });

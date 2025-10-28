@@ -390,7 +390,19 @@
                   class="supplement-row"
                 >
                   <div v-for="(v, h) in z" :key="y" class="supplement-row">
-                    <span class="supplement-text">→ {{ v.nombre }}</span>
+                    <span
+                      class="supplement-text"
+                      :style="{
+                        color: v.printed == v.unidades ? 'green' : '',
+                      }"
+                      >→ {{ v.nombre }} &nbsp;
+                      <MDBIcon
+                        v-if="v.printed == v.unidades"
+                        icon="print"
+                        class="print-icon"
+                        style="color: green" />
+                      &nbsp; <MDBIcon v-else icon="print" class="print-icon"
+                    /></span>
                     <div
                       v-for="(p, q) in v.suplementosPorArticulo"
                       :key="y"
@@ -401,7 +413,13 @@
                         :key="y"
                         class="subsupplement-row"
                       >
-                        <span class="supplement-text">➥ {{ a.nombre }}</span>
+                        <span
+                          :style="{
+                            color: v.printed == v.unidades ? 'green' : '',
+                          }"
+                          class="supplement-text"
+                          >➥ {{ a.nombre }}</span
+                        >
                       </div>
                     </div>
                   </div>

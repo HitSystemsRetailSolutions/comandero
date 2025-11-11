@@ -35,6 +35,11 @@
             <div class="units-controls">
               <div
                 class="control-btn add-btn"
+                v-if="
+                  !selectedTable.lista[EditProductModalInfo]?.nombre.includes(
+                    'Promo. '
+                  )
+                "
                 @click="
                   addProduct(
                     selectedTable.lista[EditProductModalInfo],
@@ -923,6 +928,12 @@ export default {
             selectedTable.value.lista[i].unidades
         ) {
           ticketsWithPrinter.push(selectedTable.value.lista[i]);
+        }
+        if (selectedTable.value.lista[i]?.promocion) {
+          let y = selectedTable.value.lista[i]?.promocion.grupos;
+          for (let j = 0; j < y.length; j++) {
+            ticketsWithPrinter.push(selectedTable.value.lista[i]);
+          }
         }
       }
       if (ticketsWithPrinter.length > 0) {

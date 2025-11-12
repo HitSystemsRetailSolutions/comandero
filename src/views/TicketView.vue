@@ -932,7 +932,8 @@ export default {
         if (selectedTable.value.lista[i]?.promocion) {
           let y = selectedTable.value.lista[i]?.promocion.grupos;
           for (let j = 0; j < y.length; j++) {
-            ticketsWithPrinter.push(selectedTable.value.lista[i]);
+            if (!ticketsWithPrinter.includes(selectedTable.value.lista[i]))
+              ticketsWithPrinter.push(selectedTable.value.lista[i]);
           }
         }
       }

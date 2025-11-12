@@ -39,7 +39,7 @@ export default {
               (p) =>
                 p.idArticulo === newProduct.idArticulo &&
                 JSON.stringify(p.arraySuplementos) ===
-                  JSON.stringify(newProduct.arraySuplementos)
+                JSON.stringify(newProduct.arraySuplementos)
             );
 
             return newProduct;
@@ -49,7 +49,7 @@ export default {
       });
 
       state.arrayTables = updatedTables;
-      console.log(state.arrayTables);
+      // console.log(state.arrayTables);
       if (state.indexTable != null) {
         state.selectedTable = state.arrayTables.find(
           (x) => x.indexMesa == state.indexTable
@@ -68,7 +68,7 @@ export default {
           // await router.push("/categoryselection");
         });
     },
-    async addProduct(state, payload) {},
+    async addProduct(state, payload) { },
     async removeProduct(state, payload) {
       axios
         .post("cestas/borrarItemCesta", {

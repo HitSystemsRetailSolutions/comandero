@@ -322,8 +322,8 @@
                         color: v.printed == v.unidades ? 'green' : '',
                       }"
                       >→ {{ v.nombre }} &nbsp;
-                      <MDBIcon v-if="v.printed == v.unidades" icon="print" class="print-icon" style="color: green" />
-                      &nbsp; <MDBIcon v-else icon="print" class="print-icon"
+                      <MDBIcon v-if="v.impresora && v.printed == v.unidades" icon="print" class="print-icon" style="color: green" />
+                      &nbsp; <MDBIcon v-else-if="v.impresora" icon="print" class="print-icon"
                     /></span>
                     <div v-for="(p, q) in v.suplementosPorArticulo" :key="y" class="supplement-row">
                       <div v-for="(a, b) in p.suplementos" :key="y" class="subsupplement-row">

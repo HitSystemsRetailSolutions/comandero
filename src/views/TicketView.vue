@@ -319,17 +319,21 @@
                     <span
                       class="supplement-text"
                       :style="{
-                        color: v.printed == v.unidades ? 'green' : '',
+                        color: v.printed == (x.promocion?.unidadesOferta || 1) * v.unidades ? 'green' : '',
                       }"
                       >→ {{ v.nombre }} &nbsp;
-                      <MDBIcon v-if="v.impresora && v.printed == v.unidades" icon="print" class="print-icon" style="color: green" />
+                      <MDBIcon
+                        v-if="v.impresora && v.printed == (x.promocion?.unidadesOferta || 1) * v.unidades"
+                        icon="print"
+                        class="print-icon"
+                        style="color: green" />
                       &nbsp; <MDBIcon v-else-if="v.impresora" icon="print" class="print-icon"
                     /></span>
                     <div v-for="(p, q) in v.suplementosPorArticulo" :key="y" class="supplement-row">
                       <div v-for="(a, b) in p.suplementos" :key="y" class="subsupplement-row">
                         <span
                           :style="{
-                            color: v.printed == v.unidades ? 'green' : '',
+                            color: v.printed == (x.promocion?.unidadesOferta || 1) * v.unidades ? 'green' : '',
                           }"
                           class="supplement-text"
                           >➥ {{ a.nombre }}</span

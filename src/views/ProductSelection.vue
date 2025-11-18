@@ -376,6 +376,7 @@ export default {
           },
         }
       );
+      arraySuplementosSelected.value = null;
       suplArticle.value = null;
       seleccionadoPorFamilia.value = null;
     };

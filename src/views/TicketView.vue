@@ -7,7 +7,8 @@
     v-model="openEditProductModal"
     :staticBackdrop="true"
     size="lg"
-    class="edit-product-modal custom-edit-modal">
+    class="edit-product-modal custom-edit-modal"
+  >
     <MDBModalHeader class="modal-header-custom sticky-header">
       <div class="modal-title-custom">
         <MDBIcon icon="edit" />
@@ -25,15 +26,28 @@
 
           <div class="units-display">
             <div class="current-units">
-              <span class="units-number">{{ selectedTable.lista[EditProductModalInfo]?.unidades }}</span>
+              <span class="units-number">{{
+                selectedTable.lista[EditProductModalInfo]?.unidades
+              }}</span>
               <span class="units-label">uds.</span>
             </div>
 
             <div class="units-controls">
               <div
                 class="control-btn add-btn"
-                v-if="!selectedTable.lista[EditProductModalInfo]?.nombre.includes('Promo. ')"
-                @click="addProduct(selectedTable.lista[EditProductModalInfo], null, false)">
+                v-if="
+                  !selectedTable.lista[EditProductModalInfo]?.nombre.includes(
+                    'Promo. '
+                  )
+                "
+                @click="
+                  addProduct(
+                    selectedTable.lista[EditProductModalInfo],
+                    null,
+                    false
+                  )
+                "
+              >
                 <MDBIcon icon="plus" />
               </div>
               <div
@@ -41,15 +55,24 @@
                 @click="
                   removeProduct(selectedTable.lista[EditProductModalInfo]);
                   openEditProductModal = false;
-                ">
+                "
+              >
                 <MDBIcon icon="trash-alt" />
               </div>
               <div
                 class="control-btn minus-btn"
-                @click="restProduct(selectedTable.lista[EditProductModalInfo], null, false)"
+                @click="
+                  restProduct(
+                    selectedTable.lista[EditProductModalInfo],
+                    null,
+                    false
+                  )
+                "
                 :class="{
-                  disabled: selectedTable.lista[EditProductModalInfo]?.unidades == 1,
-                }">
+                  disabled:
+                    selectedTable.lista[EditProductModalInfo]?.unidades == 1,
+                }"
+              >
                 <MDBIcon icon="minus" />
               </div>
             </div>
@@ -57,7 +80,10 @@
         </div>
 
         <!-- Sección de suplementos -->
-        <div v-if="selectedTable.lista[EditProductModalInfo]?.arraySuplementos" class="supplements-section">
+        <div
+          v-if="selectedTable.lista[EditProductModalInfo]?.arraySuplementos"
+          class="supplements-section"
+        >
           <div class="section-header">
             <MDBIcon icon="plus-circle" />
             <span class="section-title">Suplementos</span>
@@ -65,9 +91,11 @@
 
           <div class="supplements-list">
             <div
-              v-for="(x, i) in selectedTable.lista[EditProductModalInfo].arraySuplementos"
+              v-for="(x, i) in selectedTable.lista[EditProductModalInfo]
+                .arraySuplementos"
               :key="i"
-              class="supplement-item">
+              class="supplement-item"
+            >
               <div class="supplement-info">
                 <MDBIcon icon="arrow-right" class="supplement-icon" />
                 <span class="supplement-name">{{ x.nombre }}</span>
@@ -80,19 +108,27 @@
         </div>
 
         <!-- Sección de menú (solo si es menu) -->
-        <div v-if="selectedTable.lista[EditProductModalInfo]?.articulosMenu" class="units-section-menu">
+        <div
+          v-if="selectedTable.lista[EditProductModalInfo]?.articulosMenu"
+          class="units-section-menu"
+        >
           <MenuModal
             id="menuModal"
             :menuSelected="selectedTable.lista[EditProductModalInfo]"
             :suplByFamily="suplByFamily"
             :initialSeleccionadoPorFamilia="menuSeleccionadoPorFamilia"
             :closeBtn="false"
-            @aplicarCambios="onAplicarCambios" />
+            @aplicarCambios="onAplicarCambios"
+          />
         </div>
       </div>
     </MDBModalBody>
     <MDBModalFooter class="modal-footer-custom sticky-footer">
-      <MDBBtn color="secondary" @click="openEditProductModal = false" class="close-btn">
+      <MDBBtn
+        color="secondary"
+        @click="openEditProductModal = false"
+        class="close-btn"
+      >
         <MDBIcon icon="times" />
         Cerrar
       </MDBBtn>
@@ -107,7 +143,8 @@
     v-model="paymentModal"
     :staticBackdrop="true"
     size="md"
-    class="payment-modal">
+    class="payment-modal"
+  >
     <MDBModalHeader class="payment-modal-header">
       <div class="payment-modal-title">
         <MDBIcon icon="credit-card" />
@@ -155,7 +192,11 @@
       </div>
     </MDBModalBody>
     <MDBModalFooter class="payment-modal-footer">
-      <MDBBtn color="secondary" @click="paymentModal = false" class="cancel-payment-btn">
+      <MDBBtn
+        color="secondary"
+        @click="paymentModal = false"
+        class="cancel-payment-btn"
+      >
         <MDBIcon icon="times" />
         Cancelar
       </MDBBtn>
@@ -170,7 +211,8 @@
     v-model="transferModal"
     :staticBackdrop="true"
     size="md"
-    class="transfer-modal">
+    class="transfer-modal"
+  >
     <MDBModalHeader class="transfer-modal-header">
       <div class="transfer-modal-title">
         <MDBIcon icon="exchange-alt" />
@@ -187,7 +229,9 @@
         </div>
         <div class="products-count">
           <div class="count-label">Productos a traspasar:</div>
-          <div class="count-value">{{ selectedTable.lista.length }} productos</div>
+          <div class="count-value">
+            {{ selectedTable.lista.length }} productos
+          </div>
         </div>
       </div>
 
@@ -203,19 +247,34 @@
             :key="table._id"
             class="table-option"
             @click="selectTargetTable(table)"
-            :class="{ selected: selectedTargetTable?._id === table._id }">
+            :class="{ selected: selectedTargetTable?._id === table._id }"
+          >
             <div class="table-icon">
-              <MDBIcon :icon="table.lista && table.lista.length > 0 ? 'utensils' : 'table'" />
+              <MDBIcon
+                :icon="
+                  table.lista && table.lista.length > 0 ? 'utensils' : 'table'
+                "
+              />
             </div>
             <div class="table-info">
               <div class="table-name">
                 {{ table.nombre || `Mesa ${table.indexMesa + 1}` }}
               </div>
-              <div class="table-status" :class="{ occupied: table.lista && table.lista.length > 0 }">
-                {{ table.lista && table.lista.length > 0 ? `${table.lista.length} productos` : "Libre" }}
+              <div
+                class="table-status"
+                :class="{ occupied: table.lista && table.lista.length > 0 }"
+              >
+                {{
+                  table.lista && table.lista.length > 0
+                    ? `${table.lista.length} productos`
+                    : "Libre"
+                }}
               </div>
             </div>
-            <div v-if="table.lista && table.lista.length > 0" class="warning-icon">
+            <div
+              v-if="table.lista && table.lista.length > 0"
+              class="warning-icon"
+            >
               <MDBIcon icon="exclamation-triangle" />
             </div>
           </div>
@@ -229,11 +288,17 @@
           transferModal = false;
           selectedTargetTable = null;
         "
-        class="cancel-transfer-btn">
+        class="cancel-transfer-btn"
+      >
         <MDBIcon icon="times" />
         Cancelar
       </MDBBtn>
-      <MDBBtn color="warning" @click="confirmTransfer" :disabled="!selectedTargetTable" class="confirm-transfer-btn">
+      <MDBBtn
+        color="warning"
+        @click="confirmTransfer"
+        :disabled="!selectedTargetTable"
+        class="confirm-transfer-btn"
+      >
         <MDBIcon icon="check" />
         Confirmar traspaso
       </MDBBtn>
@@ -249,20 +314,25 @@
           <div class="header-content">
             <MDBIcon icon="shopping-basket" class="header-icon" />
             <span class="header-text">{{
-              selectedTable.nombre ? selectedTable.nombre : "Mesa " + (selectedTable.indexMesa + 1)
+              selectedTable.nombre
+                ? selectedTable.nombre
+                : "Mesa " + (selectedTable.indexMesa + 1)
             }}</span>
           </div>
         </MDBListGroupItem>
         <MDBListGroupItem @click="changeClients" class="header-item">
           <div class="header-content">
             <MDBIcon icon="user-tie" class="header-icon" />
-            <span class="header-text">{{ selectedTable.comensales }} comensales</span>
+            <span class="header-text"
+              >{{ selectedTable.comensales }} comensales</span
+            >
           </div>
         </MDBListGroupItem>
         <MDBListGroupItem
           class="header-item prepare-item"
-          @click="sendToPrepare"
-          :class="{ disabled: selectedTable.lista.length == 0 }">
+          @click="handleSendToPrepare"
+          :class="{ disabled: selectedTable.lista.length == 0 }"
+        >
           <div class="header-content">
             <MDBIcon icon="print" class="header-icon" />
             <span class="header-text">Preparar</span>
@@ -285,7 +355,10 @@
       </div>
 
       <!-- Tabla de productos responsive -->
-      <div v-if="selectedTable.lista.length > 0" class="products-table-container">
+      <div
+        v-if="selectedTable.lista.length > 0"
+        class="products-table-container"
+      >
         <div class="table-header-row">
           <div class="col-units">Uds.</div>
           <div class="col-product">Producto</div>
@@ -298,7 +371,8 @@
             :key="i"
             class="product-row"
             @click="selectProduct(i)"
-            :class="{ selected: actProd == i }">
+            :class="{ selected: actProd == i }"
+          >
             <div class="col-units">
               <span class="units-badge">x{{ x.unidades }}</span>
             </div>
@@ -309,31 +383,60 @@
                   v-if="x.impresora"
                   icon="print"
                   class="print-icon"
-                  :class="{ printed: x?.printed == x.unidades }" />
+                  :class="{ printed: x?.printed == x.unidades }"
+                />
                 <span class="product-name">{{ x.nombre }} </span>
               </div>
 
               <div v-if="x.promocion" class="supplements">
-                <div v-for="(z, y) in x.promocion.grupos" :key="y" class="supplement-row">
+                <div
+                  v-for="(z, y) in x.promocion.grupos"
+                  :key="y"
+                  class="supplement-row"
+                >
                   <div v-for="(v, h) in z" :key="y" class="supplement-row">
                     <span
                       class="supplement-text"
                       :style="{
-                        color: v.printed == (x.promocion?.unidadesOferta || 1) * v.unidades ? 'green' : '',
+                        color:
+                          v.printed ==
+                          (x.promocion?.unidadesOferta || 1) * v.unidades
+                            ? 'green'
+                            : '',
                       }"
                       >→ {{ v.nombre }} &nbsp;
                       <MDBIcon
-                        v-if="v.impresora && v.printed == (x.promocion?.unidadesOferta || 1) * v.unidades"
+                        v-if="
+                          v.impresora &&
+                          v.printed ==
+                            (x.promocion?.unidadesOferta || 1) * v.unidades
+                        "
                         icon="print"
                         class="print-icon"
                         style="color: green" />
-                      &nbsp; <MDBIcon v-else-if="v.impresora" icon="print" class="print-icon"
+                      &nbsp;
+                      <MDBIcon
+                        v-else-if="v.impresora"
+                        icon="print"
+                        class="print-icon"
                     /></span>
-                    <div v-for="(p, q) in v.suplementosPorArticulo" :key="y" class="supplement-row">
-                      <div v-for="(a, b) in p.suplementos" :key="y" class="subsupplement-row">
+                    <div
+                      v-for="(p, q) in v.suplementosPorArticulo"
+                      :key="y"
+                      class="supplement-row"
+                    >
+                      <div
+                        v-for="(a, b) in p.suplementos"
+                        :key="y"
+                        class="subsupplement-row"
+                      >
                         <span
                           :style="{
-                            color: v.printed == (x.promocion?.unidadesOferta || 1) * v.unidades ? 'green' : '',
+                            color:
+                              v.printed ==
+                              (x.promocion?.unidadesOferta || 1) * v.unidades
+                                ? 'green'
+                                : '',
                           }"
                           class="supplement-text"
                           >➥ {{ a.nombre }}</span
@@ -345,23 +448,47 @@
               </div>
 
               <div v-if="x.arraySuplementos" class="supplements">
-                <div v-for="(z, y) in x.arraySuplementos" :key="y" class="supplement-row">
+                <div
+                  v-for="(z, y) in x.arraySuplementos"
+                  :key="y"
+                  class="supplement-row"
+                >
                   <span class="supplement-text">→ {{ z.nombre }}</span>
                 </div>
               </div>
 
               <div v-if="x.articulosMenu" class="supplements">
-                <div v-for="(z, y) in x.articulosMenu" :key="y" class="supplement-row">
+                <div
+                  v-for="(z, y) in x.articulosMenu"
+                  :key="y"
+                  class="supplement-row"
+                >
                   <span class="supplement-text">{{ z.nombre }}</span>
 
                   <!-- Subniveles -->
-                  <div v-if="z.arraySuplementos" class="supplements" style="margin-left: 20px">
-                    <div v-for="(a, b) in z.arraySuplementos" :key="b" class="supplement-row">
+                  <div
+                    v-if="z.arraySuplementos"
+                    class="supplements"
+                    style="margin-left: 20px"
+                  >
+                    <div
+                      v-for="(a, b) in z.arraySuplementos"
+                      :key="b"
+                      class="supplement-row"
+                    >
                       <span class="supplement-text">→ {{ a.nombre }}</span>
 
                       <!-- Sub-subniveles -->
-                      <div v-if="a.arraySuplementos" class="supplements" style="margin-left: 20px">
-                        <div v-for="(c, d) in a.arraySuplementos" :key="d" class="supplement-row">
+                      <div
+                        v-if="a.arraySuplementos"
+                        class="supplements"
+                        style="margin-left: 20px"
+                      >
+                        <div
+                          v-for="(c, d) in a.arraySuplementos"
+                          :key="d"
+                          class="supplement-row"
+                        >
                           <span class="supplement-text">→ {{ c.nombre }}</span>
                         </div>
                       </div>
@@ -374,7 +501,11 @@
             <div class="col-price">
               <div class="main-price">{{ x.subtotal.toFixed(2) }}€</div>
               <div v-if="x.arraySuplementos" class="supplement-prices">
-                <div v-for="(z, y) in x.arraySuplementos" :key="y" class="supplement-price">
+                <div
+                  v-for="(z, y) in x.arraySuplementos"
+                  :key="y"
+                  class="supplement-price"
+                >
                   {{ z.precioConIva.toFixed(2) }}€
                 </div>
               </div>
@@ -410,7 +541,8 @@
           size="lg"
           class="payment-btn"
           @click="paymentModal = true"
-          :disabled="selectedTable.lista.length == 0">
+          :disabled="selectedTable.lista.length == 0"
+        >
           <MDBIcon icon="cash-register" />
           Cobrar pedido
         </MDBBtn>
@@ -420,7 +552,8 @@
           size="lg"
           class="transfer-btn"
           @click="transferModal = true"
-          :disabled="selectedTable.lista.length == 0">
+          :disabled="selectedTable.lista.length == 0"
+        >
           <MDBIcon icon="exchange-alt" />
           Traspasar mesa
         </MDBBtn>
@@ -469,7 +602,9 @@ export default {
   setup() {
     const store = useStore();
     const route = useRouter();
-    const SelectEmployer = computed(() => store.state.Employers.selectedEmployer);
+    const SelectEmployer = computed(
+      () => store.state.Employers.selectedEmployer
+    );
     const hideInfo = ref(false);
     const tables = computed(() => store.state.Tables.arrayTables);
     let selectedTable = computed(() => store.state.Tables.selectedTable);
@@ -493,10 +628,14 @@ export default {
         grupos[familia].push(sup);
       });
       // Ordenar familias alfabéticamente y los suplementos dentro de cada familia
-      const familiasOrdenadas = Object.keys(grupos).sort((a, b) => a.localeCompare(b));
+      const familiasOrdenadas = Object.keys(grupos).sort((a, b) =>
+        a.localeCompare(b)
+      );
       const resultado = {};
       familiasOrdenadas.forEach((fam) => {
-        resultado[fam] = grupos[fam].sort((a, b) => a.nombre.localeCompare(b.nombre));
+        resultado[fam] = grupos[fam].sort((a, b) =>
+          a.nombre.localeCompare(b.nombre)
+        );
       });
       return resultado;
     });
@@ -504,7 +643,8 @@ export default {
     // Mapea articulosMenu a seleccionadoPorFamilia para MenuModal
     const menuSeleccionadoPorFamilia = computed(() => {
       const result = {};
-      const articulosMenu = selectedTable.value.lista[EditProductModalInfo.value]?.articulosMenu;
+      const articulosMenu =
+        selectedTable.value.lista[EditProductModalInfo.value]?.articulosMenu;
       const suplMap = {};
       // Construir un mapa _id -> familia en suplByFamily
       Object.entries(suplByFamily.value).forEach(([familia, sups]) => {
@@ -540,7 +680,9 @@ export default {
 
     // Computed para mesas disponibles (excluyendo la mesa actual)
     const availableTables = computed(() => {
-      return tables.value.filter((table) => table._id !== selectedTable.value._id);
+      return tables.value.filter(
+        (table) => table._id !== selectedTable.value._id
+      );
     });
 
     // Función para seleccionar mesa destino
@@ -553,11 +695,15 @@ export default {
       if (!selectedTargetTable.value) return;
 
       // Si la mesa destino tiene productos, mostrar advertencia
-      if (selectedTargetTable.value.lista && selectedTargetTable.value.lista.length > 0) {
+      if (
+        selectedTargetTable.value.lista &&
+        selectedTargetTable.value.lista.length > 0
+      ) {
         const result = await Swal.fire({
           title: "¡Atención!",
           text: `La mesa "${
-            selectedTargetTable.value.nombre || `Mesa ${selectedTargetTable.value.indexMesa + 1}`
+            selectedTargetTable.value.nombre ||
+            `Mesa ${selectedTargetTable.value.indexMesa + 1}`
           }" ya tiene productos. Debes vaciarla primero antes de traspasar.`,
           icon: "warning",
           showCancelButton: true,
@@ -572,7 +718,8 @@ export default {
         const result = await Swal.fire({
           title: "¿Confirmar traspaso?",
           text: `¿Estás seguro de traspasar todos los productos a "${
-            selectedTargetTable.value.nombre || `Mesa ${selectedTargetTable.value.indexMesa + 1}`
+            selectedTargetTable.value.nombre ||
+            `Mesa ${selectedTargetTable.value.indexMesa + 1}`
           }"?`,
           icon: "question",
           showCancelButton: true,
@@ -608,7 +755,8 @@ export default {
         Swal.fire({
           icon: "error",
           title: "Error",
-          text: error.response?.data?.message || "No se pudo realizar el traspaso",
+          text:
+            error.response?.data?.message || "No se pudo realizar el traspaso",
         });
       }
     };
@@ -630,7 +778,8 @@ export default {
       let z = selectedTable.value.lista.filter(
         (products) =>
           products.idArticulo == x.idArticulo &&
-          JSON.stringify(products.arraySuplementos) == JSON.stringify(x.arraySuplementos)
+          JSON.stringify(products.arraySuplementos) ==
+            JSON.stringify(x.arraySuplementos)
       );
       if (z.length > 0) {
         if (z[0].unidades > 1) {
@@ -665,7 +814,8 @@ export default {
       let z = selectedTable.value.lista.filter(
         (products) =>
           products.idArticulo == x.idArticulo &&
-          JSON.stringify(products.arraySuplementos) == JSON.stringify(x.arraySuplementos)
+          JSON.stringify(products.arraySuplementos) ==
+            JSON.stringify(x.arraySuplementos)
       );
       await store.dispatch("Tables/removeProduct", EditProductModalInfo.value);
       return x;
@@ -688,7 +838,9 @@ export default {
     const selectProduct = async (x) => {
       if (actProd.value == x) {
         if (selectedTable.value.lista[x]?.articulosMenu) {
-          console.log("Artículo es menú, cargando suplementos y abriendo modal...");
+          console.log(
+            "Artículo es menú, cargando suplementos y abriendo modal..."
+          );
           const infoArticle = await axios.post("articulos/getArticuloById", {
             idArticulo: selectedTable.value.lista[x].idArticulo,
           });
@@ -783,12 +935,23 @@ export default {
       }
     }
 
+    const isPreparing = ref(false);
+
+    const handleSendToPrepare = async () => {
+      if (isPreparing.value) return;
+      isPreparing.value = true;
+      await sendToPrepare().finally(() => {
+        isPreparing.value = false;
+      });
+    };
+
     const sendToPrepare = async () => {
       let ticketsWithPrinter = [];
       for (let i = 0; i < selectedTable.value.lista.length; i++) {
         if (
           selectedTable.value.lista[i].impresora &&
-          selectedTable.value.lista[i].printed != selectedTable.value.lista[i].unidades
+          selectedTable.value.lista[i].printed !=
+            selectedTable.value.lista[i].unidades
         ) {
           ticketsWithPrinter.push(selectedTable.value.lista[i]);
         }
@@ -797,7 +960,9 @@ export default {
         try {
           const res2 = await axios.post("impresora/imprimirTicketComandero", {
             products: ticketsWithPrinter,
-            table: selectedTable.value.nombre || "TAULA: " + selectedTable.value.indexMesa + 1,
+            table:
+              selectedTable.value.nombre ||
+              "TAULA: " + selectedTable.value.indexMesa + 1,
             worker: SelectEmployer.value.nombre,
             clients: selectedTable.value.comensales,
           });
@@ -847,6 +1012,7 @@ export default {
       cobrar,
       router,
       hideInfo,
+      handleSendToPrepare,
       sendToPrepare,
       selectProduct,
       openEditProductModal,

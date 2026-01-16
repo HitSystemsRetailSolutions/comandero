@@ -1,75 +1,95 @@
 import axios from "axios";
 import Swal from "sweetalert2";
-import router from "@/router";
 import Employers from "./Employers";
 export default {
   namespaced: true,
   state: {
     arrayTables: [],
+    rawBaskets: [],
     indexTable: null,
     selectedTable: [],
     mesas: [],
+    salas: [],
+    salaId: 'MESAS',
   },
   mutations: {
-    async arrayTables(state, payload) {
-      // Solo cargar mesas si el array está vacío
-      if (state.mesas.length === 0) {
-        try {
-          const resMesas = await axios.get("mesas/getMesas");
-          state.mesas = resMesas.data;
-        } catch (error) {
-          console.error("Error cargando mesas:", error);
-        }
-      }
+    setSalas(state, payload) {
+      state.salas = payload;
+    },
+    setSalasId(state, payload) {
+      state.salasId = payload;
+    },
+    setSalaId(state, payload) {
+      state.salaId = payload;
+    },
+    setMesas(state, payload) {
+      state.mesas = payload;
+    },
+    arrayTables(state, payload) {
+      state.rawBaskets = payload;
 
-      const filteredTables = payload.filter((table) => table.indexMesa != null);
+      const currentRoomBaskets = payload.filter(
+        (basket) => basket.salaId === state.salaId
+      );
 
-      // Preservar propiedades locales importantes como 'printed'
-      const updatedTables = filteredTables.map((newTable) => {
-        const existingTable = state.arrayTables.find(
-          (t) => t._id === newTable._id
+      const activeMesas = state.mesas.filter(
+        (m) => m.nombre && m.nombre.trim() !== ""
+      );
+
+      const combinedTables = activeMesas.map((mesaDef) => {
+        let activeBasket = currentRoomBaskets.find(
+          (basket) => basket.indexMesa == mesaDef._id
         );
-        newTable.nombre = state.mesas.find(
-          (e) => e._id == newTable.indexMesa
-        ).nombre;
-        if (existingTable && existingTable.lista) {
-          // Preservar propiedades locales en los productos
-          newTable.lista = newTable.lista.map((newProduct) => {
-            const existingProduct = existingTable.lista.find(
-              (p) =>
-                p.idArticulo === newProduct.idArticulo &&
-                JSON.stringify(p.arraySuplementos) ===
-                JSON.stringify(newProduct.arraySuplementos)
-            );
 
-            return newProduct;
-          });
+        if (activeBasket) {
+          activeBasket = { ...activeBasket, nombre: mesaDef.nombre };
+
+          const previousTableState = state.arrayTables.find(
+            (t) => t.indexMesa == mesaDef._id
+          );
+
+          if (previousTableState && previousTableState.lista) {
+            activeBasket.lista = activeBasket.lista.map((newItem) => {
+              const previousItem = previousTableState.lista.find(
+                (p) =>
+                  p.idArticulo === newItem.idArticulo &&
+                  JSON.stringify(p.arraySuplementos) ===
+                    JSON.stringify(newItem.arraySuplementos)
+              );
+
+              if (previousItem) {
+                newItem.printed = previousItem.printed || 0;
+              }
+              return newItem;
+            });
+          }
+          return activeBasket;
+        } else {
+          return {
+            _id: null,
+            indexMesa: mesaDef._id,
+            nombre: mesaDef.nombre,
+            salaId: state.salaId,
+            lista: [],
+          };
         }
-        return newTable;
       });
 
-      state.arrayTables = updatedTables;
-      // console.log(state.arrayTables);
+      state.arrayTables = combinedTables;
+
       if (state.indexTable != null) {
-        state.selectedTable = state.arrayTables.find(
+        const found = state.arrayTables.find(
           (x) => x.indexMesa == state.indexTable
         );
+        state.selectedTable = found || [];
       }
     },
-    async setTable(state, payload) {
+    setTable(state, payload) {
       state.selectedTable = payload;
       state.indexTable = payload.indexMesa;
-      await axios
-        .post("cestas/cambiarCestaTrabajador", {
-          idCesta: state.selectedTable._id,
-          idTrabajador: Employers.state.selectedEmployer._id,
-        })
-        .then(async (res) => {
-          // await router.push("/categoryselection");
-        });
     },
-    async addProduct(state, payload) { },
-    async removeProduct(state, payload) {
+    addProduct(state, payload) {},
+    removeProduct(state, payload) {
       axios
         .post("cestas/borrarItemCesta", {
           idCesta: state.selectedTable._id,
@@ -83,26 +103,67 @@ export default {
           }
         })
         .catch((err) => {
-          Swal.fire("Oops...", err.message, "error");
+          // Silent error or handling without console log if requested
         });
     },
   },
   getters: {
+    getSalas: (state) => state.salas,
     getTables: (state) => state.arrayTables,
     getSelectedTable: (state) => state.selectedTable,
   },
   actions: {
-    arrayTablesMutation({ commit }, data) {
+    async arrayTablesMutation({ commit, state, dispatch }, data) {
+      if (state.mesas.length === 0) {
+        await dispatch("fetchMesas", state.salaId);
+      }
       commit("arrayTables", data);
     },
-    setSelectedTable({ commit }, data) {
-      commit("setTable", data);
+    async setTable({ commit, state }, payload) {
+      commit("setTable", payload);
+      try {
+        await axios.post("cestas/cambiarCestaTrabajador", {
+          idCesta: state.selectedTable._id,
+          idTrabajador: Employers.state.selectedEmployer._id,
+        });
+      } catch (error) {
+        // Error hidden
+      }
+    },
+    setSelectedTable({ dispatch }, data) {
+      dispatch("setTable", data);
+    },
+    setSalasId({ commit }, data) {
+      commit("setSalasId", data);
     },
     addProduct({ commit }, data) {
       commit("addProduct", data);
     },
     removeProduct({ commit }, data) {
       commit("removeProduct", data);
+    },
+    async fetchSalas({ commit }) {
+      try {
+        const res = await axios.get("mesas/getSalas");
+        if (res.data) commit("setSalas", res.data);
+      } catch (e) {
+        // Error hidden
+      }
+    },
+    async fetchMesas({ commit, state }, salaId) {
+      try {
+        const res = await axios.get("mesas/getMesas", {
+          params: { salaId: salaId || state.salaId },
+        });
+        commit("setMesas", res.data);
+        commit("setSalaId", salaId || state.salaId);
+        
+        if (state.rawBaskets && state.rawBaskets.length > 0) {
+          commit("arrayTables", state.rawBaskets);
+        }
+      } catch (error) {
+        // Error hidden
+      }
     },
   },
 };

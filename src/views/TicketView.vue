@@ -313,19 +313,22 @@
         <MDBListGroupItem @click="selectOtherTable" class="header-item">
           <div class="header-content">
             <MDBIcon icon="shopping-basket" class="header-icon" />
-            <span class="header-text">{{
-              selectedTable.nombre
-                ? selectedTable.nombre
-                : "Mesa " + (selectedTable.indexMesa + 1)
-            }}</span>
-          </div>
-        </MDBListGroupItem>
-        <MDBListGroupItem @click="changeClients" class="header-item">
-          <div class="header-content">
-            <MDBIcon icon="user-tie" class="header-icon" />
-            <span class="header-text"
-              >{{ selectedTable.comensales }} comensales</span
-            >
+            <span class="header-text">
+              <span class="room-pill">{{ currentSalaName }}</span>
+              <span class="separator">|</span>
+              <span class="table-text">
+                {{
+                  selectedTable.nombre
+                    ? selectedTable.nombre
+                    : "Mesa " + (selectedTable.indexMesa + 1)
+                }}
+              </span>
+              <span class="separator">|</span>
+              <span class="diners-text" @click.stop="changeClients">
+                {{ selectedTable.comensales }}
+                <MDBIcon icon="user" class="ms-1" />
+              </span>
+            </span>
           </div>
         </MDBListGroupItem>
         <MDBListGroupItem
@@ -412,13 +415,12 @@
                             (x.promocion?.unidadesOferta || 1) * v.unidades
                         "
                         icon="print"
-                        class="print-icon"
+                        class="print-icon ms-1"
                         style="color: green" />
-                      &nbsp;
                       <MDBIcon
                         v-else-if="v.impresora"
                         icon="print"
-                        class="print-icon"
+                        class="print-icon ms-1"
                     /></span>
                     <div
                       v-for="(p, q) in v.suplementosPorArticulo"
@@ -615,6 +617,12 @@ export default {
     const EditProductModalInfo = ref(-1);
     const actProd = ref(null);
     const selectedTargetTable = ref(null);
+    const currentSalaName = computed(() => {
+        const id = store.state.Tables.salaId;
+        const list = store.state.Tables.salas;
+        const found = list.find((s) => s.id === id);
+        return found ? found.name : id === "MESAS" ? "Principal" : id;
+    });
 
     // menu
     const menuArticles = ref(null);
@@ -1030,6 +1038,7 @@ export default {
       EditProductModalInfo,
       suplByFamily,
       menuSeleccionadoPorFamilia,
+      currentSalaName,
       menuArticles,
       onAplicarCambios,
       selectedTargetTable,
@@ -1937,5 +1946,23 @@ export default {
   overflow-y: auto;
   max-height: calc(100vh - 120px); /* Ajusta según altura header+footer */
   padding-bottom: 16px;
+}
+
+.table-name-pill {
+  background-color: #e3f2fd;
+  color: #0d47a1;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-weight: 600;
+  margin-right: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.diners-pill {
+  background-color: #f1f3f4;
+  color: #5f6368;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.9rem;
 }
 </style>

@@ -14,16 +14,22 @@
       <MDBListGroupItem @click="selectOtherTable" class="employer header-item">
         <div class="header-content">
           <MDBIcon icon="shopping-basket" class="header-icon" />
-          <span class="header-text"
-            >{{
-              selectTable.nombre
-                ? selectTable.nombre
-                : "Mesa " + (selectTable.indexMesa + 1)
-            }}
-            |
-
-            {{ selectTable.comensales }} comensales</span
-          >
+          <span class="header-text">
+            <span class="room-pill">{{ currentSalaName }}</span>
+            <span class="separator">|</span>
+            <span class="table-text">
+              {{
+                selectTable.nombre
+                  ? selectTable.nombre
+                  : "Mesa " + (selectTable.indexMesa + 1)
+              }}
+            </span>
+            <span class="separator">|</span>
+            <span class="diners-text">
+              {{ selectTable.comensales }}
+              <MDBIcon icon="user" class="ms-1" />
+            </span>
+          </span>
         </div>
       </MDBListGroupItem>
       <MDBListGroupItem
@@ -182,6 +188,12 @@ export default {
       totalTable,
 
       categories,
+      currentSalaName: computed(() => {
+        const id = store.state.Tables.salaId;
+        const list = store.state.Tables.salas;
+        const found = list.find((s) => s.id === id);
+        return found ? found.name : id === "MESAS" ? "Principal" : id;
+      }),
     };
   },
 };
@@ -393,5 +405,33 @@ export default {
   font-size: 0.75rem;
   min-width: 24px;
   text-align: center;
+}
+
+.room-pill {
+  background-color: #e3f2fd;
+  color: #0d47a1;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-weight: 600;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  font-size: 0.95rem;
+}
+
+.separator {
+  margin: 0 8px;
+  color: #adb5bd;
+  font-weight: 300;
+}
+
+.table-text {
+  font-weight: 500;
+  color: #343a40;
+}
+
+.diners-text {
+  font-weight: 500;
+  color: #495057;
+  display: inline-flex;
+  align-items: center;
 }
 </style>

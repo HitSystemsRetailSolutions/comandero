@@ -25,14 +25,22 @@
         <MDBListGroupItem @click="selectOtherTable" class="info-item">
           <div class="info-content">
             <MDBIcon icon="shopping-basket" class="info-icon" />
-            <span class="info-text"
-              >{{
-                selectTable?.nombre
-                  ? selectTable.nombre
-                  : "Mesa " + (selectTable.indexMesa + 1)
-              }}
-              | {{ selectTable.comensales }} comensales</span
-            >
+            <span class="info-text">
+              <span class="room-pill">{{ currentSalaName }}</span>
+              <span class="separator">|</span>
+              <span class="table-text">
+                {{
+                  selectTable?.nombre
+                    ? selectTable.nombre
+                    : "Mesa " + (selectTable.indexMesa + 1)
+                }}
+              </span>
+              <span class="separator">|</span>
+              <span class="diners-text">
+                {{ selectTable.comensales }}
+                <MDBIcon icon="user" class="ms-1" />
+              </span>
+            </span>
           </div>
         </MDBListGroupItem>
         <MDBListGroupItem
@@ -68,8 +76,15 @@
         <div class="category-nav-content">
           <MDBIcon icon="arrow-left" class="back-icon" />
           <div class="category-info">
+            <div class="category-name">
             <MDBIcon icon="folder-open" class="category-icon" />
             <span class="category-name">{{ products.nombre }}</span>
+            </div>
+            <div class="products-count">
+            <MDBIcon icon="utensils" />
+            <span class="products-count">
+              {{ products.arrayTeclas.filter((prods) => prods.esSumable).length }}
+            </span></div>
           </div>
         </div>
       </MDBListGroupItem>
@@ -77,13 +92,6 @@
 
     <!-- Lista de productos mejorada -->
     <div class="products-section">
-      <div class="products-header">
-        <MDBIcon icon="utensils" />
-        <span>Productos disponibles</span>
-        <span class="products-count">
-          {{ products.arrayTeclas.filter((prods) => prods.esSumable).length }}
-        </span>
-      </div>
 
       <MDBListGroup class="products-list">
         <MDBListGroupItem
@@ -445,6 +453,12 @@ export default {
       toggleFamilia,
       confirmarSuplementos,
       onConfirmarMenu,
+      currentSalaName: computed(() => {
+        const id = store.state.Tables.salaId;
+        const list = store.state.Tables.salas;
+        const found = list.find((s) => s.id === id);
+        return found ? found.name : id === "MESAS" ? "Principal" : id;
+      }),
     };
   },
 };
@@ -468,6 +482,12 @@ export default {
     background-color: #e9ecef;
     border-color: #dee2e6;
   }
+}
+
+.category-name {
+  display: flex;
+  align-items: center;
+  gap:5px;
 }
 
 .toggle-content {
@@ -808,6 +828,34 @@ export default {
     background-color: #e7f3ff;
     border-color: #007bff;
   }
+}
+
+.room-pill {
+  background-color: #e3f2fd;
+  color: #0d47a1;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-weight: 600;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  font-size: 0.95rem;
+}
+
+.separator {
+  margin: 0 8px;
+  color: #adb5bd;
+  font-weight: 300;
+}
+
+.table-text {
+  font-weight: 500;
+  color: #343a40;
+}
+
+.diners-text {
+  font-weight: 500;
+  color: #495057;
+  display: inline-flex;
+  align-items: center;
 }
 
 .supplement-content {

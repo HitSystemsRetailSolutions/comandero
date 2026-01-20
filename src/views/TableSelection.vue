@@ -1,6 +1,7 @@
 <template>
   <div>
     <!-- Encabezado del empleado mejorado -->
+     
     <MDBListGroup class="employerList">
       <MDBListGroupItem @click="selectOtherEmployer" class="employer">
         <div class="employer-content">
@@ -15,6 +16,25 @@
     </MDBListGroup>
 
     <hr class="section-divider" />
+ <!-- Room Selection (Salas) -->
+    <div v-if="salas && salas.length > 0" class="room-selector-container">
+        <MDBListGroup horizontal class="room-list">
+
+             <!-- Dynamic Rooms -->
+             <MDBListGroupItem 
+                v-for="sala in salas" 
+                :key="sala.id"
+                class="room-item"
+                :class="{'active': selectedSala === sala.id}"
+                @click="selectSala(sala.id)"
+             >
+                <div class="room-content">
+                    <MDBIcon :icon="sala.icon || 'square'" class="room-icon" />
+                    <span class="room-name">{{ sala.name }}</span>
+                </div>
+             </MDBListGroupItem>
+        </MDBListGroup>
+    </div>
 
     <!-- Título de sección -->
     <div class="section-header">
@@ -26,32 +46,32 @@
     <div class="listDiv">
       <MDBListGroup class="tableList">
         <MDBListGroupItem
-          v-for="(x, i) in tables"
+          v-for="(x, i) in filteredTables"
           :key="i"
           class="tablebtn"
-          :class="{ 'table-in-use': x.lista.length > 0 }"
+          :class="{ 'table-in-use': x.lista?.length > 0 }"
           @click="selectTable(x)"
         >
           <div class="table-content">
             <div class="table-main-info">
               <MDBIcon
-                :icon="x.lista.length > 0 ? 'shopping-basket' : 'table'"
+                :icon="x.lista?.length > 0 ? 'shopping-basket' : 'table'"
                 class="table-icon"
-                :class="{ 'icon-in-use': x.lista.length > 0 }"
+                :class="{ 'icon-in-use': x.lista?.length > 0 }"
               />
               <div class="table-infos">
                 <span class="table-number">{{
                   x.nombre ? x.nombre : "Mesa " + (x.indexMesa + 1)
                 }}</span>
-                <span v-if="x.lista.length > 0" class="table-status"
-                  >{{ x.lista.length }} producto(s)</span
+                <span v-if="x.lista?.length > 0" class="table-status"
+                  >{{ x.lista?.length }} producto(s)</span
                 >
               </div>
             </div>
 
             <!-- Indicador de estado mejorado -->
             <div class="table-status-indicator">
-              <div v-if="x.lista.length > 0" class="status-badge in-use">
+              <div v-if="x.lista?.length > 0" class="status-badge in-use">
                 <MDBIcon icon="clock" class="status-icon" />
                 <span class="status-text">En uso</span>
               </div>
@@ -77,8 +97,7 @@ import {
 } from "mdb-vue-ui-kit";
 
 import { useStore } from "vuex";
-import { ref, computed } from "vue";
-import { io } from "socket.io-client";
+import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import router from "@/router";
 
@@ -93,11 +112,29 @@ export default {
   setup() {
     const store = useStore();
     const route = useRouter();
-    const SelectEmployer = computed(
-      () => store.state.Employers.selectedEmployer
-    );
+    
+    // Correctly access state from Tables module
+    const salas = computed(() => store.state.Tables.salas);
     const tables = computed(() => store.state.Tables.arrayTables);
+    const SelectEmployer = computed(() => store.state.Employers.selectedEmployer);
     const actualPage = computed(() => route.currentRoute.value.path);
+    
+    const selectedSala = ref('MESAS');
+
+    onMounted(async () => {
+        await store.dispatch("Tables/fetchSalas");
+        await store.dispatch("Tables/fetchMesas", 'MESAS');
+    });
+
+    const selectSala = async (id) => {
+        selectedSala.value = id;
+        await store.dispatch("Tables/fetchMesas", id);
+    };
+
+    // Filter Logic: Left Join Layout (mesasDef) with Baskets (tablesRaw)
+    const filteredTables = computed(() => {
+         return tables.value;
+    });
 
     const selectTable = async (x) => {
       await store.dispatch("Tables/setSelectedTable", x);
@@ -106,12 +143,16 @@ export default {
     const selectOtherEmployer = () => {
       router.push("/employer");
     };
+
     return {
       selectTable,
       actualPage,
       selectOtherEmployer,
       router,
-      tables,
+      salas,
+      filteredTables,
+      selectedSala,
+      selectSala,
       SelectEmployer,
     };
   },
@@ -329,5 +370,73 @@ export default {
   .status-badge {
     padding: 8px 14px;
   }
+}
+
+// Room Selector CSS
+.room-selector-container {
+    padding: 0 5%;
+    margin-bottom: 20px;
+}
+
+.room-list {
+    overflow-x: auto;
+    white-space: nowrap;
+    display: flex;
+    gap: 10px;
+    padding-bottom: 5px;
+    padding-top: 5px; /* Prevent clipping */
+    padding-left: 2px; /* Small buffer */
+    padding-right: 2px;
+    scrollbar-width: thin; /* Firefox */
+    
+    &::-webkit-scrollbar {
+        height: 4px;
+    }
+    &::-webkit-scrollbar-thumb {
+        background-color: #dee2e6;
+        border-radius: 4px;
+    }
+}
+
+.room-item {
+    display: inline-flex;
+    flex: 0 0 auto;
+    background-color: #ffffff69;
+    border: 1px solid transparent;
+    border-radius: 12px !important;
+    padding: 10px 15px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    
+    &:hover {
+        background-color: #ffffff90;
+        transform: translateY(-1px);
+    }
+    
+    &.active {
+        background-color: #e8f0fe !important;
+        border-color: #4285f4;
+        color: #1967d2;
+        
+        .room-icon {
+            color: #1967d2;
+        }
+    }
+}
+
+.room-content {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.room-icon {
+    font-size: 1rem;
+    color: #6c757d;
+}
+
+.room-name {
+    font-size: 0.9rem;
+    font-weight: 600;
 }
 </style>

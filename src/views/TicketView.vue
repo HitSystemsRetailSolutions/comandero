@@ -977,7 +977,6 @@ export default {
           const res = await axios.post("cestas/setArticuloImprimido", {
             idCesta: selectedTable.value._id,
             articulos: ticketsWithPrinter.map((item) => item.idArticulo),
-            printed: ticketsWithPrinter.map((item) => item.idArticulo).unidades,
           });
 
           if (res.data && res2.data) {

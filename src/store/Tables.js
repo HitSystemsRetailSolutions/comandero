@@ -54,11 +54,11 @@ export default {
                 (p) =>
                   p.idArticulo === newItem.idArticulo &&
                   JSON.stringify(p.arraySuplementos) ===
-                    JSON.stringify(newItem.arraySuplementos)
+                  JSON.stringify(newItem.arraySuplementos)
               );
 
               if (previousItem) {
-                newItem.printed = previousItem.printed || 0;
+                newItem.printed = newItem.printed ?? previousItem.printed ?? 0;
               }
               return newItem;
             });
@@ -88,7 +88,7 @@ export default {
       state.selectedTable = payload;
       state.indexTable = payload.indexMesa;
     },
-    addProduct(state, payload) {},
+    addProduct(state, payload) { },
     removeProduct(state, payload) {
       axios
         .post("cestas/borrarItemCesta", {
@@ -157,7 +157,7 @@ export default {
         });
         commit("setMesas", res.data);
         commit("setSalaId", salaId || state.salaId);
-        
+
         if (state.rawBaskets && state.rawBaskets.length > 0) {
           commit("arrayTables", state.rawBaskets);
         }

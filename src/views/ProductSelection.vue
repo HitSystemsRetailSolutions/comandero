@@ -53,11 +53,11 @@
               <span class="amount-text">
                 {{
                   (
-                    selectTable.detalleIva.importe1 +
-                    selectTable.detalleIva.importe2 +
-                    selectTable.detalleIva.importe3 +
-                    selectTable.detalleIva.importe4 +
-                    selectTable.detalleIva.importe5
+           selectTable.detalleIva?.importe1 +
+                  selectTable.detalleIva?.importe2 +
+                  selectTable.detalleIva?.importe3 +
+                  selectTable.detalleIva?.importe4 +
+                  selectTable.detalleIva?.importe5
                   ).toFixed(2)
                 }}€
               </span>

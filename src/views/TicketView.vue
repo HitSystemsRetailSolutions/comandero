@@ -203,6 +203,52 @@
     </MDBModalFooter>
   </MDBModal>
 
+  <!-- Modal de imprimir ticket -->
+  <MDBModal
+    id="printTicketModal"
+    tabindex="-1"
+    labelledby="printTicketModal"
+    v-model="printTicketModal"
+    :staticBackdrop="true"
+    size="md"
+    class="print-ticket-modal"
+  >
+    <MDBModalHeader class="print-ticket-modal-header">
+      <div class="print-ticket-modal-title">
+        <MDBIcon icon="receipt" />
+        <span>¿Imprimir ticket?</span>
+      </div>
+    </MDBModalHeader>
+    <MDBModalBody class="print-ticket-modal-body">
+      <div class="print-ticket-icon-container">
+        <div class="print-ticket-big-icon">
+          <MDBIcon icon="print" />
+        </div>
+      </div>
+      <div class="print-ticket-question">
+        ¿Deseas imprimir el ticket de la venta?
+      </div>
+    </MDBModalBody>
+    <MDBModalFooter class="print-ticket-modal-footer">
+      <MDBBtn
+        color="secondary"
+        @click="handleSkipPrint"
+        class="skip-print-btn"
+      >
+        <MDBIcon icon="times" />
+        No, gracias
+      </MDBBtn>
+      <MDBBtn
+        color="success"
+        @click="handlePrintTicket"
+        class="confirm-print-btn"
+      >
+        <MDBIcon icon="print" />
+        Sí, imprimir
+      </MDBBtn>
+    </MDBModalFooter>
+  </MDBModal>
+
   <!-- Modal de traspasar mesa -->
   <MDBModal
     id="transferModal"
@@ -613,6 +659,8 @@ export default {
     const actualPage = computed(() => route.currentRoute.value.path);
     const openEditProductModal = ref(false);
     const paymentModal = ref(false);
+    const printTicketModal = ref(false);
+    const lastCreatedTicketId = ref(null);
     const transferModal = ref(false);
     const EditProductModalInfo = ref(-1);
     const actProd = ref(null);
@@ -922,25 +970,58 @@ export default {
         if (!resultado.data) {
           throw Error("No se ha podido crear el ticket");
         } else {
-          const res = await axios
-            .post("/cestas/setClients", {
-              clients: 0,
-              cesta: selectedTable.value._id,
-            })
-            .then((res) => {
-              if (res) router.push("/categoryselection");
+          // Guardar el ID del ticket creado para poder imprimirlo
+            await axios.post("tickets/getUltimoTicket").then(async (res) => {
+              lastCreatedTicketId.value =  res.data[0]?._id;
             });
-          Swal.fire({
-            icon: "success",
-            title: "Venta registrada correctamente",
-            showConfirmButton: false,
-            timer: 1000,
+
+          await axios.post("/cestas/setClients", {
+            clients: 0,
+            cesta: selectedTable.value._id,
           });
-          router.push("/tableselection");
+
+          // Mostrar modal de imprimir ticket en vez de navegar directamente
+          printTicketModal.value = true;
         }
       } catch (err) {
         Swal.fire("Oops...", err.message, "error");
       }
+    }
+
+    async function handlePrintTicket() {
+      printTicketModal.value = false;
+      console.log(lastCreatedTicketId.value);
+      try {
+        if (lastCreatedTicketId.value) {
+          await axios.post("impresora/imprimirTicket", {
+            idTicket: lastCreatedTicketId.value,
+          });
+        }
+        Swal.fire({
+          icon: "success",
+          title: "Ticket impreso correctamente",
+          showConfirmButton: false,
+          timer: 1000,
+        });
+      } catch (err) {
+        console.error("Error al imprimir ticket:", err);
+        Swal.fire("Oops...", "No se ha podido imprimir el ticket", "error");
+      } finally {
+        lastCreatedTicketId.value = null;
+        router.push("/tableselection");
+      }
+    }
+
+    function handleSkipPrint() {
+      printTicketModal.value = false;
+      lastCreatedTicketId.value = null;
+      Swal.fire({
+        icon: "success",
+        title: "Venta registrada correctamente",
+        showConfirmButton: false,
+        timer: 1000,
+      });
+      router.push("/tableselection");
     }
 
     const isPreparing = ref(false);
@@ -1024,6 +1105,9 @@ export default {
       selectProduct,
       openEditProductModal,
       paymentModal,
+      printTicketModal,
+      handlePrintTicket,
+      handleSkipPrint,
       transferModal,
       selectOtherTable,
       removeProduct,
@@ -1372,10 +1456,12 @@ export default {
 // Modal styles
 .edit-product-modal,
 .payment-modal,
-.transfer-modal {
+.transfer-modal,
+.print-ticket-modal {
   .modal-header-custom,
   .payment-modal-header,
-  .transfer-modal-header {
+  .transfer-modal-header,
+  .print-ticket-modal-header {
     background-color: #f8f9fa;
     border-bottom: 2px solid #e9ecef;
     padding: 20px;
@@ -1383,7 +1469,8 @@ export default {
 
   .modal-title-custom,
   .payment-modal-title,
-  .transfer-modal-title {
+  .transfer-modal-title,
+  .print-ticket-modal-title {
     display: flex;
     align-items: center;
     gap: 12px;
@@ -1394,17 +1481,75 @@ export default {
 
   .modal-body-custom,
   .payment-modal-body,
-  .transfer-modal-body {
+  .transfer-modal-body,
+  .print-ticket-modal-body {
     background-color: #fff9f2;
     padding: 25px;
   }
 
   .modal-footer-custom,
   .payment-modal-footer,
-  .transfer-modal-footer {
+  .transfer-modal-footer,
+  .print-ticket-modal-footer {
     background-color: #f8f9fa;
     border-top: 2px solid #e9ecef;
     padding: 15px 20px;
+  }
+}
+
+// Print ticket modal specific styles
+.print-ticket-icon-container {
+  display: flex;
+  justify-content: center;
+  padding: 20px 0 15px;
+}
+
+.print-ticket-big-icon {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #28a745, #20c997);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.2rem;
+  color: white;
+  box-shadow: 0 6px 20px rgba(40, 167, 69, 0.3);
+}
+
+.print-ticket-question {
+  text-align: center;
+  font-size: 1.15rem;
+  font-weight: 500;
+  color: #495057;
+  padding: 10px 0;
+}
+
+.print-ticket-modal-footer {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+
+.skip-print-btn,
+.confirm-print-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+
+  &:hover {
+    transform: translateY(-1px);
+  }
+}
+
+.confirm-print-btn {
+  &:hover {
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
   }
 }
 

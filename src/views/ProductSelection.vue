@@ -263,12 +263,12 @@ export default {
       });
       // Ordenar familias alfabéticamente y los suplementos dentro de cada familia
       const familiasOrdenadas = Object.keys(grupos).sort((a, b) =>
-        a.localeCompare(b)
+        a.localeCompare(b, undefined, { sensitivity: "base" })
       );
       const resultado = {};
       familiasOrdenadas.forEach((fam) => {
         resultado[fam] = grupos[fam].sort((a, b) =>
-          a.nombre.localeCompare(b.nombre)
+          a.nombre.localeCompare(b.nombre, undefined, { sensitivity: "base" })
         );
       });
       return resultado;
@@ -418,11 +418,11 @@ export default {
       if (SelectEmployer.value == null) {
         router.push("/");
       }
-      products.value.arrayTeclas.sort((a, b) => {
-        if (a.nombreArticulo < b.nombreArticulo) return -1;
-        if (a.nombreArticulo > b.nombreArticulo) return 1;
-        return 0;
-      });
+      products.value.arrayTeclas.sort((a, b) =>
+        a.nombreArticulo.localeCompare(b.nombreArticulo, undefined, {
+          sensitivity: "base",
+        })
+      );
     });
 
     return {

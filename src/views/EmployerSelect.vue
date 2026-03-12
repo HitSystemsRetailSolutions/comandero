@@ -1,4 +1,5 @@
 <template>
+<div class="unified-layout">
   <!-- Título de sección -->
   <div class="section-header">
     <MDBIcon icon="users" class="section-icon" />
@@ -35,6 +36,7 @@
       </MDBListGroupItem>
     </MDBListGroup>
   </div>
+</div>
 </template>
 
 <script>
@@ -83,6 +85,15 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+.unified-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: #f8f9fa;
+  overflow-y: auto;
+  padding-bottom: 20px;
+}
+
 .section-header {
   display: flex;
   align-items: center;

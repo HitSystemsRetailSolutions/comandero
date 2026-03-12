@@ -118,11 +118,11 @@ socket.on("consultaPaytefRefund", (data) => {
   }
 });
 
-socket.on("nuevoTrabajadorActivo", (data) => {
-  if (data.id) {
-    store.dispatch("Trabajadores/setNuevoActivo", data.id);
-  }
-});
+// socket.on("nuevoTrabajadorActivo", (data) => {
+//   if (data.id) {
+//     store.dispatch("Trabajadores/setNuevoActivo", data.id);
+//   }
+// });
 
 socket.on("resDatafono", (data) => {
   store.dispatch("setEsperandoDatafono", false);

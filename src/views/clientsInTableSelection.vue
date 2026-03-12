@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="unified-layout">
     <!-- Encabezado con información del empleado y mesa -->
     <MDBListGroup class="employerList">
       <MDBListGroupItem @click="selectOtherEmployer" class="employer">
@@ -187,10 +187,18 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+.unified-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: #f8f9fa;
+  overflow-y: auto;
+  padding-bottom: 20px;
+}
+
 .employerList {
   width: 100%;
   margin-top: 4%;
-  height: 100%;
 }
 
 .employer {

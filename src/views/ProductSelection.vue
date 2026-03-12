@@ -1,159 +1,174 @@
 <template>
-  <div>
-    <!-- Header colapsible -->
-    <MDBListGroup class="employerList">
-      <MDBListGroupItem class="info-toggle" @click="hideInfo = !hideInfo">
-        <div class="toggle-content">
-          <MDBIcon :icon="hideInfo ? 'eye' : 'eye-slash'" class="toggle-icon" />
-          <span class="toggle-text"
-            >{{ hideInfo ? "Mostrar" : "Ocultar" }} información</span
-          >
-          <MDBIcon
-            :icon="hideInfo ? 'chevron-down' : 'chevron-up'"
-            class="chevron-icon"
-          />
-        </div>
-      </MDBListGroupItem>
-
-      <div v-if="!hideInfo" class="info-panel">
-        <MDBListGroupItem @click="selectOtherEmployer" class="info-item">
-          <div class="info-content">
-            <MDBIcon icon="user-tag" class="info-icon" />
-            <span class="info-text">{{ SelectEmployer.nombre }}</span>
-          </div>
-        </MDBListGroupItem>
-        <MDBListGroupItem @click="selectOtherTable" class="info-item">
-          <div class="info-content">
-            <MDBIcon icon="shopping-basket" class="info-icon" />
-            <span class="info-text">
-              <span class="room-pill">{{ currentSalaName }}</span>
-              <span class="separator">|</span>
-              <span class="table-text">
-                {{
-                  selectTable?.nombre
-                    ? selectTable.nombre
-                    : "Mesa " + (selectTable.indexMesa + 1)
-                }}
-              </span>
-              <span class="separator">|</span>
-              <span class="diners-text">
-                {{ selectTable.comensales }}
-                <MDBIcon icon="user" class="ms-1" />
-              </span>
-            </span>
-          </div>
-        </MDBListGroupItem>
-        <MDBListGroupItem
-          class="info-item ticket-info"
-          @click="router.push('/ticketview')"
-        >
-          <div class="ticketBtn">
-            <div class="ticket-amount">
-              <MDBIcon icon="hand-holding-usd" class="info-icon" />
-              <span class="amount-text">
-                {{
-                  (
-           selectTable.detalleIva?.importe1 +
-                  selectTable.detalleIva?.importe2 +
-                  selectTable.detalleIva?.importe3 +
-                  selectTable.detalleIva?.importe4 +
-                  selectTable.detalleIva?.importe5
-                  ).toFixed(2)
-                }}€
-              </span>
-            </div>
-            <span class="ticket-label">Ver ticket</span>
-          </div>
-        </MDBListGroupItem>
+  <div class="unified-layout">
+    <!-- Header: Trabajador | Mesa -->
+    <div class="top-header">
+      <div class="header-item" @click="selectOtherEmployer">
+        <MDBIcon icon="user-tag" class="header-icon" />
+        <span class="header-text">{{ SelectEmployer.nombre }}</span>
       </div>
-    </MDBListGroup>
-
-    <div class="section-divider"></div>
-
-    <!-- Navegación de categoría -->
-    <div class="category-nav">
-      <MDBListGroupItem @click="selectOtherCategory" class="category-header">
-        <div class="category-nav-content">
-          <MDBIcon icon="arrow-left" class="back-icon" />
-          <div class="category-info">
-            <div class="category-name">
-            <MDBIcon icon="folder-open" class="category-icon" />
-            <span class="category-name">{{ products.nombre }}</span>
-            </div>
-            <div class="products-count">
-            <MDBIcon icon="utensils" />
-            <span class="products-count">
-              {{ products.arrayTeclas.filter((prods) => prods.esSumable).length }}
-            </span></div>
-          </div>
-        </div>
-      </MDBListGroupItem>
+      <div class="header-item" @click="selectOtherTable">
+        <MDBIcon icon="shopping-basket" class="header-icon" />
+        <span class="header-text">
+          <span class="room-pill">{{ currentSalaName }}</span>
+          <span class="separator">|</span>
+          <span class="table-text">
+            {{
+              selectTable?.nombre
+                ? selectTable.nombre
+                : "Mesa " + (selectTable.indexMesa + 1)
+            }}
+          </span>
+          <span class="separator">|</span>
+          <span class="diners-text">
+            {{ selectTable.comensales }}
+            <MDBIcon icon="user" class="ms-1" />
+          </span>
+        </span>
+      </div>
     </div>
 
-    <!-- Lista de productos mejorada -->
-    <div class="products-section">
-
-      <MDBListGroup class="products-list">
-        <MDBListGroupItem
-          v-for="(x, i) in products.arrayTeclas.filter(
-            (prods) => prods.esSumable
-          )"
-          :key="i"
-          class="product-item"
+    <!-- Ticket Section -->
+    <div class="unified-ticket-section">
+      <div class="ticket-lines-container">
+        <div
+          v-if="!selectTable.lista || selectTable.lista.length === 0"
+          class="empty-ticket"
         >
-          <div class="product-card">
-            <!-- Botón quitar -->
-            <div
-              class="quantity-control remove-btn"
-              @click="removeProduct(x, i)"
-            >
-              <MDBIcon icon="minus" class="control-icon" />
-            </div>
-
-            <!-- Información del producto -->
-            <div class="product-info">
-              <div class="product-header">
-                <MDBIcon icon="utensils" class="product-icon" />
-                <span class="product-name">{{ x.nombreArticulo }}</span>
+          No hay productos en esta cesta
+        </div>
+        <div v-else class="ticket-scroll">
+          <div
+            v-for="(x, i) in selectTable.lista"
+            :key="i"
+            class="ticket-line"
+            :class="{ 'confirm-mode': pendingDelete === i }"
+            @click="handleTicketClick(i)"
+          >
+            <template v-if="pendingDelete !== i">
+              <div class="ticket-line-content">
+                <span class="ticket-qty">{{ x.unidades }}</span>
+                <MDBIcon
+                  v-if="x.arraySuplementos && x.arraySuplementos.length > 0"
+                  icon="puzzle-piece"
+                  class="supplement-indicator-icon me-2"
+                  color="primary"
+                />
+                <span class="ticket-name">{{ x.nombre }}</span>
+                <span class="ticket-price">{{ x.subtotal?.toFixed(2) }}€</span>
               </div>
-              <div class="product-details">
-                <span class="product-price">{{ x.precioConIva }}€</span>
-                <div class="quantity-display">
-                  <span class="quantity-label">Cantidad:</span>
-                  <span class="quantity-value">
-                    {{
-                      (selectTable.lista.filter(
-                        (products) => products.idArticulo == x.idArticle
-                      )[0]?.arraySuplementos?.length > 0
-                        ? selectTable.lista.filter(
-                            (products) => products.idArticulo == x.idArticle
-                          ).length
-                        : selectTable.lista.filter(
-                            (products) => products.idArticulo == x.idArticle
-                          )[0]?.unidades) || 0
-                    }}
-                  </span>
-                </div>
+              <button
+                class="delete-line-btn"
+                @click.stop="handleTicketDelete(x, i)"
+              >
+                <MDBIcon :icon="x.unidades > 1 ? 'minus' : 'trash-alt'" />
+              </button>
+            </template>
+            <template v-else>
+              <span class="confirm-text"
+                >¿Eliminar <strong>{{ x.nombre }}</strong
+                >?</span
+              >
+              <div class="confirm-actions">
+                <button
+                  class="confirm-cancel-btn"
+                  @click.stop="pendingDelete = null"
+                >
+                  No
+                </button>
+                <button
+                  class="confirm-delete-btn"
+                  @click.stop="
+                    removeFromTicket(x, i);
+                    pendingDelete = null;
+                  "
+                >
+                  Eliminar
+                </button>
               </div>
-            </div>
-
-            <!-- Botón añadir -->
-            <div
-              class="quantity-control add-btn"
-              @click="
-                x?.suplementos?.length > 0
-                  ? selectSuplements(x, i)
-                  : addProduct(x, i)
-              "
-            >
-              <MDBIcon
-                :icon="x?.suplementos?.length > 0 ? 'plus-circle' : 'plus'"
-                class="control-icon"
-              />
-            </div>
+            </template>
           </div>
-        </MDBListGroupItem>
-      </MDBListGroup>
+        </div>
+      </div>
+
+      <div class="ticket-actions-container">
+       <!-- <div class="ticket-total-display">
+          <span>Total:</span>
+          <span class="ticket-total-amount">
+            {{
+              selectTable.detalleIva
+                ? (
+                    selectTable.detalleIva.importe1 +
+                    selectTable.detalleIva.importe2 +
+                    selectTable.detalleIva.importe3 +
+                    selectTable.detalleIva.importe4 +
+                    selectTable.detalleIva.importe5
+                  ).toFixed(2)
+                : "0.00"
+            }}€
+          </span>
+        </div>-->
+        <MDBBtn
+          color="success"
+          class="action-btn"
+          @click="router.push('/ticketview')"
+        >
+          <MDBIcon icon="cash-register" class="me-2" />Cobrar
+        </MDBBtn>
+        <MDBBtn color="danger" class="action-btn" @click="deleteAll()">
+          <MDBIcon icon="trash-alt" class="me-2" />Vacíar cesta
+        </MDBBtn>
+      </div>
+    </div>
+
+    <!-- Breadcrumb -->
+    <div class="breadcrumb-container" @click="selectOtherCategory">
+      <MDBIcon icon="arrow-left" class="back-icon" />
+      <span class="breadcrumb-text">{{ products.nombre }}</span>
+      <span class="products-count-badge">
+        {{ products.arrayTeclas.filter((prods) => prods.esSumable).length }}
+        prods.
+      </span>
+    </div>
+
+    <!-- Grid de Productos -->
+    <div class="products-grid-container">
+      <div
+        v-for="(x, i) in products.arrayTeclas.filter(
+          (prods) => prods.esSumable,
+        )"
+        :key="i"
+        class="product-grid-item"
+        @click="
+          x?.suplementos?.length > 0 ? selectSuplements(x, i) : addProduct(x, i)
+        "
+      >
+        <div class="product-grid-header">
+          <span class="product-grid-name">{{ x.nombreArticulo }}</span>
+          <span class="product-grid-price">{{ x.precioConIva }}€</span>
+        </div>
+
+        <div class="product-grid-actions-simple">
+          <div
+            class="grid-qty-display-badge"
+            v-if="
+              selectTable.lista.filter((p) => p.idArticulo == x.idArticle)
+                .length > 0 ||
+              selectTable.lista.filter((p) => p.idArticulo == x.idArticle)[0]
+                ?.unidades > 0
+            "
+          >
+            {{
+              (selectTable.lista.filter((p) => p.idArticulo == x.idArticle)[0]
+                ?.arraySuplementos?.length > 0
+                ? selectTable.lista.filter((p) => p.idArticulo == x.idArticle)
+                    .length
+                : selectTable.lista.filter(
+                    (p) => p.idArticulo == x.idArticle,
+                  )[0]?.unidades) || 0
+            }}
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Modales de suplementos y menú -->
@@ -168,7 +183,7 @@
       :staticBackdrop="true"
       labelledby="menuModal"
       size="lg"
-      class="menu-modal"
+      class="menu-modal-premium"
     >
       <MenuModal
         v-model="menuModal"
@@ -177,6 +192,9 @@
         @confirmarMenu="onConfirmarMenu"
       />
     </MDBModal>
+
+    <!-- Edit Product Modal -->
+    <EditProductModal v-model="showEditModal" :index="editProductIndex" />
   </div>
 </template>
 <script>
@@ -191,18 +209,17 @@ import {
   MDBModalFooter,
   MDBModalHeader,
   MDBBtn,
-  MDBPopconfirm,
 } from "mdb-vue-ui-kit";
 import SuplementosModal from "@/components/SuplementosModal.vue";
 import MenuModal from "@/components/MenuModal.vue";
+import EditProductModal from "@/components/EditProductModal.vue";
 
 import { useStore } from "vuex";
 import axios from "axios";
 import { ref, computed, onMounted } from "vue";
-import { io } from "socket.io-client";
 import { useRouter } from "vue-router";
 import router from "@/router";
-
+import Swal from "sweetalert2";
 export default {
   name: "MenuPrincipalView",
 
@@ -210,7 +227,6 @@ export default {
     MDBFooter,
     MDBIcon,
     MDBListGroup,
-    MDBPopconfirm,
     MDBBtn,
     MDBListGroupItem,
     MDBModal,
@@ -220,19 +236,24 @@ export default {
     MDBModalFooter,
     SuplementosModal,
     MenuModal,
+    EditProductModal,
   },
   setup() {
     const store = useStore();
     const route = useRouter();
     const totalTable = ref(0);
     const hideInfo = ref(false);
+    const pendingDelete = ref(null);
     const suplModal = ref(false);
+    const showEditModal = ref(false);
+    const editProductIndex = ref(null);
+    const lastClickTime = ref(0);
     const categories = computed(() => store.state.Categories.arrayCategories);
     const suplArticle = ref(null);
     const arraySuplementosSelected = ref(null);
     const suplSelected = ref(null);
     const SelectEmployer = computed(
-      () => store.state.Employers.selectedEmployer
+      () => store.state.Employers.selectedEmployer,
     );
     let selectTable = computed(() => store.state.Tables.selectedTable);
     let products = computed(() => store.state.Categories.selectedCategory);
@@ -263,12 +284,12 @@ export default {
       });
       // Ordenar familias alfabéticamente y los suplementos dentro de cada familia
       const familiasOrdenadas = Object.keys(grupos).sort((a, b) =>
-        a.localeCompare(b, undefined, { sensitivity: "base" })
+        a.localeCompare(b, undefined, { sensitivity: "base" }),
       );
       const resultado = {};
       familiasOrdenadas.forEach((fam) => {
         resultado[fam] = grupos[fam].sort((a, b) =>
-          a.nombre.localeCompare(b.nombre, undefined, { sensitivity: "base" })
+          a.nombre.localeCompare(b.nombre, undefined, { sensitivity: "base" }),
         );
       });
       return resultado;
@@ -284,6 +305,7 @@ export default {
     };
 
     const selectSuplements = async (x, i) => {
+      console.log(x);
       if (!x?.suplementos?.length) return;
       const sup = x.suplementos;
       const res = await axios.post("articulos/getSuplementos", {
@@ -360,6 +382,58 @@ export default {
       menuArticles.value = null;
       menuSelected.value = null;
     }
+    const openEditModal = (index) => {
+      editProductIndex.value = index;
+      showEditModal.value = true;
+    };
+
+    const handleTicketClick = (index) => {
+      const now = Date.now();
+      const DOUBLE_CLICK_THRESHOLD = 300; // ms
+
+      if (
+        now - lastClickTime.value < DOUBLE_CLICK_THRESHOLD &&
+        editProductIndex.value === index
+      ) {
+        openEditModal(index);
+        lastClickTime.value = 0; // Reset
+      } else {
+        lastClickTime.value = now;
+        editProductIndex.value = index;
+      }
+    };
+
+    const deleteAll = async () => {
+      Swal.fire({
+        title: "¿Estás seguro de que quieres vaciar la cesta?",
+        icon: "warning",
+        backdrop: "rgba(255,0,0,0.4)",
+        confirmButtonColor: "red",
+        cancelButtonColor: "green",
+        iconColor: "red",
+        showCancelButton: true,
+        confirmButtonText: "Sí",
+        cancelButtonText: "No",
+      }).then(async (result) => {
+        if (result.isConfirmed) {
+          await axios
+            .post("cestas/borrarCesta", {
+              idCesta: selectTable.value._id,
+              quitarCliente: true,
+            })
+            .then((x) => {
+              if (x.data) {
+                Swal.fire({
+                  title: "Cesta vaciada",
+                  icon: "success",
+                  timer: 1000,
+                  showConfirmButton: false,
+                });
+              }
+            });
+        }
+      });
+    };
 
     const addProduct = async (x, i) => {
       await axios.post(
@@ -382,7 +456,7 @@ export default {
             article: encodeURIComponent(x.nombreArticulo),
             worker: encodeURIComponent(SelectEmployer.value.nombre),
           },
-        }
+        },
       );
       arraySuplementosSelected.value = null;
       suplArticle.value = null;
@@ -390,7 +464,7 @@ export default {
     };
     const removeProduct = async (x, i) => {
       let z = selectTable.value.lista.filter(
-        (products) => products.idArticulo == x.idArticle
+        (products) => products.idArticulo == x.idArticle,
       );
       if (z.length > 0) {
         if (z[0].unidades > 1) {
@@ -407,10 +481,31 @@ export default {
           totalTable.value -= x.precioConIva;
           store.dispatch(
             "Tables/removeProduct",
-            selectTable.value.lista.indexOf(z[0])
+            selectTable.value.lista.indexOf(z[0]),
           );
         }
       }
+    };
+
+    // Manejo del botón X del ticket: si hay >1 unidades, decrementa; si queda 1, muestra confirmación
+    const handleTicketDelete = async (item, index) => {
+      if (item.unidades > 1) {
+        await axios.post("teclado/clickTeclaArticulo", {
+          idArticulo: item.idArticulo,
+          gramos: 0,
+          idCesta: selectTable.value._id,
+          unidades: -1,
+          arraySuplementos: item.arraySuplementos || null,
+          nombre: item.nombre,
+        });
+      } else {
+        pendingDelete.value = index;
+      }
+    };
+
+    // Borra por índice del ticket (usado desde la confirmación)
+    const removeFromTicket = (item, index) => {
+      store.dispatch("Tables/removeProduct", index);
     };
 
     onMounted(() => {
@@ -421,7 +516,7 @@ export default {
       products.value.arrayTeclas.sort((a, b) =>
         a.nombreArticulo.localeCompare(b.nombreArticulo, undefined, {
           sensitivity: "base",
-        })
+        }),
       );
     });
 
@@ -433,6 +528,9 @@ export default {
       selectOtherCategory,
       removeProduct,
       hideInfo,
+      pendingDelete,
+      removeFromTicket,
+      handleTicketDelete,
       categories,
       selectTable,
       suplSelected,
@@ -446,6 +544,11 @@ export default {
       menuModal,
       menuArticles,
       menuSelected,
+      deleteAll,
+      openEditModal,
+      handleTicketClick,
+      showEditModal,
+      editProductIndex,
       seleccionadoPorFamilia,
       setSeleccionFamilia,
       suplByFamily,
@@ -465,369 +568,49 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-.employerList {
-  width: 100%;
-  margin-top: 2%;
-}
-
-.info-toggle {
+.unified-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  padding: 15px;
+  gap: 15px;
   background-color: #f8f9fa;
-  padding: 15px 20px;
-  border-radius: 10px;
-  border: 2px solid #e9ecef;
-  cursor: pointer;
-  transition: all 0.3s ease;
-
-  &:hover {
-    background-color: #e9ecef;
-    border-color: #dee2e6;
-  }
-}
-
-.category-name {
-  display: flex;
-  align-items: center;
-  gap:5px;
-}
-
-.toggle-content {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.toggle-icon {
-  font-size: 1.2rem;
-  color: #007bff;
-}
-
-.toggle-text {
-  font-weight: 500;
-  color: #495057;
-}
-
-.chevron-icon {
-  font-size: 1rem;
-  color: #6c757d;
-  transition: transform 0.3s ease;
-}
-
-.info-panel {
-  margin-top: 10px;
-  border-radius: 10px;
   overflow: hidden;
-  border: 1px solid #e9ecef;
 }
 
-.info-item {
-  background-color: #ffffff69;
-  padding: 12px 20px;
-  border-bottom: 1px solid #f1f3f4;
-  transition: background-color 0.2s ease;
-
-  &:hover {
-    background-color: #ffffff80;
-  }
-
-  &:last-child {
-    border-bottom: none;
-  }
-}
-
-.info-content {
+.top-header {
   display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.info-icon {
-  font-size: 1.1rem;
-  color: #666;
-  min-width: 20px;
-}
-
-.info-text {
-  font-size: 0.95rem;
-}
-
-.ticket-info {
-  background-color: #f8f9fa !important;
-}
-
-.ticketBtn {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-}
-
-.ticket-amount {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.amount-text {
-  font-size: 1.2rem;
-  font-weight: bold;
-  color: #28a745;
-}
-
-.ticket-label {
-  font-size: 0.85rem;
-  font-style: italic;
-  color: #666;
-}
-
-.section-divider {
-  height: 3px;
-  background: linear-gradient(90deg, #e9ecef 0%, #dee2e6 50%, #e9ecef 100%);
-  margin: 20px 0;
-  border-radius: 2px;
-}
-
-.category-nav {
-  margin-bottom: 20px;
-}
-
-.category-header {
-  background-color: #ffffff69;
-  padding: 15px 20px;
-  border-radius: 10px;
-  border: 2px solid #e9ecef;
-  cursor: pointer;
-  transition: all 0.3s ease;
-
-  &:hover {
-    background-color: #ffffff80;
-    border-color: #007bff;
-    transform: translateY(-1px);
-  }
-}
-
-.category-nav-content {
-  display: flex;
-  align-items: center;
   gap: 15px;
 }
 
-.back-icon {
-  font-size: 1.2rem;
-  color: #007bff;
-}
-
-.category-info {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.category-icon {
-  font-size: 1.1rem;
-  color: #6c757d;
-}
-
-.category-name {
-  font-size: 1.1rem;
-  font-weight: 500;
-  color: #333;
-}
-
-.products-section {
-  margin-top: 20px;
-}
-
-.products-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 15px 20px;
-  background-color: #f8f9fa;
-  border-radius: 8px;
-  margin-bottom: 15px;
-  font-weight: 600;
-  color: #495057;
-  border-left: 4px solid #28a745;
-}
-
-.products-count {
-  background-color: #28a745;
-  color: white;
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 0.85rem;
-  margin-left: auto;
-}
-
-.products-list {
-  width: 100%;
-}
-
-.product-item {
+.header-item {
+  flex: 1;
   background-color: #ffffff69;
-  margin-bottom: 10px;
-  border-radius: 12px;
-  padding: 0;
+  padding: 15px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+  transition: all 0.2s;
   border: 1px solid transparent;
-  transition: all 0.3s ease;
 
   &:hover {
+    transform: translateY(-2px);
     background-color: #ffffff80;
     border-color: #dee2e6;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   }
 }
 
-.product-card {
-  display: flex;
-  align-items: center;
-  padding: 20px;
-  gap: 20px;
-}
-
-.quantity-control {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  cursor: pointer;
-  transition: all 0.3s ease;
-
-  &.remove-btn {
-    background-color: #dc3545;
-    color: white;
-
-    &:hover {
-      background-color: #c82333;
-      transform: scale(1.1);
-    }
-  }
-
-  &.add-btn {
-    background-color: #28a745;
-    color: white;
-
-    &:hover {
-      background-color: #218838;
-      transform: scale(1.1);
-    }
-  }
-}
-
-.control-icon {
-  font-size: 1.5rem;
-}
-
-.product-info {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.product-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.product-icon {
+.header-icon {
   font-size: 1.2rem;
   color: #007bff;
 }
 
-.product-name {
-  font-size: 1.1rem;
+.header-text {
   font-weight: 500;
-  color: #333;
-}
-
-.product-details {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-}
-
-.product-price {
-  font-size: 1rem;
-  font-weight: bold;
-  color: #28a745;
-}
-
-.quantity-display {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.quantity-label {
-  font-size: 0.9rem;
-  color: #6c757d;
-}
-
-.quantity-value {
-  background-color: #007bff;
-  color: white;
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 0.9rem;
-  font-weight: bold;
-  min-width: 30px;
-  text-align: center;
-}
-
-// Modal styles
-.supplements-modal {
-  .modal-header-custom {
-    background-color: #f8f9fa;
-    border-bottom: 2px solid #e9ecef;
-  }
-
-  .modal-title-custom {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 1.2rem;
-    font-weight: 600;
-    color: #495057;
-  }
-
-  .modal-body-custom {
-    background-color: #fff9f2;
-    padding: 20px;
-  }
-
-  .modal-footer-custom {
-    background-color: #f8f9fa;
-    border-top: 2px solid #e9ecef;
-    gap: 10px;
-  }
-}
-
-.supplements-list {
-  background-color: transparent;
-}
-
-.supplement-item {
-  background-color: #ffffff;
-  margin-bottom: 8px;
-  border-radius: 8px;
-  border: 2px solid #e9ecef;
-  cursor: pointer;
-  transition: all 0.3s ease;
-
-  &:hover {
-    border-color: #007bff;
-    transform: translateY(-1px);
-  }
-
-  &.supplement-selected {
-    background-color: #e7f3ff;
-    border-color: #007bff;
-  }
+  font-size: 1.05rem;
 }
 
 .room-pill {
@@ -836,7 +619,343 @@ export default {
   padding: 4px 12px;
   border-radius: 20px;
   font-weight: 600;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  font-size: 0.95rem;
+}
+
+.separator {
+  margin: 0 8px;
+  color: #adb5bd;
+}
+
+/* Ticket Section */
+.unified-ticket-section {
+  display: flex;
+  gap: 15px;
+  height: 35vh;
+  min-height: 200px;
+}
+
+.ticket-lines-container {
+  flex: 1;
+  background-color: #ffffff69;
+  border-radius: 10px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid #e9ecef;
+  min-height: 0;
+}
+
+.ticket-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.empty-ticket {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100px;
+  color: #adb5bd;
+  font-weight: 500;
+  font-size: 1.1rem;
+}
+
+.ticket-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 15px;
+  background-color: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  border: 1px solid #f1f3f5;
+  transition: transform 0.2s, box-shadow 0.2s;
+  cursor: pointer;
+  user-select: none;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+  }
+}
+
+.ticket-line-content {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  gap: 15px;
+}
+
+.ticket-qty {
+  font-weight: 700;
+  color: #495057;
+  background-color: #f8f9fa;
+  min-width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  padding: 0 6px;
+  border: 1px solid #e9ecef;
+}
+
+.ticket-name {
+  flex: 1;
+  font-weight: 600;
+  color: #212529;
+  font-size: 1rem;
+  line-height: 1.3;
+}
+
+.ticket-price {
+  font-weight: 700;
+  color: #212529;
+  font-size: 1.05rem;
+}
+
+.delete-line-btn {
+  background: none;
+  color: #adb5bd;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: color 0.2s ease;
+  font-size: 1.1rem;
+  margin-left: 12px;
+  flex-shrink: 0;
+
+  &:hover {
+    color: #fa5252;
+  }
+}
+
+.confirm-mode {
+  background-color: #fff5f5 !important;
+  border-color: #ffc9c9 !important;
+}
+
+.confirm-text {
+  flex: 1;
+  font-size: 0.9rem;
+  color: #495057;
+  line-height: 1.3;
+}
+
+.confirm-actions {
+  display: flex;
+  gap: 8px;
+  margin-left: 10px;
+  flex-shrink: 0;
+}
+
+.confirm-cancel-btn {
+  background: #f1f3f5;
+  color: #868e96;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+
+  &:hover {
+    background: #e9ecef;
+  }
+}
+
+.confirm-delete-btn {
+  background: #fa5252;
+  color: white;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+
+  &:hover {
+    background: #e03131;
+  }
+}
+
+.ticket-actions-container {
+  width: 250px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ticket-total-display {
+  background-color: #ffffff69;
+  padding: 15px;
+  border-radius: 10px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 1.2rem;
+  font-weight: bold;
+  border: 2px solid #28a745;
+}
+
+.ticket-total-amount {
+  color: #28a745;
+}
+
+.action-btn {
+  flex: 1;
+  font-size: 1.1rem;
+  font-weight: bold;
+  border-radius: 10px;
+}
+
+/* Breadcrumb */
+.breadcrumb-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 15px;
+  background-color: #ffffff69;
+  border-radius: 10px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+  border: 1px solid transparent;
+
+  &:hover {
+    background-color: #ffffff80;
+    border-color: #dee2e6;
+  }
+}
+
+.back-icon {
+  color: #007bff;
+  font-size: 1.2rem;
+}
+
+.breadcrumb-text {
+  font-weight: bold;
+  font-size: 1.1rem;
+  color: #333;
+}
+
+.products-count-badge {
+  background-color: #28a745;
+  color: white;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: bold;
+  margin-left: auto;
+}
+
+/* Products Grid */
+.products-grid-container {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-auto-rows: min-content;
+  gap: 15px;
+  overflow-y: auto;
+  padding-bottom: 20px;
+  min-height: 0;
+}
+
+.product-grid-item {
+  position: relative;
+  background-color: #ffffff69;
+  border-radius: 10px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  transition: all 0.2s;
+  border: 1px solid transparent;
+  cursor: pointer;
+
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+    background-color: #ffffff80;
+    border-color: #dee2e6;
+  }
+}
+
+.product-grid-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.product-grid-name {
+  font-weight: bold;
+  font-size: 1.05rem;
+  color: #343a40;
+  line-height: 1.2;
+}
+
+.product-grid-price {
+  font-weight: bold;
+  color: #28a745;
+  font-size: 1.1rem;
+  white-space: nowrap;
+}
+
+.product-grid-actions-simple {
+  display: none;
+}
+
+.grid-qty-display-badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: linear-gradient(135deg, #28a745, #20c997);
+  color: white;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  font-weight: bold;
+  box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
+  border: 2px solid white;
+}
+
+.grid-btn {
+  display: none;
+}
+
+.grid-qty-display {
+  display: none;
+}
+
+// Los estilos de modales se han movido a sus respectivos componentes para mayor limpieza.
+
+.room-pill {
+  background-color: #e3f2fd;
+  color: #0d47a1;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-weight: 600;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   font-size: 0.95rem;
 }
 
@@ -930,5 +1049,93 @@ export default {
 }
 #menuModal {
   z-index: 1100 !important;
+}
+
+/* Media Queries para Responsive (Móvil y Tablet) */
+@media (max-width: 768px) {
+  .top-header {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .header-item {
+    padding: 10px;
+  }
+
+  .unified-ticket-section {
+    flex-direction: column;
+    height: auto;
+    min-height: unset;
+    gap: 10px;
+  }
+
+  .ticket-lines-container {
+    max-height: 200px;
+  }
+
+  .ticket-actions-container {
+    width: 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .ticket-total-display {
+    width: 100%;
+    padding: 10px;
+  }
+
+  .action-btn {
+    flex: 1;
+    font-size: 1rem;
+    padding: 10px;
+  }
+
+  .breadcrumb-container {
+    padding: 10px;
+    flex-wrap: wrap;
+  }
+
+  .products-grid-container {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
+  }
+
+  .product-grid-item {
+    padding: 10px;
+    gap: 10px;
+  }
+
+  .product-grid-header {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .product-grid-name {
+    font-size: 0.95rem;
+  }
+
+  .product-grid-price {
+    font-size: 1rem;
+  }
+
+  .grid-btn {
+    width: 32px;
+    height: 32px;
+  }
+
+  .grid-qty-display {
+    font-size: 1rem;
+  }
+}
+
+.supplement-indicator-icon {
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+  color: #007bff;
+}
+
+.ticket-line:hover .supplement-indicator-icon {
+  transform: scale(1.2);
 }
 </style>

@@ -91,7 +91,7 @@
       </div>
 
       <div class="ticket-actions-container">
-       <!-- <div class="ticket-total-display">
+        <!-- <div class="ticket-total-display">
           <span>Total:</span>
           <span class="ticket-total-amount">
             {{

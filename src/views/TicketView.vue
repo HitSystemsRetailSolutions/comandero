@@ -317,13 +317,19 @@
             <div class="item-qty-container">
               <span class="item-quantity">x{{ x.unidades }}</span>
               <MDBIcon
-                v-if="x.impresora || (x.promocion && x.promocion.grupos.flat().some(a => a.impresora))"
+                v-if="
+                  x.impresora ||
+                  (x.promocion &&
+                    x.promocion.grupos.flat().some((a) => a.impresora))
+                "
                 icon="print"
                 class="status-icon-inline"
                 :class="{
                   'printed-success': x.promocion
-                    ? x.promocion.grupos.flat().every(a => a.printed >= a.unidades)
-                    : x?.printed == x.unidades
+                    ? x.promocion.grupos
+                        .flat()
+                        .every((a) => a.printed >= a.unidades)
+                    : x?.printed == x.unidades,
                 }"
               />
             </div>
@@ -357,6 +363,16 @@
               >
                 <MDBIcon icon="utensils" class="detail-icon menu-icon" />
                 <span>{{ z.nombre }}</span>
+                <MDBIcon
+                  v-if="z.impresora"
+                  icon="print"
+                  class="status-icon-inline"
+                  :class="{
+                    'printed-success': z.instancias
+                      ? z.instancias.every((inst) => inst.printed)
+                      : z.printed >= z.unidades,
+                  }"
+                />
               </div>
             </div>
 
@@ -786,12 +802,15 @@ export default {
     const sendToPrepare = async () => {
       let ticketsWithPrinter = [];
       for (let i = 0; i < selectedTable.value.lista.length; i++) {
-        console.log(selectedTable.value.lista[i]);
         if (
           selectedTable.value.lista[i].impresora &&
           !selectedTable.value.lista[i].promocion &&
           selectedTable.value.lista[i].printed !=
-            selectedTable.value.lista[i].unidades
+            selectedTable.value.lista[i].unidades &&
+          (!selectedTable.value.lista[i].articulosMenu ||
+            selectedTable.value.lista[i].articulosMenu.every(
+              (a) => a.printed == 0,
+            ))
         ) {
           ticketsWithPrinter.push(selectedTable.value.lista[i]);
         }
@@ -814,6 +833,36 @@ export default {
                 ticketsWithPrinter.push(
                   selectedTable.value.lista[i].promocion.grupos[j][k],
                 );
+              }
+            }
+          }
+        }
+        if (
+          selectedTable.value.lista[i].articulosMenu &&
+          selectedTable.value.lista[i].articulosMenu.some((a) => a.impresora)
+        ) {
+          for (
+            let j = 0;
+            j < selectedTable.value.lista[i].articulosMenu.length;
+            j++
+          ) {
+            let artMenu = selectedTable.value.lista[i].articulosMenu[j];
+            if (artMenu.impresora) {
+              if (artMenu.instancias && artMenu.instancias.length > 0) {
+                // Instancias-based tracking
+                let unprintedInstances = artMenu.instancias.filter(
+                  (inst) => !inst.printed,
+                );
+                if (unprintedInstances.length > 0) {
+                  ticketsWithPrinter.push({
+                    ...artMenu,
+                    unidades: unprintedInstances.length,
+                    instancias: unprintedInstances,
+                  });
+                }
+              } else if (artMenu.printed != artMenu.unidades) {
+                // Fallback tracking
+                ticketsWithPrinter.push(artMenu);
               }
             }
           }

@@ -15,7 +15,9 @@
         </div>
         <div class="title-text-group">
           <span class="product-name-title">{{ product?.nombre }}</span>
-          <span class="product-category-subtitle" v-if="product?.familia">{{ product.familia }}</span>
+          <span class="product-category-subtitle" v-if="product?.familia">{{
+            product.familia
+          }}</span>
         </div>
         <div class="ms-auto product-price-badge" v-if="product">
           {{ product.subtotal?.toFixed(2) }}€
@@ -32,23 +34,23 @@
               <MDBIcon icon="calculator" class="me-2" />
               <span>Unidades</span>
             </div>
-            
+
             <div class="quantity-selector">
-              <button 
-                class="qty-btn minus" 
+              <button
+                class="qty-btn minus"
                 @click="handleRestProduct"
                 :disabled="product.unidades <= 1"
               >
                 <MDBIcon icon="minus" />
               </button>
-              
+
               <div class="qty-display">
                 <span class="qty-value">{{ product.unidades }}</span>
                 <span class="qty-unit">uds</span>
               </div>
-              
-              <button 
-                class="qty-btn plus" 
+
+              <button
+                class="qty-btn plus"
                 @click="handleAddProduct"
                 v-if="!product.nombre.includes('Promo. ')"
               >
@@ -59,14 +61,14 @@
 
           <!-- Quick Actions -->
           <div class="control-card actions-card">
-             <div class="card-header-slim">
+            <div class="card-header-slim">
               <MDBIcon icon="bolt" class="me-2" />
               <span>Acciones</span>
             </div>
             <div class="actions-group">
-              <MDBBtn 
-                color="danger" 
-                class="premium-action-btn delete-btn w-100" 
+              <MDBBtn
+                color="danger"
+                class="premium-action-btn delete-btn w-100"
                 @click="handleRemoveProduct"
               >
                 <MDBIcon icon="trash-alt" class="me-2" /> Eliminar artículo
@@ -76,7 +78,10 @@
         </div>
 
         <!-- Supplements Section -->
-        <div v-if="product.arraySuplementos && product.arraySuplementos.length > 0" class="premium-section supplements-section">
+        <div
+          v-if="product.arraySuplementos && product.arraySuplementos.length > 0"
+          class="premium-section supplements-section"
+        >
           <div class="section-badge">
             <MDBIcon icon="plus-circle" class="me-2" />
             <span>Suplementos Añadidos</span>
@@ -103,28 +108,50 @@
 
         <!-- Menu Configuration Section -->
         <div v-if="product.articulosMenu" class="premium-section menu-section">
-          <div class="section-badge menu-badge">
+          <div class="section-badge menu-badge mb-2">
             <MDBIcon icon="utensils" class="me-2" />
             <span>Configuración de Menú</span>
           </div>
-          <div class="menu-modal-wrapper">
-            <MenuModal
-              id="menuModal"
-              :menuSelected="product"
-              :suplByFamily="suplByFamily"
-              :initialSeleccionadoPorFamilia="menuSeleccionadoPorFamilia"
-              :closeBtn="false"
-              @aplicarCambios="onAplicarCambios"
-            />
-          </div>
+          <MDBBtn
+            color="primary"
+            outline
+            class="premium-action-btn w-100 d-flex align-items-center justify-content-center"
+            @click="isMenuModalOpen = true"
+          >
+            <MDBIcon icon="utensils" class="me-2" />
+            Modificar Opciones del Menú
+          </MDBBtn>
         </div>
       </div>
     </MDBModalBody>
     <MDBModalFooter class="modal-footer-premium sticky-footer">
-      <MDBBtn outline="primary" @click="isOpen = false" class="premium-close-btn">
+      <MDBBtn
+        outline="primary"
+        @click="isOpen = false"
+        class="premium-close-btn"
+      >
         <MDBIcon icon="times" class="me-2" /> Cerrar
       </MDBBtn>
     </MDBModalFooter>
+  </MDBModal>
+  <!-- Menu Modal extracted from body -->
+  <MDBModal
+    id="menuModalContainer"
+    tabindex="-1"
+    v-model="isMenuModalOpen"
+    :staticBackdrop="true"
+    size="lg"
+  >
+    <MenuModal
+      v-if="menuDataLoaded && product?.articulosMenu"
+      id="menuModal"
+      :menuSelected="product"
+      :suplByFamily="suplByFamily"
+      :initialSeleccionadoPorFamilia="menuSeleccionadoPorFamilia"
+      :closeBtn="true"
+      @aplicarCambios="onAplicarCambios"
+      @update:modelValue="isMenuModalOpen = $event"
+    />
   </MDBModal>
 </template>
 
@@ -168,9 +195,12 @@ export default {
     const selectedTable = computed(() => store.state.Tables.selectedTable);
     const product = computed(() => selectedTable.value?.lista[props.index]);
 
+    const isMenuModalOpen = ref(false);
     const menuArticles = ref([]);
+    const menuDataLoaded = ref(false);
 
     const fetchMenuDetails = async () => {
+      menuDataLoaded.value = false;
       if (product.value?.articulosMenu) {
         try {
           const infoArticle = await axios.post("articulos/getArticuloById", {
@@ -180,16 +210,23 @@ export default {
             arrayIdSuplementos: infoArticle?.data?.suplementos,
           });
           menuArticles.value = res.data;
+          menuDataLoaded.value = true;
         } catch (error) {
           console.error("Error fetching menu details:", error);
+          menuDataLoaded.value = true;
         }
+      } else {
+        menuDataLoaded.value = true;
       }
     };
 
     watch(() => props.index, fetchMenuDetails, { immediate: true });
-    watch(() => props.modelValue, (newVal) => {
-      if (newVal) fetchMenuDetails();
-    });
+    watch(
+      () => props.modelValue,
+      (newVal) => {
+        if (newVal) fetchMenuDetails();
+      },
+    );
 
     const suplByFamily = computed(() => {
       const grupos = {};
@@ -199,12 +236,12 @@ export default {
         grupos[familia].push(sup);
       });
       const familiasOrdenadas = Object.keys(grupos).sort((a, b) =>
-        a.localeCompare(b, undefined, { sensitivity: "base" })
+        a.localeCompare(b, undefined, { sensitivity: "base" }),
       );
       const resultado = {};
       familiasOrdenadas.forEach((fam) => {
         resultado[fam] = grupos[fam].sort((a, b) =>
-          a.nombre.localeCompare(b.nombre, undefined, { sensitivity: "base" })
+          a.nombre.localeCompare(b.nombre, undefined, { sensitivity: "base" }),
         );
       });
       return resultado;
@@ -216,12 +253,12 @@ export default {
       const suplMap = {};
       Object.entries(suplByFamily.value).forEach(([familia, sups]) => {
         sups.forEach((sup) => {
-          suplMap[sup._id] = { familia, sup };
+          suplMap[String(sup.idArticulo || sup._id)] = { familia, sup };
         });
       });
       if (articulosMenu && Array.isArray(articulosMenu)) {
         articulosMenu.forEach((art) => {
-          const match = suplMap[art.idArticulo];
+          const match = suplMap[String(art.idArticulo)];
           if (match) {
             result[match.familia] = {
               idArticulo: art.idArticulo ?? art._id ?? null,
@@ -229,6 +266,9 @@ export default {
               arraySuplementos: art.arraySuplementos ?? null,
               unidades: art.unidades ?? 1,
               gramos: art.gramos ?? null,
+              printed: art.printed ?? 0,
+              impresora: art.impresora ?? null,
+              instancias: art.instancias ?? [],
             };
           }
         });
@@ -271,7 +311,7 @@ export default {
       isOpen.value = false;
       const x = { ...product.value };
       await store.dispatch("Tables/removeProduct", props.index);
-      
+
       const newSups = [...x.arraySuplementos];
       newSups.splice(supIndex, 1);
       const finalSups = newSups.length > 0 ? newSups : null;
@@ -321,6 +361,8 @@ export default {
       suplByFamily,
       menuSeleccionadoPorFamilia,
       onAplicarCambios,
+      menuDataLoaded,
+      isMenuModalOpen,
     };
   },
 };
@@ -351,7 +393,7 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  
+
   .title-icon {
     color: #007bff;
     font-size: 1.1rem;
@@ -444,18 +486,24 @@ export default {
   justify-content: center;
   font-size: 1.1rem;
   transition: all 0.2s;
-  
+
   &.minus {
     background-color: #f8f9fa;
     color: #495057;
-    &:hover:not(:disabled) { background-color: #e9ecef; }
-    &:disabled { opacity: 0.5; }
+    &:hover:not(:disabled) {
+      background-color: #e9ecef;
+    }
+    &:disabled {
+      opacity: 0.5;
+    }
   }
-  
+
   &.plus {
     background-color: #e3f2fd;
     color: #007bff;
-    &:hover { background-color: #bbdefb; }
+    &:hover {
+      background-color: #bbdefb;
+    }
   }
 }
 
@@ -479,10 +527,12 @@ export default {
   text-transform: none;
   font-size: 0.95rem;
   box-shadow: none;
-  
+
   &.delete-btn {
     background-color: #fa5252;
-    &:hover { background-color: #e03131; }
+    &:hover {
+      background-color: #e03131;
+    }
   }
 }
 
@@ -519,7 +569,7 @@ export default {
   align-items: center;
   justify-content: space-between;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03);
-  
+
   &:hover {
     border-color: #adb5bd;
   }
@@ -542,7 +592,7 @@ export default {
   align-items: center;
   justify-content: center;
   font-size: 0.75rem;
-  
+
   &:hover {
     background-color: #ffe3e3;
     color: #e03131;
@@ -568,8 +618,18 @@ export default {
   text-transform: none;
 }
 
-.sticky-header { position: sticky; top: 0; z-index: 10; background-color: #fff !important; }
-.sticky-footer { position: sticky; bottom: 0; z-index: 10; background-color: #fff !important; }
+.sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background-color: #fff !important;
+}
+.sticky-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  background-color: #fff !important;
+}
 
 .scrollable-modal-body {
   max-height: 70vh;

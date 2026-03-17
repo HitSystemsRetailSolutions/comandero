@@ -72,7 +72,11 @@
       </div>
     </MDBModalBody>
     <MDBModalFooter class="modal-footer-premium">
-      <MDBBtn outline="primary" @click="paymentModal = false" class="premium-cancel-btn">
+      <MDBBtn
+        outline="primary"
+        @click="paymentModal = false"
+        class="premium-cancel-btn"
+      >
         <MDBIcon icon="times" class="me-2" /> Cancelar
       </MDBBtn>
     </MDBModalFooter>
@@ -104,14 +108,24 @@
           <MDBIcon icon="print" class="print-big-icon" />
         </div>
         <h4 class="print-question-title">¿Deseas imprimir el ticket?</h4>
-        <p class="print-question-desc">Se generará el recibo físico para el cliente</p>
+        <p class="print-question-desc">
+          Se generará el recibo físico para el cliente
+        </p>
       </div>
     </MDBModalBody>
     <MDBModalFooter class="modal-footer-premium justify-content-center">
-      <MDBBtn outline="danger" @click="handleSkipPrint" class="premium-skip-btn me-3">
+      <MDBBtn
+        outline="danger"
+        @click="handleSkipPrint"
+        class="premium-skip-btn me-3"
+      >
         <MDBIcon icon="times" class="me-2" /> No, gracias
       </MDBBtn>
-      <MDBBtn color="success" @click="handlePrintTicket" class="premium-print-btn">
+      <MDBBtn
+        color="success"
+        @click="handlePrintTicket"
+        class="premium-print-btn"
+      >
         <MDBIcon icon="print" class="me-2" /> Sí, imprimir
       </MDBBtn>
     </MDBModalFooter>
@@ -144,14 +158,18 @@
         <div class="transfer-source-card mb-4">
           <div class="source-item">
             <span class="source-label">Mesa Actual</span>
-            <span class="source-value">{{ selectedTable.nombre || `Mesa ${selectedTable.indexMesa + 1}` }}</span>
+            <span class="source-value">{{
+              selectedTable.nombre || `Mesa ${selectedTable.indexMesa + 1}`
+            }}</span>
           </div>
           <div class="source-separator">
             <MDBIcon icon="arrow-right" />
           </div>
           <div class="source-item">
             <span class="source-label">Elementos</span>
-            <span class="source-value">{{ selectedTable.lista.length }} artículos</span>
+            <span class="source-value"
+              >{{ selectedTable.lista.length }} artículos</span
+            >
           </div>
         </div>
 
@@ -166,22 +184,35 @@
             v-for="table in availableTables"
             :key="table._id"
             class="transfer-table-card"
-            :class="{ 
-              'selected': selectedTargetTable?._id === table._id,
-              'has-items': table.lista && table.lista.length > 0
+            :class="{
+              selected: selectedTargetTable?._id === table._id,
+              'has-items': table.lista && table.lista.length > 0,
             }"
             @click="selectTargetTable(table)"
           >
             <div class="table-card-icon">
-              <MDBIcon :icon="table.lista && table.lista.length > 0 ? 'utensils' : 'table'" />
+              <MDBIcon
+                :icon="
+                  table.lista && table.lista.length > 0 ? 'utensils' : 'table'
+                "
+              />
             </div>
             <div class="table-card-info">
-              <span class="table-card-name">{{ table.nombre || `Mesa ${table.indexMesa + 1}` }}</span>
+              <span class="table-card-name">{{
+                table.nombre || `Mesa ${table.indexMesa + 1}`
+              }}</span>
               <span class="table-card-status">
-                {{ table.lista && table.lista.length > 0 ? `${table.lista.length} uds` : 'Libre' }}
+                {{
+                  table.lista && table.lista.length > 0
+                    ? `${table.lista.length} uds`
+                    : "Libre"
+                }}
               </span>
             </div>
-            <div v-if="selectedTargetTable?._id === table._id" class="selection-check">
+            <div
+              v-if="selectedTargetTable?._id === table._id"
+              class="selection-check"
+            >
               <MDBIcon icon="check-circle" />
             </div>
           </div>
@@ -189,13 +220,20 @@
       </div>
     </MDBModalBody>
     <MDBModalFooter class="modal-footer-premium">
-      <MDBBtn outline="primary" @click="transferModal = false; selectedTargetTable = null;" class="premium-cancel-btn me-3">
+      <MDBBtn
+        outline="primary"
+        @click="
+          transferModal = false;
+          selectedTargetTable = null;
+        "
+        class="premium-cancel-btn me-3"
+      >
         <MDBIcon icon="times" class="me-2" /> Cancelar
       </MDBBtn>
-      <MDBBtn 
-        color="warning" 
-        @click="confirmTransfer" 
-        :disabled="!selectedTargetTable" 
+      <MDBBtn
+        color="warning"
+        @click="confirmTransfer"
+        :disabled="!selectedTargetTable"
         class="premium-confirm-btn"
       >
         <MDBIcon icon="check" class="me-2" /> Confirmar Traspaso
@@ -279,10 +317,14 @@
             <div class="item-qty-container">
               <span class="item-quantity">x{{ x.unidades }}</span>
               <MDBIcon
-                v-if="x.impresora"
+                v-if="x.impresora || (x.promocion && x.promocion.grupos.flat().some(a => a.impresora))"
                 icon="print"
                 class="status-icon-inline"
-                :class="{ 'printed-success': x?.printed == x.unidades }"
+                :class="{
+                  'printed-success': x.promocion
+                    ? x.promocion.grupos.flat().every(a => a.printed >= a.unidades)
+                    : x?.printed == x.unidades
+                }"
               />
             </div>
             <span class="item-name-text">{{ x.nombre }}</span>
@@ -318,10 +360,24 @@
               </div>
             </div>
 
-            <!-- Promociones (Simplificado para el rediseño) -->
+            <!-- Promociones: articulos de la promo -->
             <div v-if="x.promocion" class="nested-details promo-details">
-              <MDBIcon icon="star" class="detail-icon promo-icon" />
-              <span>Pack Promocional</span>
+              <template v-for="(grupo, gi) in x.promocion.grupos" :key="gi">
+                <div
+                  v-for="(art, ai) in grupo"
+                  :key="ai"
+                  class="detail-row promo-article-row"
+                >
+                  <MDBIcon icon="tag" class="detail-icon promo-icon" />
+                  <span>{{ art.unidades }}x {{ art.nombre }}</span>
+                  <MDBIcon
+                    v-if="art.impresora"
+                    icon="print"
+                    class="status-icon-inline"
+                    :class="{ 'printed-success': art.printed >= art.unidades }"
+                  />
+                </div>
+              </template>
             </div>
           </div>
         </div>
@@ -730,12 +786,37 @@ export default {
     const sendToPrepare = async () => {
       let ticketsWithPrinter = [];
       for (let i = 0; i < selectedTable.value.lista.length; i++) {
+        console.log(selectedTable.value.lista[i]);
         if (
           selectedTable.value.lista[i].impresora &&
+          !selectedTable.value.lista[i].promocion &&
           selectedTable.value.lista[i].printed !=
             selectedTable.value.lista[i].unidades
         ) {
           ticketsWithPrinter.push(selectedTable.value.lista[i]);
+        }
+        if (selectedTable.value.lista[i].promocion) {
+          for (
+            let j = 0;
+            j < selectedTable.value.lista[i].promocion.grupos.length;
+            j++
+          ) {
+            for (
+              let k = 0;
+              k < selectedTable.value.lista[i].promocion.grupos[j].length;
+              k++
+            ) {
+              if (
+                selectedTable.value.lista[i].promocion.grupos[j][k].impresora &&
+                selectedTable.value.lista[i].promocion.grupos[j][k].printed !=
+                  selectedTable.value.lista[i].promocion.grupos[j][k].unidades
+              ) {
+                ticketsWithPrinter.push(
+                  selectedTable.value.lista[i].promocion.grupos[j][k],
+                );
+              }
+            }
+          }
         }
       }
       if (ticketsWithPrinter.length > 0) {
@@ -1303,7 +1384,7 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  
+
   .title-icon {
     font-size: 1.4rem;
     color: #3b82f6;
@@ -1398,8 +1479,14 @@ export default {
     border-color: #3b82f6;
   }
 
-  &.cash .method-icon-box { background: #ecfdf5; color: #10b981; }
-  &.credit-card .method-icon-box { background: #eff6ff; color: #3b82f6; }
+  &.cash .method-icon-box {
+    background: #ecfdf5;
+    color: #10b981;
+  }
+  &.credit-card .method-icon-box {
+    background: #eff6ff;
+    color: #3b82f6;
+  }
 }
 
 .method-icon-box {
@@ -1518,8 +1605,13 @@ export default {
   overflow-y: auto;
   padding: 4px;
 
-  &::-webkit-scrollbar { width: 6px; }
-  &::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 10px;
+  }
 }
 
 .transfer-table-card {
@@ -1547,7 +1639,10 @@ export default {
 
   &.has-items {
     background: #fffbeb;
-    .table-card-icon { background: #fef3c7; color: #d97706; }
+    .table-card-icon {
+      background: #fef3c7;
+      color: #d97706;
+    }
   }
 }
 
@@ -1587,16 +1682,18 @@ export default {
   font-size: 1.5rem;
   background: white;
   border-radius: 50%;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.premium-cancel-btn, .premium-skip-btn {
+.premium-cancel-btn,
+.premium-skip-btn {
   font-weight: 700 !important;
   border-radius: 12px !important;
   text-transform: none !important;
 }
 
-.premium-confirm-btn, .premium-print-btn {
+.premium-confirm-btn,
+.premium-print-btn {
   font-weight: 800 !important;
   border-radius: 12px !important;
   text-transform: none !important;

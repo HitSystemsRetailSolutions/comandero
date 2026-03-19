@@ -811,12 +811,9 @@ export default {
         if (
           selectedTable.value.lista[i].impresora &&
           !selectedTable.value.lista[i].promocion &&
+          !selectedTable.value.lista[i].articulosMenu &&
           selectedTable.value.lista[i].printed !=
-            selectedTable.value.lista[i].unidades &&
-          (!selectedTable.value.lista[i].articulosMenu ||
-            selectedTable.value.lista[i].articulosMenu.every(
-              (a) => a.printed == 0,
-            ))
+            selectedTable.value.lista[i].unidades
         ) {
           ticketsWithPrinter.push(selectedTable.value.lista[i]);
         }

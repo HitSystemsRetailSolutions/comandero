@@ -325,11 +325,13 @@
                 icon="print"
                 class="status-icon-inline"
                 :class="{
-                  'printed-success': x.promocion
-                    ? x.promocion.grupos
-                        .flat()
-                        .every((a) => a.printed >= a.unidades)
-                    : x?.printed == x.unidades,
+                  'printed-success':
+                    !x.articulosMenu?.some((a) => a.printed != a.unidades) ||
+                    (x.promocion
+                      ? x.promocion.grupos
+                          .flat()
+                          .every((a) => a.printed >= a.unidades)
+                      : x?.printed == x.unidades),
                 }"
               />
             </div>

@@ -106,12 +106,62 @@
           </div>
         </div>
 
+        <!-- Comments Section -->
+        <div class="premium-section comments-section">
+          <div class="section-badge comments-badge">
+            <MDBIcon icon="comment-alt" class="me-2" />
+            <span>Notas y Comentarios</span>
+          </div>
+          <div class="control-card comments-card">
+            <textarea
+              v-model="productComment"
+              class="premium-textarea"
+              placeholder="Escribe una nota para cocina..."
+              @blur="updateProductComment"
+            ></textarea>
+            <div class="quick-notes-grid">
+              <button
+                v-for="note in quickNotes"
+                :key="note"
+                class="quick-note-btn"
+                @click="addQuickNote(note)"
+              >
+                {{ note }}
+              </button>
+            </div>
+          </div>
+        </div>
+
         <!-- Menu Configuration Section -->
         <div v-if="product.articulosMenu" class="premium-section menu-section">
           <div class="section-badge menu-badge mb-2">
             <MDBIcon icon="utensils" class="me-2" />
             <span>Configuración de Menú</span>
           </div>
+
+          <!-- Menu Items Comments -->
+          <div class="menu-items-comments mt-2">
+            <div
+              v-for="(item, i) in product.articulosMenu"
+              :key="i"
+              class="menu-item-comment-box mb-3"
+            >
+              <div class="menu-item-name-slim mb-1">
+                <MDBIcon icon="chevron-right" class="me-1 small" />
+                {{ item.nombre }}
+              </div>
+              <div class="d-flex gap-2 align-items-center">
+                <input
+                  type="text"
+                  v-model="item.comentario"
+                  class="premium-input-slim"
+                  placeholder="Nota..."
+                  @blur="updateMenuItemComment(i, item.comentario)"
+                />
+              </div>
+            </div>
+          </div>
+
           <MDBBtn
             color="primary"
             outline
@@ -198,9 +248,55 @@ export default {
     const isMenuModalOpen = ref(false);
     const menuArticles = ref([]);
     const menuDataLoaded = ref(false);
+    const productComment = ref(product.value?.comentario || "");
+
+    const quickNotes = [
+      "SIN CEBOLLA",
+      "SIN SAL",
+      "POCO HECHO",
+      "AL PUNTO",
+      "MUY HECHO",
+      "ALÉRGICO",
+      "SIN TOMATE",
+      "PARA LLEVAR",
+    ];
+
+    const updateProductComment = async () => {
+      try {
+        await axios.post("cestas/setComentario", {
+          idCesta: selectedTable.value._id,
+          index: props.index,
+          comentario: productComment.value,
+        });
+      } catch (error) {
+        console.error("Error updating product comment:", error);
+      }
+    };
+
+    const addQuickNote = (note) => {
+      if (productComment.value.includes(note)) return;
+      productComment.value = productComment.value
+        ? `${productComment.value}, ${note}`
+        : note;
+      updateProductComment();
+    };
+
+    const updateMenuItemComment = async (menuIndex, comentario) => {
+      try {
+        await axios.post("cestas/setComentarioMenu", {
+          idCesta: selectedTable.value._id,
+          indexCesta: props.index,
+          indexMenu: menuIndex,
+          comentario: comentario,
+        });
+      } catch (error) {
+        console.error("Error updating menu item comment:", error);
+      }
+    };
 
     const fetchMenuDetails = async () => {
       menuDataLoaded.value = false;
+      productComment.value = product.value?.comentario || "";
       if (product.value?.articulosMenu) {
         try {
           const infoArticle = await axios.post("articulos/getArticuloById", {
@@ -363,6 +459,11 @@ export default {
       onAplicarCambios,
       menuDataLoaded,
       isMenuModalOpen,
+      productComment,
+      quickNotes,
+      updateProductComment,
+      addQuickNote,
+      updateMenuItemComment,
     };
   },
 };
@@ -634,5 +735,89 @@ export default {
 .scrollable-modal-body {
   max-height: 70vh;
   overflow-y: auto;
+}
+
+/* Comments Styling */
+.comments-badge {
+  background-color: #fff3e0;
+  color: #ef6c00;
+}
+
+.comments-card {
+  padding: 12px;
+}
+
+.premium-textarea {
+  width: 100%;
+  min-height: 80px;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 0.95rem;
+  resize: vertical;
+  background-color: #fff;
+  transition: border-color 0.2s;
+
+  &:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
+  }
+}
+
+.quick-notes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.quick-note-btn {
+  background-color: #f1f3f5;
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  padding: 6px 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #495057;
+  transition: all 0.2s;
+
+  &:hover {
+    background-color: #e9ecef;
+    border-color: #dee2e6;
+  }
+
+  &:active {
+    background-color: #dee2e6;
+    transform: translateY(1px);
+  }
+}
+
+.menu-item-comment-box {
+  background-color: #ffffff;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+.menu-item-name-slim {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #6c757d;
+  text-transform: uppercase;
+}
+
+.premium-input-slim {
+  width: 100%;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 0.9rem;
+  transition: border-color 0.2s;
+
+  &:focus {
+    outline: none;
+    border-color: #007bff;
+  }
 }
 </style>

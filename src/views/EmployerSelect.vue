@@ -1,6 +1,5 @@
 <template>
   <div class="unified-layout">
-
     <!-- Hero Header -->
     <div class="hero-header">
       <div class="hero-icon-wrap">
@@ -53,16 +52,18 @@
     <!-- Footer info -->
     <div class="footer-bar">
       <MDBIcon icon="info-circle" class="footer-icon" />
-      <span>{{ employers.length }} empleado{{ employers.length !== 1 ? 's' : '' }} registrado{{ employers.length !== 1 ? 's' : '' }}</span>
+      <span
+        >{{ employers.length }} empleado{{
+          employers.length !== 1 ? "s" : ""
+        }}
+        registrado{{ employers.length !== 1 ? "s" : "" }}</span
+      >
     </div>
-
   </div>
 </template>
 
 <script>
-import {
-  MDBIcon,
-} from "mdb-vue-ui-kit";
+import { MDBIcon } from "mdb-vue-ui-kit";
 
 import { useStore } from "vuex";
 import { ref, computed, onMounted } from "vue";
@@ -83,7 +84,7 @@ export default {
     const filteredEmployers = computed(() => {
       if (!searchQuery.value.trim()) return employers.value;
       return employers.value.filter((e) =>
-        e.nombre.toLowerCase().includes(searchQuery.value.toLowerCase())
+        e.nombre.toLowerCase().includes(searchQuery.value.toLowerCase()),
       );
     });
 
@@ -101,11 +102,7 @@ export default {
       store.dispatch("Employers/setSelectedEmployer", employer);
     }
 
-    onMounted(() => {
-      if (employers.value.length === 0) {
-        router.push("/");
-      }
-    });
+    onMounted(() => {});
 
     return {
       employers,

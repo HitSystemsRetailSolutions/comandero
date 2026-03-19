@@ -336,6 +336,9 @@
             <span class="item-name-text">{{ x.nombre }}</span>
             <span class="item-price-text">{{ x.subtotal.toFixed(2) }}€</span>
           </div>
+          <div v-if="x.comentario" class="item-comment-text">
+            {{ x.comentario }}
+          </div>
 
           <!-- Detalles (Suplementos, promos, menús) -->
           <div
@@ -363,6 +366,9 @@
               >
                 <MDBIcon icon="utensils" class="detail-icon menu-icon" />
                 <span>{{ z.nombre }}</span>
+                <div v-if="z.comentario" class="menu-item-comment-text">
+                  {{ z.comentario }}
+                </div>
                 <MDBIcon
                   v-if="z.impresora"
                   icon="print"
@@ -841,6 +847,9 @@ export default {
           selectedTable.value.lista[i].articulosMenu &&
           selectedTable.value.lista[i].articulosMenu.some((a) => a.impresora)
         ) {
+          const menuPrinters = new Set();
+          const itemsToProcess = [];
+
           for (
             let j = 0;
             j < selectedTable.value.lista[i].articulosMenu.length;
@@ -848,23 +857,42 @@ export default {
           ) {
             let artMenu = selectedTable.value.lista[i].articulosMenu[j];
             if (artMenu.impresora) {
+              let unprintedCount = 0;
+              let instancesToPrint = null;
+
               if (artMenu.instancias && artMenu.instancias.length > 0) {
-                // Instancias-based tracking
-                let unprintedInstances = artMenu.instancias.filter(
+                instancesToPrint = artMenu.instancias.filter(
                   (inst) => !inst.printed,
                 );
-                if (unprintedInstances.length > 0) {
-                  ticketsWithPrinter.push({
-                    ...artMenu,
-                    unidades: unprintedInstances.length,
-                    instancias: unprintedInstances,
-                  });
-                }
-              } else if (artMenu.printed != artMenu.unidades) {
-                // Fallback tracking
-                ticketsWithPrinter.push(artMenu);
+                unprintedCount = instancesToPrint.length;
+              } else if (artMenu.printed < artMenu.unidades) {
+                unprintedCount = artMenu.unidades - artMenu.printed;
+              }
+
+              if (unprintedCount > 0) {
+                menuPrinters.add(artMenu.impresora);
+                itemsToProcess.push({
+                  ...artMenu,
+                  unidades: unprintedCount,
+                  instancias: instancesToPrint,
+                });
               }
             }
+          }
+
+          if (itemsToProcess.length > 0) {
+            // Add a header for each printer
+            menuPrinters.forEach((p) => {
+              ticketsWithPrinter.push({
+                nombre: `--- ${selectedTable.value.lista[i].nombre} ---`,
+                unidades: 1,
+                printed: 0,
+                idArticulo: -1,
+                impresora: p,
+              });
+            });
+            // Add the items
+            ticketsWithPrinter.push(...itemsToProcess);
           }
         }
       }
@@ -874,13 +902,15 @@ export default {
             products: ticketsWithPrinter,
             table:
               selectedTable.value.nombre ||
-              "TAULA: " + selectedTable.value.indexMesa + 1,
+              "TAULA: " + (selectedTable.value.indexMesa + 1),
             worker: SelectEmployer.value.nombre,
             clients: selectedTable.value.comensales,
           });
           const res = await axios.post("cestas/setArticuloImprimido", {
             idCesta: selectedTable.value._id,
-            articulos: ticketsWithPrinter.map((item) => item.idArticulo),
+            articulos: ticketsWithPrinter
+              .filter((item) => item.idArticulo !== -1)
+              .map((item) => item.idArticulo),
           });
 
           if (res.data && res2.data) {
@@ -1271,6 +1301,21 @@ export default {
   font-weight: 800;
   color: #10b981;
   font-size: 1.1rem;
+}
+
+.item-comment-text {
+  font-size: 0.85rem;
+  font-style: italic;
+  color: #64748b;
+  margin-left: 38px;
+  margin-top: -4px;
+}
+
+.menu-item-comment-text {
+  font-size: 0.75rem;
+  font-style: italic;
+  color: #94a3b8;
+  display: block;
 }
 
 /* Secondary details (Supplements, etc) */

@@ -94,13 +94,12 @@ socket.on("resConsultaPuntos", (data) => {
 });
 
 socket.on("consultaPaytef", (data) => {
-  if (data) {
+  if (data.valid) {
     store.dispatch("Datafono/setEstado", "APROBADA");
-  } else {
+  } else if (!data?.lost) {
     store.dispatch("Datafono/setEstado", "DENEGADA");
-    setTimeout(() => {
-      store.dispatch("Datafono/setEstado", "AGAIN");
-    }, 3000);
+  } else {
+    store.dispatch("Datafono/setEstado", "PERDIDA");
   }
 });
 
@@ -118,11 +117,11 @@ socket.on("consultaPaytefRefund", (data) => {
   }
 });
 
-socket.on("nuevoTrabajadorActivo", (data) => {
-  if (data.id) {
-    store.dispatch("Trabajadores/setNuevoActivo", data.id);
-  }
-});
+// socket.on("nuevoTrabajadorActivo", (data) => {
+//   if (data.id) {
+//     store.dispatch("Trabajadores/setNuevoActivo", data.id);
+//   }
+// });
 
 socket.on("resDatafono", (data) => {
   store.dispatch("setEsperandoDatafono", false);

@@ -1,118 +1,155 @@
 <template>
-  <div>
-    <!-- Header con información compacta -->
-    <MDBListGroup class="employerList">
-      <MDBListGroupItem
-        @click="selectOtherEmployer"
-        class="employer header-item"
-      >
-        <div class="header-content">
-          <MDBIcon icon="user-tag" class="header-icon" />
-          <span class="header-text">{{ SelectEmployer.nombre }}</span>
-        </div>
-      </MDBListGroupItem>
-      <MDBListGroupItem @click="selectOtherTable" class="employer header-item">
-        <div class="header-content">
-          <MDBIcon icon="shopping-basket" class="header-icon" />
-          <span class="header-text">
-            <span class="room-pill">{{ currentSalaName }}</span>
-            <span class="separator">|</span>
-            <span class="table-text">
-              {{
-                selectTable.nombre
-                  ? selectTable.nombre
-                  : "Mesa " + (selectTable.indexMesa + 1)
-              }}
-            </span>
-            <span class="separator">|</span>
-            <span class="diners-text">
-              {{ selectTable.comensales }}
-              <MDBIcon icon="user" class="ms-1" />
-            </span>
+  <div class="unified-layout">
+    <!-- Header: Trabajador | Mesa -->
+    <div class="top-header">
+      <div class="header-item" @click="selectOtherEmployer">
+        <MDBIcon icon="user-tag" class="header-icon" />
+        <span class="header-text">{{ SelectEmployer.nombre }}</span>
+      </div>
+      <div class="header-item" @click="selectOtherTable">
+        <MDBIcon icon="shopping-basket" class="header-icon" />
+        <span class="header-text">
+          <span class="room-pill">{{ currentSalaName }}</span>
+          <span class="separator">|</span>
+          <span class="table-text">
+            {{
+              selectTable.nombre
+                ? selectTable.nombre
+                : "Mesa " + (selectTable.indexMesa + 1)
+            }}
           </span>
+          <span class="separator">|</span>
+          <span class="diners-text">
+            {{ selectTable.comensales }}
+            <MDBIcon icon="user" class="ms-1" />
+          </span>
+        </span>
+      </div>
+    </div>
+
+    <!-- Ticket Section -->
+    <div class="unified-ticket-section">
+      <div class="ticket-lines-container">
+        <div
+          v-if="!selectTable.lista || selectTable.lista.length === 0"
+          class="empty-ticket"
+        >
+          No hay productos en esta cesta
         </div>
-      </MDBListGroupItem>
-      <MDBListGroupItem
-        class="employer header-item ticket-summary"
-        @click="router.push('/ticketview')"
-      >
-        <div class="ticketBtn">
-          <div class="ticket-amount">
-            <MDBIcon icon="hand-holding-usd" class="header-icon" />
-            <span class="amount-text">
-              {{
-                (
-                  selectTable.detalleIva.importe1 +
-                  selectTable.detalleIva.importe2 +
-                  selectTable.detalleIva.importe3 +
-                  selectTable.detalleIva.importe4 +
-                  selectTable.detalleIva.importe5
-                ).toFixed(2)
-              }}€
-            </span>
+        <div v-else class="ticket-scroll">
+          <div
+            v-for="(x, i) in selectTable.lista"
+            :key="i"
+            class="ticket-line"
+            :class="{ 'confirm-mode': pendingDelete === i }"
+            @click="handleTicketClick(i)"
+          >
+            <template v-if="pendingDelete !== i">
+              <div class="ticket-line-content">
+                <span class="ticket-qty">{{ x.unidades }}</span>
+                <MDBIcon
+                  v-if="x.arraySuplementos && x.arraySuplementos.length > 0"
+                  icon="puzzle-piece"
+                  class="supplement-indicator-icon me-2"
+                  color="primary"
+                />
+                <span class="ticket-name">{{ x.nombre }}</span>
+                <span class="ticket-price">{{ x.subtotal?.toFixed(2) }}€</span>
+              </div>
+              <button
+                class="delete-line-btn"
+                @click.stop="handleTicketDelete(x, i)"
+              >
+                <MDBIcon :icon="x.unidades > 1 ? 'minus' : 'trash-alt'" />
+              </button>
+            </template>
+            <template v-else>
+              <span class="confirm-text"
+                >¿Eliminar <strong>{{ x.nombre }}</strong
+                >?</span
+              >
+              <div class="confirm-actions">
+                <button
+                  class="confirm-cancel-btn"
+                  @click.stop="pendingDelete = null"
+                >
+                  No
+                </button>
+                <button
+                  class="confirm-delete-btn"
+                  @click.stop="
+                    removeProduct(x, i);
+                    pendingDelete = null;
+                  "
+                >
+                  Eliminar
+                </button>
+              </div>
+            </template>
           </div>
-          <span class="ticket-label">Ver ticket</span>
         </div>
-      </MDBListGroupItem>
-    </MDBListGroup>
-
-    <div class="section-divider"></div>
-
-    <!-- Lista de categorías mejorada -->
-    <div class="categories-section">
-      <div class="section-title">
-        <MDBIcon icon="th-large" />
-        <span>Categorías</span>
       </div>
 
-      <MDBListGroup class="tableList">
-        <MDBListGroupItem
-          v-for="(x, i) in categories"
-          :key="i"
-          class="category-item"
-          @click="selectCategory(i, null)"
-          :class="{ 'category-expanded': subMenus && selectedSubcategory == i }"
-        >
-          <div class="category-content">
-            <div class="category-main">
-              <MDBIcon icon="folder" class="category-icon" />
-              <span class="category-name">{{ x.nombre }}</span>
-            </div>
-            <div class="category-info">
-              <span class="product-count" v-if="!subMenus">
-                {{ x.arrayTeclas?.length || 0 }}
-              </span>
-              <MDBIcon
-                v-if="subMenus"
-                :icon="selectedSubcategory == i ? 'chevron-up' : 'chevron-down'"
-                class="expand-icon"
-              />
-            </div>
-          </div>
+      <div class="ticket-actions-container">
 
-          <!-- Subcategorías -->
-          <div
-            v-if="subMenus && selectedSubcategory == i"
-            class="subcategories"
-          >
-            <MDBListGroupItem
-              v-for="(z, n) in x.arraySubmenus"
-              :key="n"
-              class="subcategory-item"
-              @click.stop="selectCategory(i, n)"
-            >
-              <div class="subcategory-content">
-                <MDBIcon icon="folder-open" class="subcategory-icon" />
-                <span class="subcategory-name">{{ z.nombre }}</span>
-                <span class="subcategory-count">{{
-                  z.arrayTeclas?.length || 0
-                }}</span>
-              </div>
-            </MDBListGroupItem>
-          </div>
-        </MDBListGroupItem>
-      </MDBListGroup>
+
+        <button class="action-btn cobrar-btn" @click="router.push('/ticketview')">
+          <span class="btn-icon-wrap"><MDBIcon icon="cash-register" /></span>
+          <span class="btn-label">Cobrar</span>
+          <span class="btn-arrow">→</span>
+        </button>
+
+        <button class="action-btn nota-btn" @click="imprimirNota()">
+          <span class="btn-icon-wrap"><MDBIcon icon="sticky-note" /></span>
+          <span class="btn-label">Nota</span>
+        </button>
+      </div>
     </div>
+
+    <!-- Grid de Categorías -->
+    <div class="categories-grid-container">
+      <div
+        v-for="(x, i) in categories"
+        :key="i"
+        class="category-grid-item"
+        @click="selectCategory(i, null)"
+        :class="{ 'category-expanded': subMenus && selectedSubcategory == i }"
+      >
+        <div class="category-grid-content">
+          <MDBIcon icon="folder" class="category-grid-icon" />
+          <span class="category-grid-name">{{ x.nombre }}</span>
+
+          <MDBIcon
+            v-if="subMenus"
+            :icon="selectedSubcategory == i ? 'chevron-up' : 'chevron-down'"
+            class="expand-icon"
+          />
+        </div>
+
+        <!-- Subcategorías (si hay) -->
+        <div
+          v-if="subMenus && selectedSubcategory == i"
+          class="subcategories-grid"
+          @click.stop
+        >
+          <div
+            v-for="(z, n) in x.arraySubmenus"
+            :key="n"
+            class="subcategory-grid-item"
+            @click.stop="selectCategory(i, n)"
+          >
+            <MDBIcon icon="folder-open" class="subcategory-icon" />
+            <span class="subcategory-name">{{ z.nombre }}</span>
+            <span class="subcategory-count">{{
+              z.arrayTeclas?.length || 0
+            }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Edit Product Modal -->
+    <EditProductModal v-model="showEditModal" :index="editProductIndex" />
   </div>
 </template>
 
@@ -122,6 +159,7 @@ import {
   MDBIcon,
   MDBListGroup,
   MDBListGroupItem,
+  MDBBtn,
 } from "mdb-vue-ui-kit";
 
 import { useStore } from "vuex";
@@ -129,6 +167,9 @@ import { ref, computed, onMounted } from "vue";
 import { io } from "socket.io-client";
 import { useRouter } from "vue-router";
 import router from "@/router";
+import axios from "axios";
+import Swal from "sweetalert2";
+import EditProductModal from "@/components/EditProductModal.vue";
 
 export default {
   name: "MenuPrincipalView",
@@ -137,13 +178,19 @@ export default {
     MDBIcon,
     MDBListGroup,
     MDBListGroupItem,
+    MDBBtn,
+    EditProductModal,
   },
   setup() {
     const store = useStore();
     const route = useRouter();
     const totalTable = ref(0);
+    const pendingDelete = ref(null);
+    const showEditModal = ref(false);
+    const editProductIndex = ref(null);
+    const lastClickTime = ref(0);
     const SelectEmployer = computed(
-      () => store.state.Employers.selectedEmployer
+      () => store.state.Employers.selectedEmployer,
     );
     const selectTable = computed(() => store.state.Tables.selectedTable);
     const categories = computed(() => store.state.Categories.arrayCategories);
@@ -156,6 +203,62 @@ export default {
     };
     const selectOtherTable = () => {
       router.push("/tableselection");
+    };
+
+    const imprimirNota = () => {
+      if (!selectTable.value._id)
+        return Swal.fire("Oops...", "Mesa inactiva. No se puede imprimir", "error");
+      axios
+        .post("cestas/imprimirNotaMesa", {
+          idCesta: selectTable.value._id,
+          idTrabajador: SelectEmployer.value._id,
+        })
+        .then((res) => {
+          if (!res.data) throw Error("No se ha podido imprimir la cesta");
+          Swal.fire({
+            toast: true, position: "top-end", icon: "success",
+            title: "Se ha enviado la mesa a imprimir",
+            showConfirmButton: false, timer: 1500,
+          });
+        })
+        .catch((err) => {
+          Swal.fire({
+            toast: true, position: "top-end", icon: "error",
+            title: err.message, showConfirmButton: false, timer: 1500,
+          });
+        });
+    };
+
+    const deleteAll = async () => {
+      Swal.fire({
+        title: "¿Estás seguro de que quieres vaciar la cesta?",
+        icon: "warning",
+        backdrop: "rgba(255,0,0,0.4)",
+        confirmButtonColor: "red",
+        cancelButtonColor: "green",
+        iconColor: "red",
+        showCancelButton: true,
+        confirmButtonText: "Sí",
+        cancelButtonText: "No",
+      }).then(async (result) => {
+        if (result.isConfirmed) {
+          await axios
+            .post("cestas/borrarCesta", {
+              idCesta: selectTable.value._id,
+              quitarCliente: true,
+            })
+            .then((x) => {
+              if (x.data) {
+                Swal.fire({
+                  title: "Cesta vaciada",
+                  icon: "success",
+                  timer: 1000,
+                  showConfirmButton: false,
+                });
+              }
+            });
+        }
+      });
     };
 
     const selectCategory = (i, x) => {
@@ -175,17 +278,67 @@ export default {
         subMenus.value = categories.value[0]?.arrayTeclas?.length == undefined;
     });
 
+    // Si hay más de 1 unidad → decrementa sin confirmar; si queda 1 → muestra confirmación
+    const handleTicketDelete = async (item, index) => {
+      if (item.unidades > 1) {
+        await axios.post("teclado/clickTeclaArticulo", {
+          idArticulo: item.idArticulo,
+          gramos: 0,
+          idCesta: selectTable.value._id,
+          unidades: -1,
+          arraySuplementos: item.arraySuplementos || null,
+          nombre: item.nombre,
+        });
+      } else {
+        pendingDelete.value = index;
+      }
+    };
+
+    const removeProduct = (productoSeleccionado, index) => {
+      store.dispatch("Tables/removeProduct", index);
+    };
+
+    const openEditModal = (index) => {
+      editProductIndex.value = index;
+      showEditModal.value = true;
+    };
+
+    const handleTicketClick = (index) => {
+      const now = Date.now();
+      const DOUBLE_CLICK_THRESHOLD = 300; // ms
+
+      if (
+        now - lastClickTime.value < DOUBLE_CLICK_THRESHOLD &&
+        editProductIndex.value === index
+      ) {
+        openEditModal(index);
+        lastClickTime.value = 0; // Reset
+      } else {
+        lastClickTime.value = now;
+        editProductIndex.value = index;
+      }
+    };
+
     return {
       actualPage,
+      removeProduct,
+      handleTicketDelete,
+      pendingDelete,
       selectOtherEmployer,
       selectedSubcategory,
       router,
       selectOtherTable,
       selectTable,
       selectCategory,
+      deleteAll,
       subMenus,
       SelectEmployer,
       totalTable,
+      showEditModal,
+      editProductIndex,
+      openEditModal,
+      handleTicketClick,
+      imprimirNota,
 
       categories,
       currentSalaName: computed(() => {
@@ -200,211 +353,49 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-.employerList {
-  width: 100%;
-  margin-top: 2%;
+.unified-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  padding: 15px;
+  gap: 15px;
+  background-color: #f8f9fa;
+  overflow: hidden;
+}
+
+.top-header {
+  display: flex;
+  gap: 15px;
 }
 
 .header-item {
+  flex: 1;
   background-color: #ffffff69;
-  padding: 4%;
-  margin-bottom: 2px;
-  border-radius: 8px;
-  transition: all 0.2s ease;
-
-  &:hover {
-    background-color: #ffffff80;
-    transform: translateY(-1px);
-  }
-}
-
-.header-content {
+  padding: 15px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   gap: 12px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid transparent;
+
+  &:hover {
+    transform: translateY(-2px);
+    background-color: #ffffff80;
+    border-color: #dee2e6;
+  }
 }
 
 .header-icon {
   font-size: 1.2rem;
-  color: #666;
-  min-width: 20px;
+  color: #007bff;
 }
 
 .header-text {
-  font-size: 1rem;
   font-weight: 500;
-}
-
-.ticket-summary {
-  background-color: #f8f9fa !important;
-  border: 2px solid #e9ecef;
-}
-
-.ticketBtn {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-}
-
-.ticket-amount {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.amount-text {
-  font-size: 1.3rem;
-  font-weight: bold;
-  color: #28a745;
-}
-
-.ticket-label {
-  font-size: 0.9rem;
-  font-style: italic;
-  color: #666;
-}
-
-.section-divider {
-  height: 3px;
-  background: linear-gradient(90deg, #e9ecef 0%, #dee2e6 50%, #e9ecef 100%);
-  margin: 20px 0;
-  border-radius: 2px;
-}
-
-.categories-section {
-  margin-top: 3%;
-}
-
-.section-title {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 15px 20px;
-  background-color: #f8f9fa;
-  border-radius: 8px;
-  margin-bottom: 15px;
-  font-weight: 600;
-  color: #495057;
-  border-left: 4px solid #007bff;
-}
-
-.tableList {
-  width: 100%;
-}
-
-.category-item {
-  background-color: #ffffff69;
-  margin-bottom: 8px;
-  border-radius: 10px;
-  overflow: hidden;
-  transition: all 0.3s ease;
-  border: 1px solid transparent;
-
-  &:hover {
-    background-color: #ffffff80;
-    border-color: #dee2e6;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  }
-
-  &.category-expanded {
-    background-color: #ffffff90;
-    border-color: #007bff;
-  }
-}
-
-.category-content {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 18px 20px;
-}
-
-.category-main {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  flex: 1;
-}
-
-.category-icon {
-  font-size: 1.3rem;
-  color: #007bff;
-  min-width: 24px;
-}
-
-.category-name {
-  font-size: 1.1rem;
-  font-weight: 500;
-  color: #333;
-}
-
-.category-info {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.product-count {
-  background-color: #007bff;
-  color: white;
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 0.85rem;
-  font-weight: 500;
-  min-width: 30px;
-  text-align: center;
-}
-
-.expand-icon {
-  font-size: 1rem;
-  color: #666;
-  transition: transform 0.3s ease;
-}
-
-.subcategories {
-  background-color: rgba(255, 255, 255, 0.3);
-  border-top: 1px solid #e9ecef;
-}
-
-.subcategory-item {
-  background-color: transparent;
-  border: none;
-  transition: background-color 0.2s ease;
-
-  &:hover {
-    background-color: rgba(255, 255, 255, 0.5);
-  }
-}
-
-.subcategory-content {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 20px 12px 50px;
-}
-
-.subcategory-icon {
-  font-size: 1rem;
-  color: #6c757d;
-  margin-right: 12px;
-}
-
-.subcategory-name {
-  flex: 1;
-  font-size: 0.95rem;
-  color: #495057;
-}
-
-.subcategory-count {
-  background-color: #6c757d;
-  color: white;
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-size: 0.75rem;
-  min-width: 24px;
-  text-align: center;
+  font-size: 1.05rem;
 }
 
 .room-pill {
@@ -413,25 +404,523 @@ export default {
   padding: 4px 12px;
   border-radius: 20px;
   font-weight: 600;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
   font-size: 0.95rem;
 }
 
 .separator {
   margin: 0 8px;
   color: #adb5bd;
-  font-weight: 300;
 }
 
-.table-text {
+/* Ticket Section */
+.unified-ticket-section {
+  display: flex;
+  gap: 15px;
+  height: 35vh;
+  min-height: 200px;
+}
+
+.ticket-lines-container {
+  flex: 1;
+  background-color: #ffffff69;
+  border-radius: 10px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid #e9ecef;
+  min-height: 0;
+}
+
+.ticket-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.empty-ticket {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100px;
+  color: #adb5bd;
   font-weight: 500;
+  font-size: 1.1rem;
+}
+
+.ticket-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 15px;
+  background-color: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  border: 1px solid #f1f3f5;
+  transition: transform 0.2s, box-shadow 0.2s;
+  cursor: pointer;
+  user-select: none;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+  }
+}
+
+.ticket-line-content {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  gap: 15px;
+}
+
+.ticket-qty {
+  font-weight: 700;
+  color: #495057;
+  background-color: #f8f9fa;
+  min-width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  padding: 0 6px;
+  border: 1px solid #e9ecef;
+}
+
+.ticket-name {
+  flex: 1;
+  font-weight: 600;
+  color: #212529;
+  font-size: 1rem;
+  line-height: 1.3;
+}
+
+.ticket-price {
+  font-weight: 700;
+  color: #212529;
+  font-size: 1.05rem;
+}
+
+.delete-line-btn {
+  background: none;
+  color: #adb5bd;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: color 0.2s ease;
+  font-size: 1.1rem;
+  margin-left: 12px;
+  flex-shrink: 0;
+
+  &:hover {
+    color: #fa5252;
+  }
+}
+
+.confirm-mode {
+  background-color: #fff5f5 !important;
+  border-color: #ffc9c9 !important;
+}
+
+.confirm-text {
+  flex: 1;
+  font-size: 0.9rem;
+  color: #495057;
+  line-height: 1.3;
+}
+
+.confirm-actions {
+  display: flex;
+  gap: 8px;
+  margin-left: 10px;
+  flex-shrink: 0;
+}
+
+.confirm-cancel-btn {
+  background: #f1f3f5;
+  color: #868e96;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+
+  &:hover {
+    background: #e9ecef;
+  }
+}
+
+.confirm-delete-btn {
+  background: #fa5252;
+  color: white;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+
+  &:hover {
+    background: #e03131;
+  }
+}
+
+.ticket-actions-container {
+  width: 250px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.total-summary {
+  background: white;
+  border-radius: 14px;
+  padding: 14px 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 1px solid #e9ecef;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+
+  .total-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #adb5bd;
+  }
+
+  .total-amount {
+    font-size: 1.55rem;
+    font-weight: 800;
+    color: #2d8a5e;
+    letter-spacing: -0.03em;
+  }
+}
+
+.action-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 18px;
+  height: 52px;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 1rem;
+  letter-spacing: 0.01em;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+
+  &:active {
+    transform: scale(0.97);
+  }
+
+  .btn-icon-wrap {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 0.85rem;
+  }
+
+  .btn-label {
+    flex: 1;
+    text-align: left;
+  }
+}
+
+.cobrar-btn {
+  background: #e6f7ef;
+  color: #1a7a4a;
+  border: 1.5px solid #b8e6d0;
+  height: 64px;
+  font-size: 1.1rem;
+
+  .btn-icon-wrap {
+    background: #c8f0dc;
+    color: #1a7a4a;
+  }
+
+  .btn-arrow {
+    font-size: 1.1rem;
+    opacity: 0.5;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+  }
+
+  &:hover {
+    background: #d4f0e2;
+    border-color: #8fd4b4;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(26, 122, 74, 0.12);
+
+    .btn-arrow {
+      transform: translateX(4px);
+      opacity: 1;
+    }
+  }
+}
+
+.nota-btn {
+  background: #edf2ff;
+  color: #3b6bdb;
+  border: 1.5px solid #c5d4f7;
+
+  .btn-icon-wrap {
+    background: #d6e2fc;
+    color: #3b6bdb;
+  }
+
+  &:hover {
+    background: #dce6fc;
+    border-color: #9db8f0;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(59, 107, 219, 0.1);
+  }
+}
+
+/* Breadcrumb */
+.breadcrumb-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 15px;
+  background-color: #ffffff69;
+  border-radius: 10px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+  border: 1px solid transparent;
+
+  &:hover {
+    background-color: #ffffff80;
+    border-color: #dee2e6;
+  }
+}
+
+.back-icon {
+  color: #007bff;
+  font-size: 1.2rem;
+}
+
+.breadcrumb-text {
+  font-weight: bold;
+  font-size: 1.1rem;
+  color: #333;
+}
+
+/* Categories Grid */
+.categories-grid-container {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-auto-rows: min-content;
+  margin-top: 5%;
+  padding: 5px;
+  gap: 15px;
+  overflow-y: auto;
+  padding-bottom: 20px;
+  min-height: 0;
+}
+
+.category-grid-item {
+  background-color: #ffffff69;
+  border-radius: 10px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+  transition: all 0.2s;
+  overflow: hidden;
+  border: 1px solid transparent;
+
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    background-color: #ffffff80;
+    border-color: #007bff;
+  }
+
+  &.category-expanded {
+    grid-column: 1 / -1;
+    background-color: #ffffff80;
+    border-color: #007bff;
+  }
+}
+
+.category-grid-content {
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.category-grid-icon {
+  font-size: 1.5rem;
+  color: #007bff;
+}
+
+.category-grid-name {
+  flex: 1;
+  font-size: 1.1rem;
+  font-weight: bold;
   color: #343a40;
 }
 
-.diners-text {
-  font-weight: 500;
-  color: #495057;
-  display: inline-flex;
+.category-grid-count {
+  background-color: #007bff;
+  color: white;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: bold;
+}
+
+.subcategories-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 10px;
+  padding: 15px;
+  background-color: rgba(255, 255, 255, 0.3);
+  border-top: 1px solid #e9ecef;
+}
+
+.subcategory-grid-item {
+  background-color: transparent;
+  padding: 15px;
+  border-radius: 8px;
+  display: flex;
   align-items: center;
+  gap: 10px;
+  box-shadow: none;
+  border: 1px solid #e9ecef;
+  transition: all 0.2s;
+
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.5);
+    transform: scale(1.02);
+  }
+}
+
+.subcategory-icon {
+  color: #6c757d;
+}
+
+.subcategory-name {
+  flex: 1;
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+
+.subcategory-count {
+  background-color: #6c757d;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+}
+
+/* Media Queries para Responsive (Móvil y Tablet) */
+@media (max-width: 768px) {
+  .top-header {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .header-item {
+    padding: 10px;
+  }
+
+  .unified-ticket-section {
+    flex-direction: column;
+    height: auto;
+    min-height: unset;
+    gap: 10px;
+  }
+
+  .ticket-lines-container {
+    max-height: 200px;
+  }
+
+  .ticket-actions-container {
+    width: 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .total-summary {
+    width: 100%;
+    padding: 10px 14px;
+
+    .total-amount {
+      font-size: 1.25rem;
+    }
+  }
+
+  .cobrar-btn {
+    flex: 2;
+    height: 52px;
+    font-size: 1rem;
+  }
+
+  .nota-btn {
+    flex: 1;
+    height: 52px;
+    font-size: 0.95rem;
+  }
+
+  .categories-grid-container {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 10px;
+  }
+
+  .category-grid-content {
+    padding: 15px 10px;
+    flex-direction: column;
+    text-align: center;
+    gap: 10px;
+  }
+
+  .category-grid-name {
+    font-size: 1rem;
+  }
+
+  .category-grid-icon {
+    font-size: 1.8rem;
+  }
+
+  .subcategories-grid {
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  }
+
+  .subcategory-grid-item {
+    padding: 10px;
+    flex-direction: column;
+    text-align: center;
+  }
+}
+
+.supplement-indicator-icon {
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+  color: #007bff;
+}
+
+.ticket-line:hover .supplement-indicator-icon {
+  transform: scale(1.2);
 }
 </style>

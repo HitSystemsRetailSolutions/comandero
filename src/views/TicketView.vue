@@ -1,139 +1,8 @@
 <template>
-  <!-- Modal de edición de producto mejorado -->
-  <MDBModal
-    id="openEditProductModal"
-    tabindex="-1"
-    labelledby="openEditProductModal"
+  <EditProductModal
     v-model="openEditProductModal"
-    :staticBackdrop="true"
-    size="lg"
-    class="edit-product-modal custom-edit-modal"
-  >
-    <MDBModalHeader class="modal-header-custom sticky-header">
-      <div class="modal-title-custom">
-        <MDBIcon icon="edit" />
-        <span>{{ selectedTable.lista[EditProductModalInfo]?.nombre }}</span>
-      </div>
-    </MDBModalHeader>
-    <MDBModalBody class="modal-body-custom scrollable-modal-body">
-      <div class="product-edit-container">
-        <!-- Sección de unidades -->
-        <div class="units-section">
-          <div class="section-header">
-            <MDBIcon icon="calculator" />
-            <span class="section-title">Unidades</span>
-          </div>
-
-          <div class="units-display">
-            <div class="current-units">
-              <span class="units-number">{{
-                selectedTable.lista[EditProductModalInfo]?.unidades
-              }}</span>
-              <span class="units-label">uds.</span>
-            </div>
-
-            <div class="units-controls">
-              <div
-                class="control-btn add-btn"
-                v-if="
-                  !selectedTable.lista[EditProductModalInfo]?.nombre.includes(
-                    'Promo. '
-                  )
-                "
-                @click="
-                  addProduct(
-                    selectedTable.lista[EditProductModalInfo],
-                    null,
-                    false
-                  )
-                "
-              >
-                <MDBIcon icon="plus" />
-              </div>
-              <div
-                class="control-btn remove-btn"
-                @click="
-                  removeProduct(selectedTable.lista[EditProductModalInfo]);
-                  openEditProductModal = false;
-                "
-              >
-                <MDBIcon icon="trash-alt" />
-              </div>
-              <div
-                class="control-btn minus-btn"
-                @click="
-                  restProduct(
-                    selectedTable.lista[EditProductModalInfo],
-                    null,
-                    false
-                  )
-                "
-                :class="{
-                  disabled:
-                    selectedTable.lista[EditProductModalInfo]?.unidades == 1,
-                }"
-              >
-                <MDBIcon icon="minus" />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Sección de suplementos -->
-        <div
-          v-if="selectedTable.lista[EditProductModalInfo]?.arraySuplementos"
-          class="supplements-section"
-        >
-          <div class="section-header">
-            <MDBIcon icon="plus-circle" />
-            <span class="section-title">Suplementos</span>
-          </div>
-
-          <div class="supplements-list">
-            <div
-              v-for="(x, i) in selectedTable.lista[EditProductModalInfo]
-                .arraySuplementos"
-              :key="i"
-              class="supplement-item"
-            >
-              <div class="supplement-info">
-                <MDBIcon icon="arrow-right" class="supplement-icon" />
-                <span class="supplement-name">{{ x.nombre }}</span>
-              </div>
-              <div class="supplement-remove" @click="removeSuplement(i)">
-                <MDBIcon icon="trash-alt" />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Sección de menú (solo si es menu) -->
-        <div
-          v-if="selectedTable.lista[EditProductModalInfo]?.articulosMenu"
-          class="units-section-menu"
-        >
-          <MenuModal
-            id="menuModal"
-            :menuSelected="selectedTable.lista[EditProductModalInfo]"
-            :suplByFamily="suplByFamily"
-            :initialSeleccionadoPorFamilia="menuSeleccionadoPorFamilia"
-            :closeBtn="false"
-            @aplicarCambios="onAplicarCambios"
-          />
-        </div>
-      </div>
-    </MDBModalBody>
-    <MDBModalFooter class="modal-footer-custom sticky-footer">
-      <MDBBtn
-        color="secondary"
-        @click="openEditProductModal = false"
-        class="close-btn"
-      >
-        <MDBIcon icon="times" />
-        Cerrar
-      </MDBBtn>
-    </MDBModalFooter>
-  </MDBModal>
+    :index="EditProductModalInfo"
+  />
 
   <!-- Modal de método de pago -->
   <MDBModal
@@ -142,63 +11,98 @@
     labelledby="paymentModal"
     v-model="paymentModal"
     :staticBackdrop="true"
-    size="md"
-    class="payment-modal"
+    size="lg"
+    class="premium-modal payment-modal"
   >
-    <MDBModalHeader class="payment-modal-header">
-      <div class="payment-modal-title">
-        <MDBIcon icon="credit-card" />
-        <span>Seleccionar método de pago</span>
+    <MDBModalHeader class="modal-header-premium">
+      <div class="modal-title-premium d-flex w-100 align-items-center">
+        <div class="title-icon-wrapper me-3">
+          <MDBIcon icon="credit-card" class="title-icon" />
+        </div>
+        <div class="title-text-group">
+          <span class="modal-main-title">Finalizar Venta</span>
+          <span class="modal-subtitle">Selecciona el método de pago</span>
+        </div>
       </div>
     </MDBModalHeader>
-    <MDBModalBody class="payment-modal-body">
-      <div class="payment-total">
-        <div class="total-label">Total a cobrar:</div>
-        <div class="total-amount">
-          {{
-            (
-              selectedTable.detalleIva.importe1 +
-              selectedTable.detalleIva.importe2 +
-              selectedTable.detalleIva.importe3 +
-              selectedTable.detalleIva.importe4 +
-              selectedTable.detalleIva.importe5
-            ).toFixed(2)
-          }}€
-        </div>
-      </div>
-
-      <div class="payment-methods">
-        <div class="payment-option" @click="cobrar('EFECTIVO')">
-          <div class="payment-icon cash">
-            <MDBIcon icon="euro-sign" />
+    <MDBModalBody class="modal-body-premium">
+      <div class="payment-glass-container">
+        <!-- Resumen del Total -->
+        <div class="payment-summary-card">
+          <div class="summary-label">TOTAL A COBRAR</div>
+          <div class="summary-value">
+            {{
+              selectedTable.detalleIva
+                ? (
+                    selectedTable.detalleIva.importe1 +
+                    selectedTable.detalleIva.importe2 +
+                    selectedTable.detalleIva.importe3 +
+                    selectedTable.detalleIva.importe4 +
+                    selectedTable.detalleIva.importe5
+                  ).toFixed(2)
+                : "0.00"
+            }}€
           </div>
-          <div class="payment-info">
-            <div class="payment-name">Efectivo</div>
-            <div class="payment-desc">Pago en metálico</div>
-          </div>
-          <MDBIcon icon="chevron-right" class="arrow-icon" />
         </div>
 
-        <div class="payment-option" @click="cobrar('DATAFONO_3G')">
-          <div class="payment-icon card">
-            <MDBIcon icon="credit-card" />
+        <!-- Métodos de Pago Grid -->
+        <div v-if="!paytefLoading" class="methods-grid">
+          <div class="method-card cash" @click="cobrar('EFECTIVO')">
+            <div class="method-icon-box">
+              <MDBIcon icon="money-bill-wave" />
+            </div>
+            <div class="method-info">
+              <span class="method-name">Efectivo</span>
+              <span class="method-hint">Pago rápido en metálico</span>
+            </div>
+            <MDBIcon icon="chevron-right" class="method-arrow" />
           </div>
-          <div class="payment-info">
-            <div class="payment-name">Tarjeta</div>
-            <div class="payment-desc">Pago con tarjeta</div>
+
+          <div class="method-card credit-card" @click="cobrar('DATAFONO_3G')">
+            <div class="method-icon-box">
+              <MDBIcon icon="credit-card" />
+            </div>
+            <div class="method-info">
+              <span class="method-name">Tarjeta / Datafono</span>
+              <span class="method-hint">Pago electrónico seguro</span>
+            </div>
+            <MDBIcon icon="chevron-right" class="method-arrow" />
           </div>
-          <MDBIcon icon="chevron-right" class="arrow-icon" />
+        </div>
+
+        <!-- Estado Paytef: Spinner + proceso -->
+        <div v-if="paytefLoading" class="paytef-status-container">
+          <div class="paytef-spinner-wrapper">
+            <div class="spinner-border text-primary paytef-spinner" role="status">
+              <span class="visually-hidden">Procesando...</span>
+            </div>
+          </div>
+          <div class="paytef-status-text">
+            <span class="paytef-status-label">Estado del datáfono</span>
+            <span class="paytef-status-value" :class="paytefStatusClass">
+              {{ procesoDatafono }}
+            </span>
+          </div>
+          <div v-if="estadoDatafono === 'APROBADA'" class="paytef-result paytef-approved">
+            <MDBIcon icon="check-circle" class="me-2" /> Pago aprobado
+          </div>
+          <div v-if="estadoDatafono === 'DENEGADA'" class="paytef-result paytef-denied">
+            <MDBIcon icon="times-circle" class="me-2" /> Pago denegado
+          </div>
+          <div v-if="estadoDatafono === 'PERDIDA'" class="paytef-result paytef-lost">
+            <MDBIcon icon="exclamation-triangle" class="me-2" /> Conexión perdida
+          </div>
         </div>
       </div>
     </MDBModalBody>
-    <MDBModalFooter class="payment-modal-footer">
+    <MDBModalFooter class="modal-footer-premium">
       <MDBBtn
-        color="secondary"
+        outline="primary"
         @click="paymentModal = false"
-        class="cancel-payment-btn"
+        class="premium-cancel-btn"
+        :disabled="paytefLoading && estadoDatafono === 'PENDIENTE'"
       >
-        <MDBIcon icon="times" />
-        Cancelar
+        <MDBIcon icon="times" class="me-2" /> Cancelar
       </MDBBtn>
     </MDBModalFooter>
   </MDBModal>
@@ -210,41 +114,44 @@
     labelledby="printTicketModal"
     v-model="printTicketModal"
     :staticBackdrop="true"
-    size="md"
-    class="print-ticket-modal"
+    class="premium-modal print-ticket-modal"
   >
-    <MDBModalHeader class="print-ticket-modal-header">
-      <div class="print-ticket-modal-title">
-        <MDBIcon icon="receipt" />
-        <span>¿Imprimir ticket?</span>
-      </div>
-    </MDBModalHeader>
-    <MDBModalBody class="print-ticket-modal-body">
-      <div class="print-ticket-icon-container">
-        <div class="print-ticket-big-icon">
-          <MDBIcon icon="print" />
+    <MDBModalHeader class="modal-header-premium">
+      <div class="modal-title-premium d-flex w-100 align-items-center">
+        <div class="title-icon-wrapper me-3">
+          <MDBIcon icon="receipt" class="title-icon" />
+        </div>
+        <div class="title-text-group">
+          <span class="modal-main-title">Ticket de Venta</span>
+          <span class="modal-subtitle">Confirmación de impresión</span>
         </div>
       </div>
-      <div class="print-ticket-question">
-        ¿Deseas imprimir el ticket de la venta?
+    </MDBModalHeader>
+    <MDBModalBody class="modal-body-premium">
+      <div class="print-glass-container text-center py-4">
+        <div class="print-big-icon-wrapper mb-4">
+          <MDBIcon icon="print" class="print-big-icon" />
+        </div>
+        <h4 class="print-question-title">¿Deseas imprimir el ticket?</h4>
+        <p class="print-question-desc">
+          Se generará el recibo físico para el cliente
+        </p>
       </div>
     </MDBModalBody>
-    <MDBModalFooter class="print-ticket-modal-footer">
+    <MDBModalFooter class="modal-footer-premium justify-content-center">
       <MDBBtn
-        color="secondary"
+        outline="danger"
         @click="handleSkipPrint"
-        class="skip-print-btn"
+        class="premium-skip-btn me-3"
       >
-        <MDBIcon icon="times" />
-        No, gracias
+        <MDBIcon icon="times" class="me-2" /> No, gracias
       </MDBBtn>
       <MDBBtn
         color="success"
         @click="handlePrintTicket"
-        class="confirm-print-btn"
+        class="premium-print-btn"
       >
-        <MDBIcon icon="print" />
-        Sí, imprimir
+        <MDBIcon icon="print" class="me-2" /> Sí, imprimir
       </MDBBtn>
     </MDBModalFooter>
   </MDBModal>
@@ -256,354 +163,325 @@
     labelledby="transferModal"
     v-model="transferModal"
     :staticBackdrop="true"
-    size="md"
-    class="transfer-modal"
+    size="xl"
+    class="premium-modal transfer-modal"
   >
-    <MDBModalHeader class="transfer-modal-header">
-      <div class="transfer-modal-title">
-        <MDBIcon icon="exchange-alt" />
-        <span>Traspasar productos a otra mesa</span>
+    <MDBModalHeader class="modal-header-premium">
+      <div class="modal-title-premium d-flex w-100 align-items-center">
+        <div class="title-icon-wrapper me-3">
+          <MDBIcon icon="exchange-alt" class="title-icon" />
+        </div>
+        <div class="title-text-group">
+          <span class="modal-main-title">Traspasar Ticket</span>
+          <span class="modal-subtitle">Cambiar productos a otra mesa</span>
+        </div>
       </div>
     </MDBModalHeader>
-    <MDBModalBody class="transfer-modal-body">
-      <div class="transfer-info">
-        <div class="current-table-info">
-          <div class="info-label">Mesa actual:</div>
-          <div class="info-value">
-            {{ selectedTable.nombre || `Mesa ${selectedTable.indexMesa + 1}` }}
+    <MDBModalBody class="modal-body-premium">
+      <div class="transfer-glass-container">
+        <!-- Info de Origen -->
+        <div class="transfer-source-card mb-4">
+          <div class="source-item">
+            <span class="source-label">Mesa Actual</span>
+            <span class="source-value">{{
+              selectedTable.nombre || `Mesa ${selectedTable.indexMesa + 1}`
+            }}</span>
+          </div>
+          <div class="source-separator">
+            <MDBIcon icon="arrow-right" />
+          </div>
+          <div class="source-item">
+            <span class="source-label">Elementos</span>
+            <span class="source-value"
+              >{{ selectedTable.lista.length }} artículos</span
+            >
           </div>
         </div>
-        <div class="products-count">
-          <div class="count-label">Productos a traspasar:</div>
-          <div class="count-value">
-            {{ selectedTable.lista.length }} productos
-          </div>
-        </div>
-      </div>
 
-      <div class="tables-selection">
-        <div class="selection-title">
-          <MDBIcon icon="table" />
-          <span>Seleccionar mesa destino:</span>
+        <div class="selection-section-title mb-3">
+          <MDBIcon icon="th" class="me-2" />
+          Selecciona la mesa de destino
         </div>
 
-        <div class="tables-grid">
+        <!-- Grid de Mesas Destino -->
+        <div class="transfer-tables-grid">
           <div
             v-for="table in availableTables"
             :key="table._id"
-            class="table-option"
+            class="transfer-table-card"
+            :class="{
+              selected: selectedTargetTable?._id === table._id,
+              'has-items': table.lista && table.lista.length > 0,
+            }"
             @click="selectTargetTable(table)"
-            :class="{ selected: selectedTargetTable?._id === table._id }"
           >
-            <div class="table-icon">
+            <div class="table-card-icon">
               <MDBIcon
                 :icon="
                   table.lista && table.lista.length > 0 ? 'utensils' : 'table'
                 "
               />
             </div>
-            <div class="table-info">
-              <div class="table-name">
-                {{ table.nombre || `Mesa ${table.indexMesa + 1}` }}
-              </div>
-              <div
-                class="table-status"
-                :class="{ occupied: table.lista && table.lista.length > 0 }"
-              >
+            <div class="table-card-info">
+              <span class="table-card-name">{{
+                table.nombre || `Mesa ${table.indexMesa + 1}`
+              }}</span>
+              <span class="table-card-status">
                 {{
                   table.lista && table.lista.length > 0
-                    ? `${table.lista.length} productos`
+                    ? `${table.lista.length} uds`
                     : "Libre"
                 }}
-              </div>
+              </span>
             </div>
             <div
-              v-if="table.lista && table.lista.length > 0"
-              class="warning-icon"
+              v-if="selectedTargetTable?._id === table._id"
+              class="selection-check"
             >
-              <MDBIcon icon="exclamation-triangle" />
+              <MDBIcon icon="check-circle" />
             </div>
           </div>
         </div>
       </div>
     </MDBModalBody>
-    <MDBModalFooter class="transfer-modal-footer">
+    <MDBModalFooter class="modal-footer-premium">
       <MDBBtn
-        color="secondary"
+        outline="primary"
         @click="
           transferModal = false;
           selectedTargetTable = null;
         "
-        class="cancel-transfer-btn"
+        class="premium-cancel-btn me-3"
       >
-        <MDBIcon icon="times" />
-        Cancelar
+        <MDBIcon icon="times" class="me-2" /> Cancelar
       </MDBBtn>
       <MDBBtn
         color="warning"
         @click="confirmTransfer"
         :disabled="!selectedTargetTable"
-        class="confirm-transfer-btn"
+        class="premium-confirm-btn"
       >
-        <MDBIcon icon="check" />
-        Confirmar traspaso
+        <MDBIcon icon="check" class="me-2" /> Confirmar Traspaso
       </MDBBtn>
     </MDBModalFooter>
   </MDBModal>
 
   <!-- Contenido principal -->
-  <div class="ticket-view">
-    <!-- Header con información de la mesa -->
-    <div class="table-header">
-      <MDBListGroup class="header-list">
-        <MDBListGroupItem @click="selectOtherTable" class="header-item">
-          <div class="header-content">
-            <MDBIcon icon="shopping-basket" class="header-icon" />
-            <span class="header-text">
-              <span class="room-pill">{{ currentSalaName }}</span>
-              <span class="separator">|</span>
-              <span class="table-text">
-                {{
-                  selectedTable.nombre
-                    ? selectedTable.nombre
-                    : "Mesa " + (selectedTable.indexMesa + 1)
-                }}
-              </span>
-              <span class="separator">|</span>
-              <span class="diners-text" @click.stop="changeClients">
-                {{ selectedTable.comensales }}
-                <MDBIcon icon="user" class="ms-1" />
-              </span>
-            </span>
-          </div>
-        </MDBListGroupItem>
-        <MDBListGroupItem
-          class="header-item prepare-item"
-          @click="handleSendToPrepare"
-          :class="{ disabled: selectedTable.lista.length == 0 }"
+  <!-- Contenido principal -->
+  <div class="unified-layout">
+    <!-- Header: Trabajador | Mesa | Comensales -->
+    <div class="top-header">
+      <div class="header-item" @click="selectOtherEmployer">
+        <MDBIcon icon="user-tag" class="header-icon" />
+        <span class="header-text">{{ SelectEmployer.nombre }}</span>
+      </div>
+      <div class="header-item" @click="selectOtherTable">
+        <MDBIcon icon="table" class="header-icon" />
+        <span class="header-text">
+          <span class="room-pill">{{ currentSalaName }}</span>
+          <br />
+          <span class="table-text">
+            {{
+              selectedTable.nombre
+                ? selectedTable.nombre
+                : "Mesa " + (selectedTable.indexMesa + 1)
+            }}
+          </span>
+        </span>
+      </div>
+      <div class="header-item" @click="changeClients">
+        <MDBIcon icon="users" class="header-icon" />
+        <span class="header-text"
+          >{{ selectedTable.comensales }} comensales</span
         >
-          <div class="header-content">
-            <MDBIcon icon="print" class="header-icon" />
-            <span class="header-text">Preparar</span>
-          </div>
-        </MDBListGroupItem>
-      </MDBListGroup>
+      </div>
     </div>
 
-    <div class="section-divider"></div>
+    <!-- Breadcrumb: Volver | Título | Acción rápida -->
+    <div class="breadcrumb-container">
+      <div class="breadcrumb-left" @click="router.back()">
+        <MDBIcon icon="arrow-left" class="back-icon" />
+        <span class="breadcrumb-text">Resumen de Ticket</span>
+      </div>
+      <MDBBtn
+        size="sm"
+        color="primary"
+        class="ms-auto prepare-btn-badge"
+        @click="handleSendToPrepare"
+        :disabled="selectedTable.lista.length == 0"
+      >
+        <MDBIcon icon="print" class="me-1" />
+        Preparar
+      </MDBBtn>
+    </div>
 
-    <!-- Lista de productos -->
-    <div class="products-container">
+    <!-- Lista de productos (Grid de tarjetas) -->
+    <div class="products-grid-container ticket-grid-layout">
       <!-- Estado vacío -->
       <div v-if="selectedTable.lista.length == 0" class="empty-state">
-        <div class="empty-icon">
+        <div class="empty-icon-wrapper">
           <MDBIcon icon="shopping-basket" />
         </div>
-        <div class="empty-text">No hay productos en esta cesta</div>
-        <div class="empty-subtext">Añade productos desde el menú</div>
+        <div class="empty-text">El ticket está vacío</div>
+        <div class="empty-subtext">
+          Vuelve a productos para añadir artículos
+        </div>
       </div>
 
-      <!-- Tabla de productos responsive -->
+      <!-- Tarjetas de productos -->
       <div
-        v-if="selectedTable.lista.length > 0"
-        class="products-table-container"
+        v-for="(x, i) in selectedTable.lista"
+        :key="i"
+        class="product-grid-item ticket-card-item"
+        :class="{ selected: actProd == i }"
+        @click="selectProduct(i)"
+        @dblclick="openEditProduct(i)"
       >
-        <div class="table-header-row">
-          <div class="col-units">Uds.</div>
-          <div class="col-product">Producto</div>
-          <div class="col-price">Precio</div>
-        </div>
+        <div class="ticket-item-main">
+          <div class="item-top-row">
+            <div class="item-qty-container">
+              <span class="item-quantity">x{{ x.unidades }}</span>
+              <MDBIcon
+                v-if="
+                  x.impresora ||
+                  (x.promocion &&
+                    x.promocion.grupos.flat().some((a) => a.impresora))
+                "
+                icon="print"
+                class="status-icon-inline"
+                :class="{
+                  'printed-success':
+                    !x.articulosMenu?.some((a) => a.printed != a.unidades) ||
+                    (x.promocion
+                      ? x.promocion.grupos
+                          .flat()
+                          .every((a) => a.printed >= a.unidades)
+                      : x?.printed == x.unidades),
+                }"
+              />
+            </div>
+            <span class="item-name-text">{{ x.nombre }}</span>
+            <span class="item-price-text">{{ x.subtotal.toFixed(2) }}€</span>
+          </div>
+          <div v-if="x.comentario" class="item-comment-text">
+            {{ x.comentario }}
+          </div>
 
-        <div class="table-body">
+          <!-- Detalles (Suplementos, promos, menús) -->
           <div
-            v-for="(x, i) in selectedTable.lista"
-            :key="i"
-            class="product-row"
-            @click="selectProduct(i)"
-            :class="{ selected: actProd == i }"
+            class="item-secondary-details"
+            v-if="x.arraySuplementos?.length || x.promocion || x.articulosMenu"
           >
-            <div class="col-units">
-              <span class="units-badge">x{{ x.unidades }}</span>
+            <!-- Suplementos normales -->
+            <div v-if="x.arraySuplementos" class="nested-details">
+              <div
+                v-for="(z, y) in x.arraySuplementos"
+                :key="y"
+                class="detail-row"
+              >
+                <MDBIcon icon="level-up-alt" class="detail-icon" />
+                <span>{{ z.nombre }}</span>
+              </div>
             </div>
 
-            <div class="col-product">
-              <div class="product-main">
+            <!-- Menús -->
+            <div v-if="x.articulosMenu" class="nested-details">
+              <div
+                v-for="(z, y) in x.articulosMenu"
+                :key="y"
+                class="detail-row"
+              >
+                <MDBIcon icon="utensils" class="detail-icon menu-icon" />
+                <span>{{ z.nombre }}</span>
+                <div v-if="z.comentario" class="menu-item-comment-text">
+                  {{ z.comentario }}
+                </div>
                 <MDBIcon
-                  v-if="x.impresora"
+                  v-if="z.impresora"
                   icon="print"
-                  class="print-icon"
-                  :class="{ printed: x?.printed == x.unidades }"
+                  class="status-icon-inline"
+                  :class="{
+                    'printed-success': z.instancias
+                      ? z.instancias.every((inst) => inst.printed)
+                      : z.printed >= z.unidades,
+                  }"
                 />
-                <span class="product-name">{{ x.nombre }} </span>
-              </div>
-
-              <div v-if="x.promocion" class="supplements">
-                <div
-                  v-for="(z, y) in x.promocion.grupos"
-                  :key="y"
-                  class="supplement-row"
-                >
-                  <div v-for="(v, h) in z" :key="y" class="supplement-row">
-                    <span
-                      class="supplement-text"
-                      :style="{
-                        color:
-                          v.printed ==
-                          (x.promocion?.unidadesOferta || 1) * v.unidades
-                            ? 'green'
-                            : '',
-                      }"
-                      >→ {{ v.nombre }} &nbsp;
-                      <MDBIcon
-                        v-if="
-                          v.impresora &&
-                          v.printed ==
-                            (x.promocion?.unidadesOferta || 1) * v.unidades
-                        "
-                        icon="print"
-                        class="print-icon ms-1"
-                        style="color: green" />
-                      <MDBIcon
-                        v-else-if="v.impresora"
-                        icon="print"
-                        class="print-icon ms-1"
-                    /></span>
-                    <div
-                      v-for="(p, q) in v.suplementosPorArticulo"
-                      :key="y"
-                      class="supplement-row"
-                    >
-                      <div
-                        v-for="(a, b) in p.suplementos"
-                        :key="y"
-                        class="subsupplement-row"
-                      >
-                        <span
-                          :style="{
-                            color:
-                              v.printed ==
-                              (x.promocion?.unidadesOferta || 1) * v.unidades
-                                ? 'green'
-                                : '',
-                          }"
-                          class="supplement-text"
-                          >➥ {{ a.nombre }}</span
-                        >
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div v-if="x.arraySuplementos" class="supplements">
-                <div
-                  v-for="(z, y) in x.arraySuplementos"
-                  :key="y"
-                  class="supplement-row"
-                >
-                  <span class="supplement-text">→ {{ z.nombre }}</span>
-                </div>
-              </div>
-
-              <div v-if="x.articulosMenu" class="supplements">
-                <div
-                  v-for="(z, y) in x.articulosMenu"
-                  :key="y"
-                  class="supplement-row"
-                >
-                  <span class="supplement-text">{{ z.nombre }}</span>
-
-                  <!-- Subniveles -->
-                  <div
-                    v-if="z.arraySuplementos"
-                    class="supplements"
-                    style="margin-left: 20px"
-                  >
-                    <div
-                      v-for="(a, b) in z.arraySuplementos"
-                      :key="b"
-                      class="supplement-row"
-                    >
-                      <span class="supplement-text">→ {{ a.nombre }}</span>
-
-                      <!-- Sub-subniveles -->
-                      <div
-                        v-if="a.arraySuplementos"
-                        class="supplements"
-                        style="margin-left: 20px"
-                      >
-                        <div
-                          v-for="(c, d) in a.arraySuplementos"
-                          :key="d"
-                          class="supplement-row"
-                        >
-                          <span class="supplement-text">→ {{ c.nombre }}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
               </div>
             </div>
 
-            <div class="col-price">
-              <div class="main-price">{{ x.subtotal.toFixed(2) }}€</div>
-              <div v-if="x.arraySuplementos" class="supplement-prices">
+            <!-- Promociones: articulos de la promo -->
+            <div v-if="x.promocion" class="nested-details promo-details">
+              <template v-for="(grupo, gi) in x.promocion.grupos" :key="gi">
                 <div
-                  v-for="(z, y) in x.arraySuplementos"
-                  :key="y"
-                  class="supplement-price"
+                  v-for="(art, ai) in grupo"
+                  :key="ai"
+                  class="detail-row promo-article-row"
                 >
-                  {{ z.precioConIva.toFixed(2) }}€
+                  <MDBIcon icon="tag" class="detail-icon promo-icon" />
+                  <span>{{ art.unidades }}x {{ art.nombre }}</span>
+                  <MDBIcon
+                    v-if="art.impresora"
+                    icon="print"
+                    class="status-icon-inline"
+                    :class="{ 'printed-success': art.printed >= art.unidades }"
+                  />
                 </div>
-              </div>
+              </template>
             </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Footer con total y botón de cobrar -->
-    <div class="footer-container">
-      <div class="total-section">
-        <div class="total-info">
-          <MDBIcon icon="hand-holding-usd" class="total-icon" />
-          <span class="total-label">Total:</span>
-          <span class="total-amount">
+    <!-- Footer: Total | Acciones -->
+    <div class="unified-footer">
+      <div class="total-summary-card">
+        <div class="total-info-group">
+          <span class="total-shoutout">Total a Cobrar</span>
+          <span class="total-value-big">
             {{
-              (
-                selectedTable.detalleIva.importe1 +
-                selectedTable.detalleIva.importe2 +
-                selectedTable.detalleIva.importe3 +
-                selectedTable.detalleIva.importe4 +
-                selectedTable.detalleIva.importe5
-              ).toFixed(2)
+              selectedTable.detalleIva
+                ? (
+                    selectedTable.detalleIva.importe1 +
+                    selectedTable.detalleIva.importe2 +
+                    selectedTable.detalleIva.importe3 +
+                    selectedTable.detalleIva.importe4 +
+                    selectedTable.detalleIva.importe5
+                  ).toFixed(2)
+                : "0.00"
             }}€
           </span>
         </div>
       </div>
 
-      <div class="payment-section">
-        <MDBBtn
-          color="success"
-          size="lg"
-          class="payment-btn"
-          @click="paymentModal = true"
-          :disabled="selectedTable.lista.length == 0"
-        >
-          <MDBIcon icon="cash-register" />
-          Cobrar pedido
-        </MDBBtn>
-
+      <div class="action-buttons-group">
         <MDBBtn
           color="warning"
-          size="lg"
-          class="transfer-btn"
+          class="footer-action-btn transfer-btn"
           @click="transferModal = true"
           :disabled="selectedTable.lista.length == 0"
         >
-          <MDBIcon icon="exchange-alt" />
-          Traspasar mesa
+          <MDBIcon icon="exchange-alt" class="me-1" />
+          Traspasar
+        </MDBBtn>
+        <MDBBtn
+          color="danger"
+
+          class="footer-action-btn vaciar-btn"
+          @click="deleteAll()"
+          :disabled="selectedTable.lista.length == 0"
+        >
+          <MDBIcon icon="trash-alt" class="me-1" />
+          Vaciar
+        </MDBBtn>
+        <MDBBtn
+          color="success"
+          class="footer-action-btn checkout-btn"
+          @click="paymentModal = true"
+          :disabled="selectedTable.lista.length == 0"
+        >
+          <MDBIcon icon="cash-register" class="me-2" />
+          COBRAR TICKET
         </MDBBtn>
       </div>
     </div>
@@ -631,6 +509,7 @@ import { useRouter } from "vue-router";
 import router from "@/router";
 import Swal from "sweetalert2";
 import axios from "axios";
+import EditProductModal from "@/components/EditProductModal.vue";
 import MenuModal from "@/components/MenuModal.vue";
 export default {
   name: "MenuPrincipalView",
@@ -646,12 +525,13 @@ export default {
     MDBModalBody,
     MDBModalFooter,
     MenuModal,
+    EditProductModal,
   },
   setup() {
     const store = useStore();
     const route = useRouter();
     const SelectEmployer = computed(
-      () => store.state.Employers.selectedEmployer
+      () => store.state.Employers.selectedEmployer,
     );
     const hideInfo = ref(false);
     const tables = computed(() => store.state.Tables.arrayTables);
@@ -662,14 +542,25 @@ export default {
     const printTicketModal = ref(false);
     const lastCreatedTicketId = ref(null);
     const transferModal = ref(false);
+    const paytefLoading = ref(false);
+    const estadoDatafono = computed(() => store.state.Datafono.estado);
+    const procesoDatafono = computed(() => store.state.Datafono.procesoActual);
+    const paytefStatusClass = computed(() => {
+      const estado = estadoDatafono.value;
+      if (estado === 'APROBADA') return 'status-approved';
+      if (estado === 'DENEGADA') return 'status-denied';
+      if (estado === 'PERDIDA') return 'status-lost';
+      return 'status-pending';
+    });
     const EditProductModalInfo = ref(-1);
     const actProd = ref(null);
+    const lastClickTime = ref(0);
     const selectedTargetTable = ref(null);
     const currentSalaName = computed(() => {
-        const id = store.state.Tables.salaId;
-        const list = store.state.Tables.salas;
-        const found = list.find((s) => s.id === id);
-        return found ? found.name : id === "MESAS" ? "Principal" : id;
+      const id = store.state.Tables.salaId;
+      const list = store.state.Tables.salas;
+      const found = list.find((s) => s.id === id);
+      return found ? found.name : id === "MESAS" ? "Principal" : id;
     });
 
     // menu
@@ -685,49 +576,15 @@ export default {
       });
       // Ordenar familias alfabéticamente y los suplementos dentro de cada familia
       const familiasOrdenadas = Object.keys(grupos).sort((a, b) =>
-        a.localeCompare(b, undefined, { sensitivity: "base" })
+        a.localeCompare(b, undefined, { sensitivity: "base" }),
       );
       const resultado = {};
       familiasOrdenadas.forEach((fam) => {
         resultado[fam] = grupos[fam].sort((a, b) =>
-          a.nombre.localeCompare(b.nombre, undefined, { sensitivity: "base" })
+          a.nombre.localeCompare(b.nombre, undefined, { sensitivity: "base" }),
         );
       });
       return resultado;
-    });
-
-    // Mapea articulosMenu a seleccionadoPorFamilia para MenuModal
-    const menuSeleccionadoPorFamilia = computed(() => {
-      const result = {};
-      const articulosMenu =
-        selectedTable.value.lista[EditProductModalInfo.value]?.articulosMenu;
-      const suplMap = {};
-      // Construir un mapa _id -> familia en suplByFamily
-      Object.entries(suplByFamily.value).forEach(([familia, sups]) => {
-        sups.forEach((sup) => {
-          suplMap[sup._id] = { familia, sup };
-        });
-      });
-      if (articulosMenu && Array.isArray(articulosMenu)) {
-        articulosMenu.forEach((art) => {
-          // Buscar el suplemento en suplByFamily por idArticulo === _id
-          const match = suplMap[art.idArticulo];
-          if (match) {
-            // Normalizar el objeto como espera el modal
-            const idSup = art.idArticulo ?? art._id ?? null;
-            const obj = {
-              idArticulo: idSup,
-              nombre: art.nombre ?? null,
-              arraySuplementos: art.arraySuplementos ?? null,
-              unidades: art.unidades ?? 1,
-              gramos: art.gramos ?? null,
-            };
-            result[match.familia] = obj;
-          }
-        });
-      }
-      console.log("menuSeleccionadoPorFamilia:", result);
-      return result;
     });
 
     const selectOtherEmployer = () => {
@@ -737,7 +594,7 @@ export default {
     // Computed para mesas disponibles (excluyendo la mesa actual)
     const availableTables = computed(() => {
       return tables.value.filter(
-        (table) => table._id !== selectedTable.value._id
+        (table) => table._id !== selectedTable.value._id,
       );
     });
 
@@ -817,6 +674,30 @@ export default {
       }
     };
 
+    const deleteAll = async () => {
+      Swal.fire({
+        title: "¿Estás seguro de que quieres vaciar la cesta?",
+        icon: "warning",
+        confirmButtonColor: "red",
+        cancelButtonColor: "green",
+        showCancelButton: true,
+        confirmButtonText: "Sí",
+        cancelButtonText: "No",
+      }).then(async (result) => {
+        if (result.isConfirmed) {
+          await axios.post("cestas/borrarCesta", {
+            idCesta: selectedTable.value._id,
+            quitarCliente: true,
+          }).then((x) => {
+            if (x.data) {
+              Swal.fire({ title: "Cesta vaciada", icon: "success", timer: 1000, showConfirmButton: false });
+              router.push("/tableselection");
+            }
+          });
+        }
+      });
+    };
+
     const addProduct = async (x, i, printedStatus) => {
       await axios.post("teclado/clickTeclaArticulo", {
         idArticulo: x.idArticulo,
@@ -835,7 +716,7 @@ export default {
         (products) =>
           products.idArticulo == x.idArticulo &&
           JSON.stringify(products.arraySuplementos) ==
-            JSON.stringify(x.arraySuplementos)
+            JSON.stringify(x.arraySuplementos),
       );
       if (z.length > 0) {
         if (z[0].unidades > 1) {
@@ -871,7 +752,7 @@ export default {
         (products) =>
           products.idArticulo == x.idArticulo &&
           JSON.stringify(products.arraySuplementos) ==
-            JSON.stringify(x.arraySuplementos)
+            JSON.stringify(x.arraySuplementos),
       );
       await store.dispatch("Tables/removeProduct", EditProductModalInfo.value);
       return x;
@@ -891,69 +772,48 @@ export default {
       );
     };
 
-    const selectProduct = async (x) => {
-      if (actProd.value == x) {
-        if (selectedTable.value.lista[x]?.articulosMenu) {
-          console.log(
-            "Artículo es menú, cargando suplementos y abriendo modal..."
-          );
-          const infoArticle = await axios.post("articulos/getArticuloById", {
-            idArticulo: selectedTable.value.lista[x].idArticulo,
-          });
-          const res = await axios.post("articulos/getSuplementos", {
-            arrayIdSuplementos: infoArticle?.data?.suplementos,
-          });
-          menuArticles.value = res.data;
-          // logica pa enviar parametros al comp menu
-        }
+    const selectProduct = async (x, forceOpen = false) => {
+      const now = Date.now();
+      const DOUBLE_CLICK_THRESHOLD = 300;
+      const alreadySelected = actProd.value === x;
+      const isDoubleClick =
+        now - lastClickTime.value < DOUBLE_CLICK_THRESHOLD && alreadySelected;
+
+      actProd.value = x;
+      lastClickTime.value = now;
+
+      if (forceOpen || isDoubleClick) {
         selectedTable.value.lista[x].id = x;
         EditProductModalInfo.value = x;
         openEditProductModal.value = true;
+        lastClickTime.value = 0;
       }
-
-      actProd.value = x;
     };
 
-    async function onAplicarCambios(menu) {
-      const seleccionadoPorFamilia = Object.values(menu);
-      try {
-        const res = await axios.post("cestas/modificarArticuloMenu", {
-          idCesta: selectedTable.value._id,
-          articulosMenu: seleccionadoPorFamilia,
-          indexCesta: actProd.value,
-        });
-        // console.log(res);
-      } catch (error) {}
-    }
-    const removeSuplement = async (sup) => {
-      openEditProductModal.value = false;
-      let x = selectedTable.value.lista[EditProductModalInfo.value];
-
-      removeProduct(selectedTable.value.lista[EditProductModalInfo.value]);
-      x.arraySuplementos.splice(sup, 1);
-      if (x.arraySuplementos.length <= 0) x.arraySuplementos = null;
-      setTimeout(async () => {
-        await axios
-          .post("teclado/clickTeclaArticulo", {
-            idArticulo: x.idArticulo,
-            gramos: x.gramos ?? 0,
-            idCesta: selectedTable.value._id,
-            unidades: 1,
-            arraySuplementos: x.arraySuplementos ?? null,
-            nombre: x.nombre,
-            menu: "",
-          })
-          .then((x) => {
-            if (x.data.error) throw Error(x.data.error);
-            setTimeout(() => {
-              EditProductModalInfo.value = selectedTable.value.lista.length - 1;
-              openEditProductModal.value = true;
-            }, 10);
-          });
-      }, 100);
+    const openEditProduct = async (i) => {
+      console.log("Double click detected for product index:", i);
+      await selectProduct(i, true);
     };
 
     async function cobrar(fm) {
+      if (fm === 'DATAFONO_3G') {
+        try {
+          const res = await axios.post("parametros/getParametros");
+          const params = res.data;
+          if (params?.tipoDatafono === "3G" || params?.ipTefpay === "0.0.0.0") {
+            await cobrarEfectivo('DATAFONO_3G');
+          } else {
+            await cobrarConPaytef();
+          }
+        } catch {
+          await cobrarEfectivo('DATAFONO_3G');
+        }
+      } else {
+        await cobrarEfectivo(fm);
+      }
+    }
+
+    async function cobrarEfectivo(fm) {
       paymentModal.value = false;
       try {
         const resultado = await axios.post("tickets/crearTicket", {
@@ -970,20 +830,56 @@ export default {
         if (!resultado.data) {
           throw Error("No se ha podido crear el ticket");
         } else {
-          // Guardar el ID del ticket creado para poder imprimirlo
-            await axios.post("tickets/getUltimoTicket").then(async (res) => {
-              lastCreatedTicketId.value =  res.data[0]?._id;
-            });
+          await axios.post("tickets/getUltimoTicket").then(async (res) => {
+            lastCreatedTicketId.value = res.data[0]?._id;
+          });
 
           await axios.post("/cestas/setClients", {
             clients: 0,
             cesta: selectedTable.value._id,
           });
 
-          // Mostrar modal de imprimir ticket en vez de navegar directamente
           printTicketModal.value = true;
         }
       } catch (err) {
+        Swal.fire("Oops...", err.message, "error");
+      }
+    }
+
+    async function cobrarConPaytef() {
+      paytefLoading.value = true;
+      store.dispatch("Datafono/setEstado", "PENDIENTE");
+      try {
+        const resultado = await axios.post("tickets/crearTicketPaytef", {
+          total: getTotal(),
+          idCesta: selectedTable.value._id,
+          idTrabajador: SelectEmployer.value._id,
+          tipo: "TARJETA",
+          tkrsData: {
+            cantidadTkrs: 0,
+            formaPago: "EFECTIVO",
+          },
+        });
+
+        if (!resultado.data) {
+          throw Error("Pago con datáfono inválido");
+        } else {
+          paytefLoading.value = false;
+          paymentModal.value = false;
+
+          await axios.post("tickets/getUltimoTicket").then(async (res) => {
+            lastCreatedTicketId.value = res.data[0]?._id;
+          });
+
+          await axios.post("/cestas/setClients", {
+            clients: 0,
+            cesta: selectedTable.value._id,
+          });
+
+          printTicketModal.value = true;
+        }
+      } catch (err) {
+        paytefLoading.value = false;
         Swal.fire("Oops...", err.message, "error");
       }
     }
@@ -1039,10 +935,87 @@ export default {
       for (let i = 0; i < selectedTable.value.lista.length; i++) {
         if (
           selectedTable.value.lista[i].impresora &&
+          !selectedTable.value.lista[i].promocion &&
+          !selectedTable.value.lista[i].articulosMenu &&
           selectedTable.value.lista[i].printed !=
             selectedTable.value.lista[i].unidades
         ) {
           ticketsWithPrinter.push(selectedTable.value.lista[i]);
+        }
+        if (selectedTable.value.lista[i].promocion) {
+          for (
+            let j = 0;
+            j < selectedTable.value.lista[i].promocion.grupos.length;
+            j++
+          ) {
+            for (
+              let k = 0;
+              k < selectedTable.value.lista[i].promocion.grupos[j].length;
+              k++
+            ) {
+              if (
+                selectedTable.value.lista[i].promocion.grupos[j][k].impresora &&
+                selectedTable.value.lista[i].promocion.grupos[j][k].printed !=
+                  selectedTable.value.lista[i].promocion.grupos[j][k].unidades
+              ) {
+                ticketsWithPrinter.push(
+                  selectedTable.value.lista[i].promocion.grupos[j][k],
+                );
+              }
+            }
+          }
+        }
+        if (
+          selectedTable.value.lista[i].articulosMenu &&
+          selectedTable.value.lista[i].articulosMenu.some((a) => a.impresora)
+        ) {
+          const menuPrinters = new Set();
+          const itemsToProcess = [];
+
+          for (
+            let j = 0;
+            j < selectedTable.value.lista[i].articulosMenu.length;
+            j++
+          ) {
+            let artMenu = selectedTable.value.lista[i].articulosMenu[j];
+            if (artMenu.impresora) {
+              let unprintedCount = 0;
+              let instancesToPrint = null;
+
+              if (artMenu.instancias && artMenu.instancias.length > 0) {
+                instancesToPrint = artMenu.instancias.filter(
+                  (inst) => !inst.printed,
+                );
+                unprintedCount = instancesToPrint.length;
+              } else if (artMenu.printed < artMenu.unidades) {
+                unprintedCount = artMenu.unidades - artMenu.printed;
+              }
+
+              if (unprintedCount > 0) {
+                menuPrinters.add(artMenu.impresora);
+                itemsToProcess.push({
+                  ...artMenu,
+                  unidades: unprintedCount,
+                  instancias: instancesToPrint,
+                });
+              }
+            }
+          }
+
+          if (itemsToProcess.length > 0) {
+            // Add a header for each printer
+            menuPrinters.forEach((p) => {
+              ticketsWithPrinter.push({
+                nombre: `--- ${selectedTable.value.lista[i].nombre} ---`,
+                unidades: 1,
+                printed: 0,
+                idArticulo: -1,
+                impresora: p,
+              });
+            });
+            // Add the items
+            ticketsWithPrinter.push(...itemsToProcess);
+          }
         }
       }
       if (ticketsWithPrinter.length > 0) {
@@ -1051,13 +1024,15 @@ export default {
             products: ticketsWithPrinter,
             table:
               selectedTable.value.nombre ||
-              "TAULA: " + selectedTable.value.indexMesa + 1,
+              "TAULA: " + (selectedTable.value.indexMesa + 1),
             worker: SelectEmployer.value.nombre,
             clients: selectedTable.value.comensales,
           });
           const res = await axios.post("cestas/setArticuloImprimido", {
             idCesta: selectedTable.value._id,
-            articulos: ticketsWithPrinter.map((item) => item.idArticulo),
+            articulos: ticketsWithPrinter
+              .filter((item) => item.idArticulo !== -1)
+              .map((item) => item.idArticulo),
           });
 
           if (res.data && res2.data) {
@@ -1112,7 +1087,7 @@ export default {
       selectOtherTable,
       removeProduct,
       tables,
-      removeSuplement,
+
       changeClients,
       SelectEmployer,
       actProd,
@@ -1120,14 +1095,20 @@ export default {
       addProduct,
       EditProductModalInfo,
       suplByFamily,
-      menuSeleccionadoPorFamilia,
+
       currentSalaName,
       menuArticles,
-      onAplicarCambios,
+
       selectedTargetTable,
       availableTables,
       selectTargetTable,
       confirmTransfer,
+      openEditProduct,
+      deleteAll,
+      paytefLoading,
+      estadoDatafono,
+      procesoDatafono,
+      paytefStatusClass,
     };
   },
 };
@@ -1139,6 +1120,7 @@ export default {
   flex-direction: column;
   height: 100vh;
   padding: 0;
+  overflow: hidden;
 }
 
 // Header styles
@@ -1159,9 +1141,11 @@ export default {
   min-width: 120px;
   transition: all 0.3s ease;
   cursor: pointer;
+  border: 1px solid transparent;
 
   &:hover {
     background-color: #ffffff80;
+    border-color: #dee2e6;
     transform: translateY(-1px);
   }
 
@@ -1176,6 +1160,15 @@ export default {
         transform: none;
         background-color: #e8f5e8;
       }
+    }
+  }
+
+  &.back-item {
+    background-color: #f8f9fa;
+    flex: 0 0 auto;
+
+    .header-icon {
+      color: #007bff;
     }
   }
 }
@@ -1211,6 +1204,7 @@ export default {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  min-height: 0;
 }
 
 // Empty state
@@ -1236,792 +1230,792 @@ export default {
   margin-bottom: 8px;
 }
 
-.empty-subtext {
-  font-size: 1rem;
-  opacity: 0.7;
-}
-
-// Responsive table
-.products-table-container {
-  flex: 1;
-  overflow: hidden;
+.unified-layout {
   display: flex;
   flex-direction: column;
-}
-
-.table-header-row {
-  display: grid;
-  grid-template-columns: 80px 1fr 100px;
+  height: 100vh;
+  padding: 15px;
   gap: 15px;
-  padding: 12px 15px;
   background-color: #f8f9fa;
-  border-radius: 8px;
-  font-weight: 600;
-  color: #495057;
-  margin-bottom: 10px;
-  border-bottom: 2px solid #dee2e6;
+  overflow: hidden;
 }
 
-.table-body {
+/* Header: Trabajador | Mesa | Comensales */
+.top-header {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.header-item {
   flex: 1;
+  background-color: #ffffffd0;
+  padding: 8px 12px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  min-width: 140px;
+
+  &:hover {
+    transform: translateY(-2px);
+    background-color: #ffffff;
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+  }
+}
+
+.header-icon {
+  font-size: 1.1rem;
+  color: #3b82f6;
+}
+
+.header-text {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #334155;
+}
+
+.room-pill {
+  background-color: #dbeafe;
+  color: #1e40af;
+  padding: 2px 10px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+}
+
+.separator {
+  margin: 0 6px;
+  color: #cbd5e1;
+}
+
+/* Breadcrumb */
+.breadcrumb-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 15px;
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(10px);
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.breadcrumb-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.back-icon {
+  color: #3b82f6;
+  font-size: 1rem;
+  padding: 8px;
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.breadcrumb-text {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: #1e293b;
+}
+
+.prepare-btn-badge {
+  font-weight: 700;
+  border-radius: 10px;
+  padding: 8px 16px;
+  box-shadow: 0 4px 10px rgba(59, 130, 246, 0.2);
+}
+
+/* Products Layout (Ticket Grid) */
+.ticket-grid-layout {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
   overflow-y: auto;
-  scrollbar-width: none;
+  padding-right: 5px;
+  min-height: 0;
+  mask-image: linear-gradient(to bottom, black 95%, transparent 100%);
 
   &::-webkit-scrollbar {
-    display: none;
+    width: 6px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 10px;
   }
 }
 
-.product-row {
-  display: grid;
-  grid-template-columns: 80px 1fr 100px;
-  gap: 15px;
-  padding: 15px;
-  background-color: #ffffff69;
-  border-radius: 8px;
-  margin-bottom: 8px;
+.ticket-card-item {
+  background-color: #ffffffd0;
+  border-radius: 16px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
   cursor: pointer;
-  transition: all 0.3s ease;
-  border: 2px solid transparent;
-
-  &:hover {
-    background-color: #ffffff80;
-    border-color: #dee2e6;
-    transform: translateY(-1px);
-  }
-
-  &.selected {
-    background-color: #f6ebdf;
-    border-color: #ffc107;
-  }
-}
-
-.col-units {
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-}
-
-.units-badge {
-  background-color: #007bff;
-  color: white;
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 0.9rem;
-  font-weight: 500;
-  min-width: 40px;
-  text-align: center;
-}
-
-.col-product {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.product-main {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.print-icon {
-  font-size: 0.8rem;
-  color: #774040;
-
-  &.printed {
-    color: #28a745;
-  }
-}
-
-.product-name {
-  font-size: 1rem;
-  font-weight: 500;
-  color: #333;
-  word-break: break-word;
-}
-
-.supplements {
-  margin-left: 20px;
-}
-
-.supplement-row {
-  margin-bottom: 4px;
-}
-.subsupplement-row {
-  margin-bottom: 4px;
-  margin-left: 15px;
-}
-
-.supplement-text {
-  font-size: 0.85rem;
-  color: #6c757d;
-  font-style: italic;
-}
-
-.col-price {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 4px;
-}
-
-.main-price {
-  font-size: 1rem;
-  font-weight: bold;
-  color: #28a745;
-}
-
-.supplement-prices {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 2px;
-}
-
-.supplement-price {
-  font-size: 0.8rem;
-  color: #6c757d;
-  font-style: italic;
-}
-
-// Footer
-.footer-container {
-  background-color: #f8f9fa;
-  border-top: 2px solid #dee2e6;
-  padding: 20px 15px;
-}
-
-.total-section {
-  margin-bottom: 15px;
-}
-
-.total-info {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: 15px;
-  background-color: #ffffff;
-  border-radius: 10px;
-  border: 2px solid #e9ecef;
-}
-
-.total-icon {
-  font-size: 1.3rem;
-  color: #28a745;
-}
-
-.total-label {
-  font-size: 1.6rem;
-  font-weight: 500;
-  color: #495057;
-}
-
-.total-amount {
-  font-size: 1.5rem;
-  font-weight: bold;
-  color: #28a745;
-}
-
-.payment-section {
-  display: flex;
-  justify-content: center;
-}
-
-.payment-btn {
-  width: 100%;
-  max-width: 300px;
-  padding: 15px 30px;
-  font-size: 1.1rem;
-  font-weight: 600;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  justify-content: center;
-  transition: all 0.3s ease;
-
-  &:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-}
-
-// Modal styles
-.edit-product-modal,
-.payment-modal,
-.transfer-modal,
-.print-ticket-modal {
-  .modal-header-custom,
-  .payment-modal-header,
-  .transfer-modal-header,
-  .print-ticket-modal-header {
-    background-color: #f8f9fa;
-    border-bottom: 2px solid #e9ecef;
-    padding: 20px;
-  }
-
-  .modal-title-custom,
-  .payment-modal-title,
-  .transfer-modal-title,
-  .print-ticket-modal-title {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    font-size: 1.3rem;
-    font-weight: 600;
-    color: #495057;
-  }
-
-  .modal-body-custom,
-  .payment-modal-body,
-  .transfer-modal-body,
-  .print-ticket-modal-body {
-    background-color: #fff9f2;
-    padding: 25px;
-  }
-
-  .modal-footer-custom,
-  .payment-modal-footer,
-  .transfer-modal-footer,
-  .print-ticket-modal-footer {
-    background-color: #f8f9fa;
-    border-top: 2px solid #e9ecef;
-    padding: 15px 20px;
-  }
-}
-
-// Print ticket modal specific styles
-.print-ticket-icon-container {
-  display: flex;
-  justify-content: center;
-  padding: 20px 0 15px;
-}
-
-.print-ticket-big-icon {
-  width: 80px;
-  height: 80px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #28a745, #20c997);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 2.2rem;
-  color: white;
-  box-shadow: 0 6px 20px rgba(40, 167, 69, 0.3);
-}
-
-.print-ticket-question {
-  text-align: center;
-  font-size: 1.15rem;
-  font-weight: 500;
-  color: #495057;
-  padding: 10px 0;
-}
-
-.print-ticket-modal-footer {
-  display: flex;
-  justify-content: center;
-  gap: 12px;
-}
-
-.skip-print-btn,
-.confirm-print-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 24px;
-  border-radius: 8px;
-  font-weight: 600;
-  font-size: 1rem;
-  transition: all 0.3s ease;
-
-  &:hover {
-    transform: translateY(-1px);
-  }
-}
-
-.confirm-print-btn {
-  &:hover {
-    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
-  }
-}
-
-// Transfer modal specific styles
-.transfer-info {
-  background-color: #ffffff;
-  padding: 20px;
-  border-radius: 10px;
-  border: 2px solid #e9ecef;
-  margin-bottom: 25px;
-}
-
-.current-table-info,
-.products-count {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-
-  &:last-child {
-    margin-bottom: 0;
-  }
-}
-
-.info-label,
-.count-label {
-  font-size: 1rem;
-  color: #6c757d;
-  font-weight: 500;
-}
-
-.info-value,
-.count-value {
-  font-size: 1.1rem;
-  color: #495057;
-  font-weight: 600;
-}
-
-.tables-selection {
-  .selection-title {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 15px;
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: #495057;
-  }
-}
-
-.tables-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 12px;
-  max-height: 300px;
-  overflow-y: auto;
-  padding: 5px;
-}
-
-.table-option {
-  display: flex;
-  align-items: center;
-  padding: 15px;
-  background-color: #ffffff;
-  border: 2px solid #e9ecef;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: all 0.3s ease;
   position: relative;
 
   &:hover {
-    border-color: #ffc107;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(255, 193, 7, 0.2);
+    background-color: #ffffff;
+    transform: translateX(4px);
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.08);
+    border-color: #3b82f6;
   }
 
   &.selected {
-    border-color: #ffc107;
-    background-color: #fff9e6;
-    box-shadow: 0 4px 12px rgba(255, 193, 7, 0.3);
+    border-left: 6px solid #3b82f6;
+    background-color: #eff6ff;
+    box-shadow: 0 10px 20px -5px rgba(59, 130, 246, 0.15);
   }
 }
 
-.table-icon {
-  width: 45px;
-  height: 45px;
-  border-radius: 50%;
-  background-color: #f8f9fa;
+.ticket-item-main {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.item-top-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.item-qty-container {
   display: flex;
   align-items: center;
-  justify-content: center;
-  margin-right: 12px;
-  font-size: 1.2rem;
-  color: #6c757d;
-  transition: all 0.3s ease;
-
-  .table-option:hover & {
-    background-color: #ffc107;
-    color: #212529;
-  }
-
-  .table-option.selected & {
-    background-color: #ffc107;
-    color: #212529;
-  }
+  gap: 6px;
 }
 
-.table-info {
-  flex: 1;
-}
-
-.table-name {
-  font-size: 1rem;
-  font-weight: 600;
-  color: #333;
-  margin-bottom: 4px;
-}
-
-.table-status {
+.item-quantity {
+  background-color: #3b82f6;
+  color: white;
+  font-weight: 800;
   font-size: 0.85rem;
-  color: #6c757d;
+  padding: 3px 8px;
+  border-radius: 8px;
+  min-width: 38px;
+  text-align: center;
+}
 
-  &.occupied {
-    color: #dc3545;
-    font-weight: 500;
+.status-icon-inline {
+  font-size: 0.85rem;
+  color: #cbd5e1;
+  &.printed-success {
+    color: #10b981;
   }
 }
 
-.warning-icon {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 24px;
-  height: 24px;
-  background-color: #ffc107;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.8rem;
-  color: #212529;
+.item-name-text {
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: #1e293b;
 }
 
-.cancel-transfer-btn,
-.confirm-transfer-btn {
+.item-price-text {
+  font-weight: 800;
+  color: #10b981;
+  font-size: 1.1rem;
+}
+
+.item-comment-text {
+  font-size: 0.85rem;
+  font-style: italic;
+  color: #64748b;
+  margin-left: 38px;
+  margin-top: -4px;
+}
+
+.menu-item-comment-text {
+  font-size: 0.75rem;
+  font-style: italic;
+  color: #94a3b8;
+  display: block;
+}
+
+/* Secondary details (Supplements, etc) */
+.item-secondary-details {
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 10px;
+  padding: 4px 10px;
+  margin-left: 38px;
+}
+
+.nested-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.detail-row {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 12px 20px;
-  border-radius: 8px;
-  font-weight: 600;
-  transition: all 0.3s ease;
-
-  &:hover:not(:disabled) {
-    transform: translateY(-1px);
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
+  font-size: 0.85rem;
+  color: #64748b;
+  font-weight: 500;
 }
 
-.confirm-transfer-btn {
-  &:hover:not(:disabled) {
-    box-shadow: 0 4px 12px rgba(255, 193, 7, 0.3);
-  }
+.detail-icon {
+  font-size: 0.75rem;
+  color: #94a3b8;
 }
 
-// Product edit modal
-.product-edit-container {
+.menu-icon {
+  color: #f59e0b;
+}
+.promo-icon {
+  color: #ef4444;
+}
+
+/* Empty State */
+.empty-state {
   display: flex;
   flex-direction: column;
-  gap: 25px;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  padding: 40px;
+  text-align: center;
 }
 
-.section-header {
+.empty-icon-wrapper {
+  width: 100px;
+  height: 100px;
+  background-color: #f1f5f9;
+  border-radius: 50%;
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 15px;
-  padding-bottom: 10px;
-  border-bottom: 2px solid #e9ecef;
+  justify-content: center;
+  font-size: 3rem;
+  color: #94a3b8;
+  margin-bottom: 20px;
+  border: 4px dashed #cbd5e1;
 }
 
-.section-title {
-  font-size: 1.1rem;
+.empty-text {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #334155;
+  margin-bottom: 8px;
+}
+
+.empty-subtext {
+  color: #64748b;
+  font-size: 1rem;
+}
+
+/* Footer Premium */
+.unified-footer {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 5px 0;
+}
+
+.total-summary-card {
+  background: white;
+  border-radius: 20px;
+  padding: 12px 18px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+}
+
+.total-info-group {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.total-shoutout {
+  font-size: 1.2rem;
   font-weight: 600;
-  color: #495057;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
-.units-section {
-  background-color: #ffffff;
-  padding: 20px;
-  border-radius: 10px;
-  border: 1px solid #e9ecef;
+.total-value-big {
+  font-size: 2rem;
+  font-weight: 900;
+  color: #10b981;
 }
 
-.units-section-menu {
-  background-color: #ffffff;
+.action-buttons-group {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: auto auto;
+  gap: 10px;
+  padding-top: 3px;
 
-  border-radius: 10px;
-  border: 1px solid #e9ecef;
+  .checkout-btn {
+    grid-column: 1 / -1;
+  }
 }
 
-.units-display {
+.footer-action-btn {
+  padding: 12px !important;
+  border-radius: 16px !important;
+  font-weight: 800 !important;
+  font-size: 1rem !important;
+  letter-spacing: 0.02em;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+
+  &:hover:not(:disabled) {
+    transform: scale(1.02);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+  }
+}
+
+.checkout-btn {
+  box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
+}
+
+/* Paytef Status */
+.paytef-status-container {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 20px;
+  padding: 40px 20px;
+  text-align: center;
 }
 
-.current-units {
+.paytef-spinner-wrapper {
+  width: 80px;
+  height: 80px;
   display: flex;
-  align-items: baseline;
+  align-items: center;
+  justify-content: center;
+}
+
+.paytef-spinner {
+  width: 60px !important;
+  height: 60px !important;
+  border-width: 4px !important;
+}
+
+.paytef-status-text {
+  display: flex;
+  flex-direction: column;
   gap: 8px;
 }
 
-.units-number {
-  font-size: 3rem;
-  font-weight: bold;
-  color: #007bff;
+.paytef-status-label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
 }
 
-.units-label {
+.paytef-status-value {
   font-size: 1.2rem;
-  color: #6c757d;
+  font-weight: 700;
+  color: #f97316;
+  animation: pulse-text 1.5s ease-in-out infinite;
+
+  &.status-approved { color: #10b981; animation: none; }
+  &.status-denied { color: #ef4444; animation: none; }
+  &.status-lost { color: #f59e0b; animation: none; }
+  &.status-pending { color: #f97316; }
 }
 
-.units-controls {
+@keyframes pulse-text {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.paytef-result {
+  font-size: 1.1rem;
+  font-weight: 800;
+  padding: 12px 24px;
+  border-radius: 14px;
   display: flex;
-  gap: 15px;
+  align-items: center;
+
+  &.paytef-approved {
+    background: #ecfdf5;
+    color: #059669;
+    border: 1px solid #a7f3d0;
+  }
+  &.paytef-denied {
+    background: #fef2f2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+  }
+  &.paytef-lost {
+    background: #fffbeb;
+    color: #d97706;
+    border: 1px solid #fde68a;
+  }
 }
 
-.control-btn {
-  width: 60px;
-  height: 60px;
+/* Modals Premium Overrides (Global for TicketView) */
+.premium-modal {
+  :deep(.modal-content) {
+    border-radius: 28px;
+    border: none;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+    background: #f8fafc;
+  }
+}
+
+.modal-header-premium {
+  background: white;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 20px 24px;
+}
+
+.title-icon-wrapper {
+  width: 48px;
+  height: 48px;
+  background: #eff6ff;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  .title-icon {
+    font-size: 1.4rem;
+    color: #3b82f6;
+  }
+}
+
+.modal-main-title {
+  display: block;
+  font-weight: 800;
+  font-size: 1.25rem;
+  color: #1e293b;
+  line-height: 1.2;
+}
+
+.modal-subtitle {
+  display: block;
+  font-size: 0.9rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.modal-body-premium {
+  padding: 24px;
+  background: #f8fafc;
+}
+
+.modal-footer-premium {
+  background: white;
+  border-top: 1px solid #e2e8f0;
+  padding: 18px 24px;
+}
+
+/* Payment Modal Specifics */
+.payment-glass-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.payment-summary-card {
+  background: white;
+  padding: 24px;
+  border-radius: 20px;
+  text-align: center;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.summary-label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #64748b;
+  letter-spacing: 0.1em;
+  margin-bottom: 8px;
+}
+
+.summary-value {
+  font-size: 3rem;
+  font-weight: 900;
+  color: #10b981;
+
+  @media (max-width: 576px) {
+    font-size: 2.2rem;
+  }
+}
+
+.methods-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.method-card {
+  background: white;
+  padding: 20px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.1);
+    border-color: #3b82f6;
+  }
+
+  &.cash .method-icon-box {
+    background: #ecfdf5;
+    color: #10b981;
+  }
+  &.credit-card .method-icon-box {
+    background: #eff6ff;
+    color: #3b82f6;
+  }
+}
+
+.method-icon-box {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+}
+
+.method-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.method-name {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: #1e293b;
+}
+
+.method-hint {
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+.method-arrow {
+  color: #cbd5e1;
+  font-size: 0.9rem;
+}
+
+/* Print Modal Specifics */
+.print-big-icon-wrapper {
+  width: 120px;
+  height: 120px;
+  background: #f0fdf4;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  font-size: 1.5rem;
-
-  &.add-btn {
-    background-color: #28a745;
-    color: white;
-
-    &:hover {
-      background-color: #218838;
-      transform: scale(1.1);
-    }
-  }
-
-  &.remove-btn {
-    background-color: #dc3545;
-    color: white;
-
-    &:hover {
-      background-color: #c82333;
-      transform: scale(1.1);
-    }
-  }
-
-  &.minus-btn {
-    background-color: #ffc107;
-    color: #212529;
-
-    &:hover:not(.disabled) {
-      background-color: #e0a800;
-      transform: scale(1.1);
-    }
-
-    &.disabled {
-      background-color: #6c757d;
-      color: #ffffff;
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-  }
+  margin: 0 auto;
+  border: 4px solid white;
+  box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.1);
 }
 
-.supplements-section {
-  background-color: #ffffff;
-  padding: 20px;
-  border-radius: 10px;
-  border: 1px solid #e9ecef;
+.print-big-icon {
+  font-size: 3.5rem;
+  color: #10b981;
 }
 
-.supplements-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+.print-question-title {
+  font-weight: 800;
+  color: #1e293b;
+  margin-bottom: 8px;
 }
 
-.supplement-item {
+.print-question-desc {
+  color: #64748b;
+  font-size: 1.1rem;
+}
+
+/* Transfer Modal Specifics */
+.transfer-source-card {
+  background: #f1f5f9;
+  padding: 20px 30px;
+  border-radius: 20px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 15px;
-  background-color: #f8f9fa;
-  border-radius: 8px;
-  border: 1px solid #e9ecef;
-}
 
-.supplement-info {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.supplement-icon {
-  font-size: 0.9rem;
-  color: #6c757d;
-}
-
-.supplement-name {
-  font-size: 0.95rem;
-  color: #495057;
-  font-style: italic;
-}
-
-.supplement-remove {
-  padding: 8px;
-  border-radius: 50%;
-  background-color: #dc3545;
-  color: white;
-  cursor: pointer;
-  transition: all 0.3s ease;
-
-  &:hover {
-    background-color: #c82333;
-    transform: scale(1.1);
+  @media (max-width: 576px) {
+    padding: 15px;
+    flex-direction: column;
+    gap: 10px;
   }
 }
 
-// Payment modal
-.payment-total {
-  text-align: center;
-  padding: 20px;
-  background-color: #ffffff;
-  border-radius: 10px;
-  margin-bottom: 20px;
-  border: 2px solid #e9ecef;
-}
-
-.total-label {
-  font-size: 1.1rem;
-  color: #6c757d;
-}
-
-.total-amount {
-  font-size: 2rem;
-  font-weight: bold;
-  color: #28a745;
-}
-
-.payment-methods {
+.source-item {
   display: flex;
   flex-direction: column;
-  gap: 12px;
 }
 
-.payment-option {
-  display: flex;
-  align-items: center;
-  padding: 20px;
-  background-color: #ffffff;
-  border-radius: 10px;
-  border: 2px solid #e9ecef;
-  cursor: pointer;
-  transition: all 0.3s ease;
-
-  &:hover {
-    border-color: #007bff;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.15);
-  }
-}
-
-.payment-icon {
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.5rem;
-  margin-right: 20px;
-
-  &.cash {
-    background-color: #ffc107;
-    color: #212529;
-  }
-
-  &.card {
-    background-color: #007bff;
-    color: white;
-  }
-}
-
-.payment-info {
-  flex: 1;
-}
-
-.payment-name {
-  font-size: 1.2rem;
-  font-weight: 600;
-  color: #333;
+.source-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
   margin-bottom: 4px;
 }
 
-.payment-desc {
-  font-size: 0.9rem;
-  color: #6c757d;
+.source-value {
+  font-weight: 800;
+  font-size: 1.25rem;
+  color: #1e293b;
 }
 
-.arrow-icon {
+.source-separator {
+  color: #94a3b8;
   font-size: 1.2rem;
-  color: #6c757d;
 }
 
-.close-btn,
-.cancel-payment-btn {
+.selection-section-title {
+  font-weight: 700;
+  color: #475569;
+  font-size: 1rem;
+}
+
+.transfer-tables-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+  max-height: 400px;
+  overflow-y: auto;
+  padding: 4px;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 10px;
+  }
+}
+
+.transfer-table-card {
+  background: white;
+  padding: 16px;
+  border-radius: 16px;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 20px;
-  border-radius: 8px;
+  gap: 12px;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: all 0.2s;
+  position: relative;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+
+  &:hover {
+    transform: scale(1.02);
+    border-color: #e2e8f0;
+  }
+
+  &.selected {
+    border-color: #3b82f6;
+    background: #eff6ff;
+  }
+
+  &.has-items {
+    background: #fffbeb;
+    .table-card-icon {
+      background: #fef3c7;
+      color: #d97706;
+    }
+  }
 }
 
-// Responsive design
-@media (max-width: 768px) {
-  .header-list {
-    flex-direction: column;
-  }
+.table-card-icon {
+  width: 44px;
+  height: 44px;
+  background: #f1f5f9;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  color: #64748b;
+}
 
-  .header-item {
-    min-width: auto;
-  }
+.table-card-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
 
-  .table-header-row,
-  .product-row {
-    grid-template-columns: 60px 1fr 80px;
-    gap: 10px;
-    padding: 12px 10px;
-  }
+.table-card-name {
+  font-weight: 700;
+  color: #1e293b;
+}
 
-  .units-number {
-    font-size: 2.5rem;
-  }
+.table-card-status {
+  font-size: 0.8rem;
+  color: #64748b;
+}
 
-  .units-controls {
-    gap: 10px;
-  }
+.selection-check {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  color: #3b82f6;
+  font-size: 1.5rem;
+  background: white;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
 
-  .control-btn {
-    width: 50px;
-    height: 50px;
-    font-size: 1.3rem;
-  }
+.premium-cancel-btn,
+.premium-skip-btn {
+  font-weight: 700 !important;
+  border-radius: 12px !important;
+  text-transform: none !important;
+}
 
-  .payment-option {
-    padding: 15px;
-  }
+.premium-confirm-btn,
+.premium-print-btn {
+  font-weight: 800 !important;
+  border-radius: 12px !important;
+  text-transform: none !important;
+  padding: 10px 24px !important;
+}
 
-  .payment-icon {
-    width: 50px;
-    height: 50px;
-    font-size: 1.3rem;
-    margin-right: 15px;
+/* Mobile Adjustments */
+@media (max-width: 576px) {
+  .total-value-big {
+    font-size: 1.8rem;
+  }
+  .item-name-text {
+    font-size: 0.95rem;
+  }
+  .action-buttons-group {
+    grid-template-columns: 1fr 1fr;
   }
 }
 
@@ -2099,7 +2093,7 @@ export default {
   border-radius: 20px;
   font-weight: 600;
   margin-right: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .diners-pill {

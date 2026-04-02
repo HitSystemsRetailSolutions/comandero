@@ -42,9 +42,8 @@ export function useMenuSelection(suplByFamily) {
 
   // Resetear selección
   function resetSelection() {
-    console.log("Reseteando selección de menús y suplementos");
     Object.keys(seleccionadoPorFamilia).forEach(
-      (f) => delete seleccionadoPorFamilia[f]
+      (f) => delete seleccionadoPorFamilia[f],
     );
     Object.keys(familiasAbiertas).forEach((f) => (familiasAbiertas[f] = false));
   }

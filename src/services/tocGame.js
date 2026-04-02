@@ -56,7 +56,7 @@ class tocGameV3 {
             Swal.fire(
               "Caja cerrada automáticamente.",
               "La caja de ayer se ha cerrado automáticamente debido a que no se cerró.",
-              "error"
+              "error",
             );
           });
         } else if (abierto == 3) {

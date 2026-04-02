@@ -1,5 +1,5 @@
 <template>
-  <div class="container-fluid">
+  <div class="">
     <router-view />
   </div>
 </template>
@@ -24,6 +24,6 @@ export default {
   font-family: Roboto, Helvetica, Arial, sans-serif;
 }
 body {
-  background-color: #fff5e9;
+  background-color: #f8f9fa;
 }
 </style>

@@ -46,7 +46,7 @@
         </div>
 
         <!-- Métodos de Pago Grid -->
-        <div class="methods-grid">
+        <div v-if="!paytefLoading" class="methods-grid">
           <div class="method-card cash" @click="cobrar('EFECTIVO')">
             <div class="method-icon-box">
               <MDBIcon icon="money-bill-wave" />
@@ -69,6 +69,30 @@
             <MDBIcon icon="chevron-right" class="method-arrow" />
           </div>
         </div>
+
+        <!-- Estado Paytef: Spinner + proceso -->
+        <div v-if="paytefLoading" class="paytef-status-container">
+          <div class="paytef-spinner-wrapper">
+            <div class="spinner-border text-primary paytef-spinner" role="status">
+              <span class="visually-hidden">Procesando...</span>
+            </div>
+          </div>
+          <div class="paytef-status-text">
+            <span class="paytef-status-label">Estado del datáfono</span>
+            <span class="paytef-status-value" :class="paytefStatusClass">
+              {{ procesoDatafono }}
+            </span>
+          </div>
+          <div v-if="estadoDatafono === 'APROBADA'" class="paytef-result paytef-approved">
+            <MDBIcon icon="check-circle" class="me-2" /> Pago aprobado
+          </div>
+          <div v-if="estadoDatafono === 'DENEGADA'" class="paytef-result paytef-denied">
+            <MDBIcon icon="times-circle" class="me-2" /> Pago denegado
+          </div>
+          <div v-if="estadoDatafono === 'PERDIDA'" class="paytef-result paytef-lost">
+            <MDBIcon icon="exclamation-triangle" class="me-2" /> Conexión perdida
+          </div>
+        </div>
       </div>
     </MDBModalBody>
     <MDBModalFooter class="modal-footer-premium">
@@ -76,6 +100,7 @@
         outline="primary"
         @click="paymentModal = false"
         class="premium-cancel-btn"
+        :disabled="paytefLoading && estadoDatafono === 'PENDIENTE'"
       >
         <MDBIcon icon="times" class="me-2" /> Cancelar
       </MDBBtn>
@@ -440,6 +465,16 @@
           Traspasar
         </MDBBtn>
         <MDBBtn
+          color="danger"
+
+          class="footer-action-btn vaciar-btn"
+          @click="deleteAll()"
+          :disabled="selectedTable.lista.length == 0"
+        >
+          <MDBIcon icon="trash-alt" class="me-1" />
+          Vaciar
+        </MDBBtn>
+        <MDBBtn
           color="success"
           class="footer-action-btn checkout-btn"
           @click="paymentModal = true"
@@ -507,6 +542,16 @@ export default {
     const printTicketModal = ref(false);
     const lastCreatedTicketId = ref(null);
     const transferModal = ref(false);
+    const paytefLoading = ref(false);
+    const estadoDatafono = computed(() => store.state.Datafono.estado);
+    const procesoDatafono = computed(() => store.state.Datafono.procesoActual);
+    const paytefStatusClass = computed(() => {
+      const estado = estadoDatafono.value;
+      if (estado === 'APROBADA') return 'status-approved';
+      if (estado === 'DENEGADA') return 'status-denied';
+      if (estado === 'PERDIDA') return 'status-lost';
+      return 'status-pending';
+    });
     const EditProductModalInfo = ref(-1);
     const actProd = ref(null);
     const lastClickTime = ref(0);
@@ -629,6 +674,30 @@ export default {
       }
     };
 
+    const deleteAll = async () => {
+      Swal.fire({
+        title: "¿Estás seguro de que quieres vaciar la cesta?",
+        icon: "warning",
+        confirmButtonColor: "red",
+        cancelButtonColor: "green",
+        showCancelButton: true,
+        confirmButtonText: "Sí",
+        cancelButtonText: "No",
+      }).then(async (result) => {
+        if (result.isConfirmed) {
+          await axios.post("cestas/borrarCesta", {
+            idCesta: selectedTable.value._id,
+            quitarCliente: true,
+          }).then((x) => {
+            if (x.data) {
+              Swal.fire({ title: "Cesta vaciada", icon: "success", timer: 1000, showConfirmButton: false });
+              router.push("/tableselection");
+            }
+          });
+        }
+      });
+    };
+
     const addProduct = async (x, i, printedStatus) => {
       await axios.post("teclado/clickTeclaArticulo", {
         idArticulo: x.idArticulo,
@@ -727,6 +796,24 @@ export default {
     };
 
     async function cobrar(fm) {
+      if (fm === 'DATAFONO_3G') {
+        try {
+          const res = await axios.post("parametros/getParametros");
+          const params = res.data;
+          if (params?.tipoDatafono === "3G" || params?.ipTefpay === "0.0.0.0") {
+            await cobrarEfectivo('DATAFONO_3G');
+          } else {
+            await cobrarConPaytef();
+          }
+        } catch {
+          await cobrarEfectivo('DATAFONO_3G');
+        }
+      } else {
+        await cobrarEfectivo(fm);
+      }
+    }
+
+    async function cobrarEfectivo(fm) {
       paymentModal.value = false;
       try {
         const resultado = await axios.post("tickets/crearTicket", {
@@ -743,7 +830,6 @@ export default {
         if (!resultado.data) {
           throw Error("No se ha podido crear el ticket");
         } else {
-          // Guardar el ID del ticket creado para poder imprimirlo
           await axios.post("tickets/getUltimoTicket").then(async (res) => {
             lastCreatedTicketId.value = res.data[0]?._id;
           });
@@ -753,10 +839,47 @@ export default {
             cesta: selectedTable.value._id,
           });
 
-          // Mostrar modal de imprimir ticket en vez de navegar directamente
           printTicketModal.value = true;
         }
       } catch (err) {
+        Swal.fire("Oops...", err.message, "error");
+      }
+    }
+
+    async function cobrarConPaytef() {
+      paytefLoading.value = true;
+      store.dispatch("Datafono/setEstado", "PENDIENTE");
+      try {
+        const resultado = await axios.post("tickets/crearTicketPaytef", {
+          total: getTotal(),
+          idCesta: selectedTable.value._id,
+          idTrabajador: SelectEmployer.value._id,
+          tipo: "TARJETA",
+          tkrsData: {
+            cantidadTkrs: 0,
+            formaPago: "EFECTIVO",
+          },
+        });
+
+        if (!resultado.data) {
+          throw Error("Pago con datáfono inválido");
+        } else {
+          paytefLoading.value = false;
+          paymentModal.value = false;
+
+          await axios.post("tickets/getUltimoTicket").then(async (res) => {
+            lastCreatedTicketId.value = res.data[0]?._id;
+          });
+
+          await axios.post("/cestas/setClients", {
+            clients: 0,
+            cesta: selectedTable.value._id,
+          });
+
+          printTicketModal.value = true;
+        }
+      } catch (err) {
+        paytefLoading.value = false;
         Swal.fire("Oops...", err.message, "error");
       }
     }
@@ -981,6 +1104,11 @@ export default {
       selectTargetTable,
       confirmTransfer,
       openEditProduct,
+      deleteAll,
+      paytefLoading,
+      estadoDatafono,
+      procesoDatafono,
+      paytefStatusClass,
     };
   },
 };
@@ -1428,10 +1556,15 @@ export default {
 }
 
 .action-buttons-group {
-  display: flex;
-  gap: 12px;
-  justify-content: space-evenly;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: auto auto;
+  gap: 10px;
   padding-top: 3px;
+
+  .checkout-btn {
+    grid-column: 1 / -1;
+  }
 }
 
 .footer-action-btn {
@@ -1450,6 +1583,86 @@ export default {
 
 .checkout-btn {
   box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
+}
+
+/* Paytef Status */
+.paytef-status-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  padding: 40px 20px;
+  text-align: center;
+}
+
+.paytef-spinner-wrapper {
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.paytef-spinner {
+  width: 60px !important;
+  height: 60px !important;
+  border-width: 4px !important;
+}
+
+.paytef-status-text {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.paytef-status-label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.paytef-status-value {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #f97316;
+  animation: pulse-text 1.5s ease-in-out infinite;
+
+  &.status-approved { color: #10b981; animation: none; }
+  &.status-denied { color: #ef4444; animation: none; }
+  &.status-lost { color: #f59e0b; animation: none; }
+  &.status-pending { color: #f97316; }
+}
+
+@keyframes pulse-text {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.paytef-result {
+  font-size: 1.1rem;
+  font-weight: 800;
+  padding: 12px 24px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+
+  &.paytef-approved {
+    background: #ecfdf5;
+    color: #059669;
+    border: 1px solid #a7f3d0;
+  }
+  &.paytef-denied {
+    background: #fef2f2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+  }
+  &.paytef-lost {
+    background: #fffbeb;
+    color: #d97706;
+    border: 1px solid #fde68a;
+  }
 }
 
 /* Modals Premium Overrides (Global for TicketView) */
@@ -1802,7 +2015,7 @@ export default {
     font-size: 0.95rem;
   }
   .action-buttons-group {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr;
   }
 }
 

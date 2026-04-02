@@ -91,32 +91,18 @@
       </div>
 
       <div class="ticket-actions-container">
-        <!-- <div class="ticket-total-display">
-          <span>Total:</span>
-          <span class="ticket-total-amount">
-            {{
-              selectTable.detalleIva
-                ? (
-                    selectTable.detalleIva.importe1 +
-                    selectTable.detalleIva.importe2 +
-                    selectTable.detalleIva.importe3 +
-                    selectTable.detalleIva.importe4 +
-                    selectTable.detalleIva.importe5
-                  ).toFixed(2)
-                : "0.00"
-            }}€
-          </span>
-        </div>-->
-        <MDBBtn
-          color="success"
-          class="action-btn"
-          @click="router.push('/ticketview')"
-        >
-          <MDBIcon icon="cash-register" class="me-2" />Cobrar
-        </MDBBtn>
-        <MDBBtn color="danger" class="action-btn" @click="deleteAll()">
-          <MDBIcon icon="trash-alt" class="me-2" />Vacíar cesta
-        </MDBBtn>
+
+
+        <button class="action-btn cobrar-btn" @click="router.push('/ticketview')">
+          <span class="btn-icon-wrap"><MDBIcon icon="cash-register" /></span>
+          <span class="btn-label">Cobrar</span>
+          <span class="btn-arrow">→</span>
+        </button>
+
+        <button class="action-btn nota-btn" @click="imprimirNota()">
+          <span class="btn-icon-wrap"><MDBIcon icon="sticky-note" /></span>
+          <span class="btn-label">Nota</span>
+        </button>
       </div>
     </div>
 
@@ -217,6 +203,30 @@ export default {
     };
     const selectOtherTable = () => {
       router.push("/tableselection");
+    };
+
+    const imprimirNota = () => {
+      if (!selectTable.value._id)
+        return Swal.fire("Oops...", "Mesa inactiva. No se puede imprimir", "error");
+      axios
+        .post("cestas/imprimirNotaMesa", {
+          idCesta: selectTable.value._id,
+          idTrabajador: SelectEmployer.value._id,
+        })
+        .then((res) => {
+          if (!res.data) throw Error("No se ha podido imprimir la cesta");
+          Swal.fire({
+            toast: true, position: "top-end", icon: "success",
+            title: "Se ha enviado la mesa a imprimir",
+            showConfirmButton: false, timer: 1500,
+          });
+        })
+        .catch((err) => {
+          Swal.fire({
+            toast: true, position: "top-end", icon: "error",
+            title: err.message, showConfirmButton: false, timer: 1500,
+          });
+        });
     };
 
     const deleteAll = async () => {
@@ -328,6 +338,7 @@ export default {
       editProductIndex,
       openEditModal,
       handleTicketClick,
+      imprimirNota,
 
       categories,
       currentSalaName: computed(() => {
@@ -571,31 +582,117 @@ export default {
   width: 250px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
-.ticket-total-display {
-  background-color: #ffffff69;
-  padding: 15px;
-  border-radius: 10px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+.total-summary {
+  background: white;
+  border-radius: 14px;
+  padding: 14px 18px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 1.2rem;
-  font-weight: bold;
-  border: 2px solid #28a745;
-}
+  border: 1px solid #e9ecef;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 
-.ticket-total-amount {
-  color: #28a745;
+  .total-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #adb5bd;
+  }
+
+  .total-amount {
+    font-size: 1.55rem;
+    font-weight: 800;
+    color: #2d8a5e;
+    letter-spacing: -0.03em;
+  }
 }
 
 .action-btn {
-  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 18px;
+  height: 52px;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 1rem;
+  letter-spacing: 0.01em;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+
+  &:active {
+    transform: scale(0.97);
+  }
+
+  .btn-icon-wrap {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 0.85rem;
+  }
+
+  .btn-label {
+    flex: 1;
+    text-align: left;
+  }
+}
+
+.cobrar-btn {
+  background: #e6f7ef;
+  color: #1a7a4a;
+  border: 1.5px solid #b8e6d0;
+  height: 64px;
   font-size: 1.1rem;
-  font-weight: bold;
-  border-radius: 10px;
+
+  .btn-icon-wrap {
+    background: #c8f0dc;
+    color: #1a7a4a;
+  }
+
+  .btn-arrow {
+    font-size: 1.1rem;
+    opacity: 0.5;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+  }
+
+  &:hover {
+    background: #d4f0e2;
+    border-color: #8fd4b4;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(26, 122, 74, 0.12);
+
+    .btn-arrow {
+      transform: translateX(4px);
+      opacity: 1;
+    }
+  }
+}
+
+.nota-btn {
+  background: #edf2ff;
+  color: #3b6bdb;
+  border: 1.5px solid #c5d4f7;
+
+  .btn-icon-wrap {
+    background: #d6e2fc;
+    color: #3b6bdb;
+  }
+
+  &:hover {
+    background: #dce6fc;
+    border-color: #9db8f0;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(59, 107, 219, 0.1);
+  }
 }
 
 /* Breadcrumb */
@@ -762,17 +859,28 @@ export default {
     width: 100%;
     flex-direction: row;
     flex-wrap: wrap;
+    gap: 8px;
   }
 
-  .ticket-total-display {
+  .total-summary {
     width: 100%;
-    padding: 10px;
+    padding: 10px 14px;
+
+    .total-amount {
+      font-size: 1.25rem;
+    }
   }
 
-  .action-btn {
-    flex: 1;
+  .cobrar-btn {
+    flex: 2;
+    height: 52px;
     font-size: 1rem;
-    padding: 10px;
+  }
+
+  .nota-btn {
+    flex: 1;
+    height: 52px;
+    font-size: 0.95rem;
   }
 
   .categories-grid-container {

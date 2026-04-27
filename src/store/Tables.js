@@ -38,7 +38,7 @@ export default {
 
       const combinedTables = activeMesas.map((mesaDef) => {
         let activeBasket = currentRoomBaskets.find(
-          (basket) => basket.indexMesa == mesaDef._id
+          (basket) => basket._id == mesaDef.idCesta
         );
 
         if (activeBasket) {

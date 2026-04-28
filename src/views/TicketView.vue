@@ -73,7 +73,10 @@
         <!-- Estado Paytef: Spinner + proceso -->
         <div v-if="paytefLoading" class="paytef-status-container">
           <div class="paytef-spinner-wrapper">
-            <div class="spinner-border text-primary paytef-spinner" role="status">
+            <div
+              class="spinner-border text-primary paytef-spinner"
+              role="status"
+            >
               <span class="visually-hidden">Procesando...</span>
             </div>
           </div>
@@ -83,14 +86,24 @@
               {{ procesoDatafono }}
             </span>
           </div>
-          <div v-if="estadoDatafono === 'APROBADA'" class="paytef-result paytef-approved">
+          <div
+            v-if="estadoDatafono === 'APROBADA'"
+            class="paytef-result paytef-approved"
+          >
             <MDBIcon icon="check-circle" class="me-2" /> Pago aprobado
           </div>
-          <div v-if="estadoDatafono === 'DENEGADA'" class="paytef-result paytef-denied">
+          <div
+            v-if="estadoDatafono === 'DENEGADA'"
+            class="paytef-result paytef-denied"
+          >
             <MDBIcon icon="times-circle" class="me-2" /> Pago denegado
           </div>
-          <div v-if="estadoDatafono === 'PERDIDA'" class="paytef-result paytef-lost">
-            <MDBIcon icon="exclamation-triangle" class="me-2" /> Conexión perdida
+          <div
+            v-if="estadoDatafono === 'PERDIDA'"
+            class="paytef-result paytef-lost"
+          >
+            <MDBIcon icon="exclamation-triangle" class="me-2" /> Conexión
+            perdida
           </div>
         </div>
       </div>
@@ -466,7 +479,6 @@
         </MDBBtn>
         <MDBBtn
           color="danger"
-
           class="footer-action-btn vaciar-btn"
           @click="deleteAll()"
           :disabled="selectedTable.lista.length == 0"
@@ -547,10 +559,10 @@ export default {
     const procesoDatafono = computed(() => store.state.Datafono.procesoActual);
     const paytefStatusClass = computed(() => {
       const estado = estadoDatafono.value;
-      if (estado === 'APROBADA') return 'status-approved';
-      if (estado === 'DENEGADA') return 'status-denied';
-      if (estado === 'PERDIDA') return 'status-lost';
-      return 'status-pending';
+      if (estado === "APROBADA") return "status-approved";
+      if (estado === "DENEGADA") return "status-denied";
+      if (estado === "PERDIDA") return "status-lost";
+      return "status-pending";
     });
     const EditProductModalInfo = ref(-1);
     const actProd = ref(null);
@@ -685,15 +697,22 @@ export default {
         cancelButtonText: "No",
       }).then(async (result) => {
         if (result.isConfirmed) {
-          await axios.post("cestas/borrarCesta", {
-            idCesta: selectedTable.value._id,
-            quitarCliente: true,
-          }).then((x) => {
-            if (x.data) {
-              Swal.fire({ title: "Cesta vaciada", icon: "success", timer: 1000, showConfirmButton: false });
-              router.push("/tableselection");
-            }
-          });
+          await axios
+            .post("cestas/borrarCesta", {
+              idCesta: selectedTable.value._id,
+              quitarCliente: true,
+            })
+            .then((x) => {
+              if (x.data) {
+                Swal.fire({
+                  title: "Cesta vaciada",
+                  icon: "success",
+                  timer: 1000,
+                  showConfirmButton: false,
+                });
+                router.push("/tableselection");
+              }
+            });
         }
       });
     };
@@ -796,17 +815,17 @@ export default {
     };
 
     async function cobrar(fm) {
-      if (fm === 'DATAFONO_3G') {
+      if (fm === "DATAFONO_3G") {
         try {
           const res = await axios.post("parametros/getParametros");
           const params = res.data;
           if (params?.tipoDatafono === "3G" || params?.ipTefpay === "0.0.0.0") {
-            await cobrarEfectivo('DATAFONO_3G');
+            await cobrarEfectivo("DATAFONO_3G");
           } else {
             await cobrarConPaytef();
           }
         } catch {
-          await cobrarEfectivo('DATAFONO_3G');
+          await cobrarEfectivo("DATAFONO_3G");
         }
       } else {
         await cobrarEfectivo(fm);
@@ -1025,7 +1044,7 @@ export default {
             table:
               selectedTable.value.nombre ||
               "TAULA: " + (selectedTable.value.indexMesa + 1),
-            worker: SelectEmployer.value.nombre,
+            worker: SelectEmployer.value.nombreCorto,
             clients: selectedTable.value.comensales,
           });
           const res = await axios.post("cestas/setArticuloImprimido", {
@@ -1629,15 +1648,31 @@ export default {
   color: #f97316;
   animation: pulse-text 1.5s ease-in-out infinite;
 
-  &.status-approved { color: #10b981; animation: none; }
-  &.status-denied { color: #ef4444; animation: none; }
-  &.status-lost { color: #f59e0b; animation: none; }
-  &.status-pending { color: #f97316; }
+  &.status-approved {
+    color: #10b981;
+    animation: none;
+  }
+  &.status-denied {
+    color: #ef4444;
+    animation: none;
+  }
+  &.status-lost {
+    color: #f59e0b;
+    animation: none;
+  }
+  &.status-pending {
+    color: #f97316;
+  }
 }
 
 @keyframes pulse-text {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
 }
 
 .paytef-result {

@@ -5,12 +5,11 @@ import router from "./router";
 import store from "./store";
 import axios from "axios";
 import { createI18n } from "vue-i18n";
-import { version } from "../package.json";
 require("./services/sockets");
 axios.defaults.baseURL = "http://" + window.location.hostname + ":3000";
 
 // Report version to backend
-axios.post("getInfo/actualizarVersionComandero", { version }).catch(() => {
+axios.post("getInfo/actualizarVersionComandero", { version: process.env.VUE_APP_VERSION }).catch(() => {
   /* Silent error */
 });
 

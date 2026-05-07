@@ -116,9 +116,7 @@
     <!-- Grid de Productos -->
     <div class="products-grid-container">
       <div
-        v-for="(x, i) in products.arrayTeclas.filter(
-          (prods) => prods.esSumable,
-        )"
+        v-for="(x, i) in sortedProducts"
         :key="i"
         class="product-grid-item"
         @click="
@@ -240,6 +238,16 @@ export default {
     );
     let selectTable = computed(() => store.state.Tables.selectedTable);
     let products = computed(() => store.state.Categories.selectedCategory);
+    const sortedProducts = computed(() => {
+      if (!products.value || !products.value.arrayTeclas) return [];
+      return products.value.arrayTeclas
+        .filter((p) => p.esSumable)
+        .sort((a, b) =>
+          a.nombreArticulo.localeCompare(b.nombreArticulo, undefined, {
+            sensitivity: "base",
+          }),
+        );
+    });
     const actualPage = computed(() => route.currentRoute.value.path);
 
     const teclaSelected = ref(null);
@@ -520,11 +528,6 @@ export default {
       if (SelectEmployer.value == null) {
         router.push("/");
       }
-      products.value.arrayTeclas.sort((a, b) =>
-        a.nombreArticulo.localeCompare(b.nombreArticulo, undefined, {
-          sensitivity: "base",
-        }),
-      );
     });
 
     return {
@@ -548,6 +551,7 @@ export default {
       suplArticle,
       selectSuplements,
       products,
+      sortedProducts,
       menuModal,
       menuArticles,
       menuSelected,

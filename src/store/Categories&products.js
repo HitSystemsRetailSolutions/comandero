@@ -20,8 +20,29 @@ export default {
     getCategories: (state) => state.arrayCategories,
   },
   actions: {
-    setArrayCategoriesMutation({ commit }, data) {
+    setArrayCategoriesMutation({ commit, state }, data) {
       commit("setArrayCategoriesMutation", data);
+      if (state.selectedCategory) {
+        let updatedCategory = data.find(
+          (cat) => cat.nombre === state.selectedCategory.nombre,
+        );
+
+        if (!updatedCategory) {
+          // Buscamos en submenus
+          for (const cat of data) {
+            if (cat.arraySubmenus) {
+              updatedCategory = cat.arraySubmenus.find(
+                (sub) => sub.nombre === state.selectedCategory.nombre,
+              );
+              if (updatedCategory) break;
+            }
+          }
+        }
+
+        if (updatedCategory) {
+          commit("setSelectedCategoryMutation", updatedCategory);
+        }
+      }
     },
     setSelectedCategoryMutation({ commit }, data) {
       commit("setSelectedCategoryMutation", data);

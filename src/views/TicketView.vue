@@ -1,5 +1,9 @@
 <template>
-  <EditProductModal v-model="openEditProductModal" :index="EditProductModalInfo" />
+  <EditProductModal
+    v-model="openEditProductModal"
+    :index="EditProductModalInfo"
+  />
+  <CobroSeparadoMesas ref="splitPaymentRef" @paid="handleSplitPaymentPaid" />
 
   <!-- Modal de método de pago -->
   <MDBModal
@@ -262,16 +266,6 @@
         <MDBIcon icon="arrow-left" class="back-icon" />
         <span class="breadcrumb-text">Resumen de Ticket</span>
       </div>
-      <MDBBtn
-        size="sm"
-        color="primary"
-        class="ms-auto prepare-btn-badge"
-        @click="handleSendToPrepare"
-        :disabled="selectedTable.lista.length == 0"
-      >
-        <MDBIcon icon="print" class="me-1" />
-        Preparar
-      </MDBBtn>
     </div>
 
     <!-- Lista de productos (Grid de tarjetas) -->
@@ -411,6 +405,24 @@
           Vaciar
         </MDBBtn>
         <MDBBtn
+          color="primary"
+          class="footer-action-btn prepare-btn"
+          @click="handleSendToPrepare"
+          :disabled="selectedTable.lista.length == 0"
+        >
+          <MDBIcon icon="print" class="me-1" />
+          Preparar
+        </MDBBtn>
+        <MDBBtn
+          color="info"
+          class="footer-action-btn split-pay-btn"
+          @click="openSplitPayment"
+          :disabled="!canSplitPay"
+        >
+          <MDBIcon icon="divide" class="me-1" />
+          Separado
+        </MDBBtn>
+        <MDBBtn
           color="success"
           class="footer-action-btn checkout-btn"
           @click="paymentModal = true"
@@ -447,6 +459,7 @@ import Swal from "sweetalert2";
 import axios from "axios";
 import EditProductModal from "@/components/EditProductModal.vue";
 import MenuModal from "@/components/MenuModal.vue";
+import CobroSeparadoMesas from "@/components/CobroSeparadoMesas.vue";
 export default {
   name: "MenuPrincipalView",
   components: {
@@ -462,6 +475,7 @@ export default {
     MDBModalFooter,
     MenuModal,
     EditProductModal,
+    CobroSeparadoMesas,
   },
   setup() {
     const store = useStore();
@@ -476,6 +490,7 @@ export default {
     const printTicketModal = ref(false);
     const lastCreatedTicketId = ref(null);
     const transferModal = ref(false);
+    const splitPaymentRef = ref(null);
     const paytefLoading = ref(false);
     const estadoDatafono = computed(() => store.state.Datafono.estado);
     const procesoDatafono = computed(() => store.state.Datafono.procesoActual);
@@ -529,6 +544,23 @@ export default {
     const availableTables = computed(() => {
       return tables.value.filter((table) => table._id !== selectedTable.value._id);
     });
+
+    const canSplitPay = computed(() => {
+      const list = selectedTable.value?.lista || [];
+      if (list.length === 0) return false;
+      return list.length > 1 || (list[0]?.unidades || 0) > 1;
+    });
+
+    const openSplitPayment = () => {
+      if (!canSplitPay.value) return;
+      splitPaymentRef.value?.openModal(selectedTable.value);
+    };
+
+    const handleSplitPaymentPaid = () => {
+      if (!selectedTable.value?.lista || selectedTable.value.lista.length === 0) {
+        router.push("/tableselection");
+      }
+    };
 
     // Función para seleccionar mesa destino
     const selectTargetTable = (table) => {
@@ -995,6 +1027,10 @@ export default {
       handlePrintTicket,
       handleSkipPrint,
       transferModal,
+      splitPaymentRef,
+      canSplitPay,
+      openSplitPayment,
+      handleSplitPaymentPaid,
       selectOtherTable,
       removeProduct,
       tables,
@@ -1144,11 +1180,14 @@ export default {
 .unified-layout {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100dvh;
+  max-height: 100dvh;
+  box-sizing: border-box;
   padding: 15px;
   gap: 15px;
   background-color: #f8f9fa;
   overflow: hidden;
+  overscroll-behavior: none;
 }
 
 /* Header: Trabajador | Mesa | Comensales */
@@ -1156,6 +1195,7 @@ export default {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
+  flex: 0 0 auto;
 }
 
 .header-item {
@@ -1208,6 +1248,7 @@ export default {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex: 0 0 auto;
   padding: 8px 15px;
   background: rgba(255, 255, 255, 0.6);
   backdrop-filter: blur(10px);
@@ -1237,22 +1278,17 @@ export default {
   color: #1e293b;
 }
 
-.prepare-btn-badge {
-  font-weight: 700;
-  border-radius: 10px;
-  padding: 8px 16px;
-  box-shadow: 0 4px 10px rgba(59, 130, 246, 0.2);
-}
-
 /* Products Layout (Ticket Grid) */
 .ticket-grid-layout {
   flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 12px;
   overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
   padding-right: 5px;
-  min-height: 0;
   mask-image: linear-gradient(to bottom, black 95%, transparent 100%);
 
   &::-webkit-scrollbar {
@@ -1430,6 +1466,7 @@ export default {
 
 /* Footer Premium */
 .unified-footer {
+  flex: 0 0 auto;
   margin-top: auto;
   display: flex;
   flex-direction: column;
@@ -1468,9 +1505,9 @@ export default {
 
 .action-buttons-group {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   grid-template-rows: auto auto;
-  gap: 10px;
+  gap: 8px;
   padding-top: 3px;
 
   .checkout-btn {
@@ -1479,11 +1516,12 @@ export default {
 }
 
 .footer-action-btn {
-  padding: 12px !important;
-  border-radius: 16px !important;
+  min-height: 46px;
+  padding: 10px 8px !important;
+  border-radius: 12px !important;
   font-weight: 800 !important;
-  font-size: 1rem !important;
-  letter-spacing: 0.02em;
+  font-size: 0.92rem !important;
+  letter-spacing: 0;
   transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 
   &:hover:not(:disabled) {
@@ -1493,7 +1531,17 @@ export default {
 }
 
 .checkout-btn {
+  min-height: 52px;
+  font-size: 1.04rem !important;
   box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
+}
+
+.prepare-btn {
+  box-shadow: 0 8px 20px rgba(59, 130, 246, 0.16);
+}
+
+.split-pay-btn {
+  box-shadow: 0 8px 20px rgba(14, 165, 233, 0.18);
 }
 
 /* Paytef Status */
@@ -1943,6 +1991,17 @@ export default {
   }
   .action-buttons-group {
     grid-template-columns: 1fr 1fr;
+    gap: 7px;
+  }
+  .footer-action-btn {
+    min-height: 42px;
+    padding: 8px 6px !important;
+    border-radius: 10px !important;
+    font-size: 0.84rem !important;
+  }
+  .checkout-btn {
+    min-height: 48px;
+    font-size: 0.98rem !important;
   }
 }
 

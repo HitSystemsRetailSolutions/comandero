@@ -39,6 +39,7 @@
               <button
                 class="qty-btn minus"
                 @click="handleRestProduct"
+                v-if="!product.nombre.includes('Promo. ')"
                 :disabled="product.unidades <= 1"
               >
                 <MDBIcon icon="minus" />

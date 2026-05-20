@@ -444,6 +444,7 @@ export default {
 
     async function cobrarEfectivo(idCesta, tipo) {
       const resultado = await axios.post("tickets/crearTicket", {
+        tipoTicket: "NORMAL",
         total: totalPrice.value,
         idCesta,
         idTrabajador: selectedEmployer.value._id,
@@ -460,6 +461,7 @@ export default {
     async function cobrarPaytef(idCesta) {
       store.dispatch("Datafono/setEstado", "PENDIENTE");
       const resultado = await axios.post("tickets/crearTicketPaytef", {
+        tipoTicket: "PAYTEF",
         total: totalPrice.value,
         idCesta,
         idTrabajador: selectedEmployer.value._id,

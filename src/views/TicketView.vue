@@ -298,11 +298,12 @@
                 class="status-icon-inline"
                 :class="{
                   'printed-success':
-                    x.articulosMenu?.length > 0
-                      ? x.articulosMenu.every((a) => a.printed >= a.unidades)
-                      : x.promocion
-                      ? x.promocion.grupos.flat().every((a) => (a.printed ?? 0) >= a.unidades)
-                      : (x.printed ?? 0) >= x.unidades,
+                    (x.articulosMenu && !x.articulosMenu.some((a) => a.printed != a.unidades)) ||
+                    (x.promocion
+                      ? x.promocion.grupos
+                          .flat()
+                          .every((a) => a.printed >= a.unidades * x.unidades)
+                      : x?.printed >= x.unidades),
                 }"
               />
             </div>
@@ -354,7 +355,7 @@
                     v-if="art.impresora"
                     icon="print"
                     class="status-icon-inline"
-                    :class="{ 'printed-success': art.printed >= art.unidades }"
+                    :class="{ 'printed-success': art.printed >= art.unidades * x.unidades }"
                   />
                 </div>
               </template>
@@ -908,12 +909,20 @@ export default {
         if (selectedTable.value.lista[i].promocion) {
           for (let j = 0; j < selectedTable.value.lista[i].promocion.grupos.length; j++) {
             for (let k = 0; k < selectedTable.value.lista[i].promocion.grupos[j].length; k++) {
+              let artPromo = selectedTable.value.lista[i].promocion.grupos[j][k];
+              let totalUnidades = artPromo.unidades * selectedTable.value.lista[i].unidades;
+              let printed = artPromo.printed || 0;
+              
               if (
-                selectedTable.value.lista[i].promocion.grupos[j][k].impresora &&
-                selectedTable.value.lista[i].promocion.grupos[j][k].printed !=
-                  selectedTable.value.lista[i].promocion.grupos[j][k].unidades
+                artPromo.impresora &&
+                printed < totalUnidades
               ) {
-                ticketsWithPrinter.push(selectedTable.value.lista[i].promocion.grupos[j][k]);
+                let unprintedCount = totalUnidades - printed;
+                ticketsWithPrinter.push({
+                  ...artPromo,
+                  unidades: unprintedCount,
+                  printed: 0
+                });
               }
             }
           }
@@ -934,8 +943,8 @@ export default {
               if (artMenu.instancias && artMenu.instancias.length > 0) {
                 instancesToPrint = artMenu.instancias.filter((inst) => !inst.printed);
                 unprintedCount = instancesToPrint.length;
-              } else if (artMenu.printed < artMenu.unidades) {
-                unprintedCount = artMenu.unidades - artMenu.printed;
+              } else if ((artMenu.printed || 0) < artMenu.unidades) {
+                unprintedCount = artMenu.unidades - (artMenu.printed || 0);
               }
 
               if (unprintedCount > 0) {
@@ -944,6 +953,7 @@ export default {
                   ...artMenu,
                   unidades: unprintedCount,
                   instancias: instancesToPrint,
+                  printed: 0
                 });
               }
             }

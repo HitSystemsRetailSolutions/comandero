@@ -752,7 +752,6 @@ export default {
     };
 
     const openEditProduct = async (i) => {
-      console.log("Double click detected for product index:", i);
       await selectProduct(i, true);
     };
 
@@ -849,7 +848,7 @@ export default {
 
     async function handlePrintTicket() {
       printTicketModal.value = false;
-      console.log(lastCreatedTicketId.value);
+
       try {
         if (lastCreatedTicketId.value) {
           await axios.post("impresora/imprimirTicket", {
@@ -883,13 +882,36 @@ export default {
       router.push("/tableselection");
     }
 
+    const getPromoArtPrintedCount = (sameIdItems) => {
+      const allInstances = sameIdItems.flatMap((item) => item.instancias || []);
+      const uniqueInstances = [];
+      const seenIds = new Set();
+      for (const inst of allInstances) {
+        if (inst && inst.instanceId && !seenIds.has(inst.instanceId)) {
+          seenIds.add(inst.instanceId);
+          uniqueInstances.push(inst);
+        }
+      }
+      if (uniqueInstances.length > 0) {
+        return uniqueInstances.filter((inst) => inst.printed).length;
+      }
+
+      const printedValues = sameIdItems.map((item) => item.printed || 0);
+      const allEqual = printedValues.every((val) => val === printedValues[0]);
+      if (allEqual) {
+        return printedValues[0] || 0;
+      } else {
+        return printedValues.reduce((sum, val) => sum + val, 0);
+      }
+    };
+
     const isPromoArtPrinted = (art, x) => {
       if (!x.promocion) return false;
       const allPromoArts = x.promocion.grupos.flat();
       const sameIdArts = allPromoArts.filter((a) => a.idArticulo === art.idArticulo);
       const totalUnitsRequiredPerPromo = sameIdArts.reduce((sum, a) => sum + (a.unidades || 0), 0);
       const totalRequired = totalUnitsRequiredPerPromo * x.unidades;
-      const printed = art.printed || 0;
+      const printed = getPromoArtPrintedCount(sameIdArts);
       return printed >= totalRequired;
     };
 
@@ -901,7 +923,7 @@ export default {
         const sameIdArts = allPromoArts.filter((a) => a.idArticulo === idArt);
         const totalUnitsRequiredPerPromo = sameIdArts.reduce((sum, a) => sum + (a.unidades || 0), 0);
         const totalRequired = totalUnitsRequiredPerPromo * x.unidades;
-        const printed = sameIdArts[0]?.printed || 0;
+        const printed = getPromoArtPrintedCount(sameIdArts);
         if (printed < totalRequired) {
           return false;
         }
@@ -937,7 +959,7 @@ export default {
             const sameIdItems = promoItems.filter((item) => item.idArticulo === artId);
             const totalUnitsRequiredPerPromo = sameIdItems.reduce((sum, item) => sum + (item.unidades || 0), 0);
             const totalRequired = totalUnitsRequiredPerPromo * selectedTable.value.lista[i].unidades;
-            const printed = sameIdItems[0]?.printed || 0;
+            const printed = getPromoArtPrintedCount(sameIdItems);
 
             if (sameIdItems[0]?.impresora && printed < totalRequired) {
               const unprintedCount = totalRequired - printed;
@@ -999,7 +1021,6 @@ export default {
       }
       if (ticketsWithPrinter.length > 0) {
         try {
-          console.log(ticketsWithPrinter);
           const res2 = await axios.post("impresora/imprimirTicketComandero", {
             products: ticketsWithPrinter,
             table: selectedTable.value.nombre || "TAULA: " + (selectedTable.value.indexMesa + 1),

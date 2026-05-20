@@ -534,9 +534,11 @@ export default {
       try {
         splitBasketId = await createSplitBasket();
         await charge(splitBasketId, method);
+
         await loadLastTicket();
         await removeSelectedFromOriginal();
         modalOpen.value = false;
+        await deleteCesta(splitBasketId);
 
         await offerPrintTicket();
         Swal.fire({
@@ -555,6 +557,24 @@ export default {
       }
     }
 
+    async function deleteCesta(idCesta) {
+      try {
+        await axios.post("cestas/fulminarCesta", {
+          idCesta: idCesta,
+        });
+        await axios.post("cestas/cambiarCestaTrabajador", {
+          idCesta: currentTable.value._id,
+          idTrabajador: selectedEmployer.value._id,
+        });
+      } catch (e) {
+        Swal.fire({
+          icon: "error",
+          title: "Error al eliminar la cesta utilizada.",
+          showConfirmButton: false,
+          timer: 1500,
+        });
+      }
+    }
     expose({ openModal, abrirModal: openModal });
 
     return {

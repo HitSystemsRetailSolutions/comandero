@@ -3,6 +3,7 @@
     v-model="openEditProductModal"
     :index="EditProductModalInfo"
   />
+  <CobroSeparadoMesas ref="splitPaymentRef" @paid="handleSplitPaymentPaid" />
 
   <!-- Modal de método de pago -->
   <MDBModal
@@ -73,10 +74,7 @@
         <!-- Estado Paytef: Spinner + proceso -->
         <div v-if="paytefLoading" class="paytef-status-container">
           <div class="paytef-spinner-wrapper">
-            <div
-              class="spinner-border text-primary paytef-spinner"
-              role="status"
-            >
+            <div class="spinner-border text-primary paytef-spinner" role="status">
               <span class="visually-hidden">Procesando...</span>
             </div>
           </div>
@@ -86,24 +84,14 @@
               {{ procesoDatafono }}
             </span>
           </div>
-          <div
-            v-if="estadoDatafono === 'APROBADA'"
-            class="paytef-result paytef-approved"
-          >
+          <div v-if="estadoDatafono === 'APROBADA'" class="paytef-result paytef-approved">
             <MDBIcon icon="check-circle" class="me-2" /> Pago aprobado
           </div>
-          <div
-            v-if="estadoDatafono === 'DENEGADA'"
-            class="paytef-result paytef-denied"
-          >
+          <div v-if="estadoDatafono === 'DENEGADA'" class="paytef-result paytef-denied">
             <MDBIcon icon="times-circle" class="me-2" /> Pago denegado
           </div>
-          <div
-            v-if="estadoDatafono === 'PERDIDA'"
-            class="paytef-result paytef-lost"
-          >
-            <MDBIcon icon="exclamation-triangle" class="me-2" /> Conexión
-            perdida
+          <div v-if="estadoDatafono === 'PERDIDA'" class="paytef-result paytef-lost">
+            <MDBIcon icon="exclamation-triangle" class="me-2" /> Conexión perdida
           </div>
         </div>
       </div>
@@ -146,24 +134,14 @@
           <MDBIcon icon="print" class="print-big-icon" />
         </div>
         <h4 class="print-question-title">¿Deseas imprimir el ticket?</h4>
-        <p class="print-question-desc">
-          Se generará el recibo físico para el cliente
-        </p>
+        <p class="print-question-desc">Se generará el recibo físico para el cliente</p>
       </div>
     </MDBModalBody>
     <MDBModalFooter class="modal-footer-premium justify-content-center">
-      <MDBBtn
-        outline="danger"
-        @click="handleSkipPrint"
-        class="premium-skip-btn me-3"
-      >
+      <MDBBtn outline="danger" @click="handleSkipPrint" class="premium-skip-btn me-3">
         <MDBIcon icon="times" class="me-2" /> No, gracias
       </MDBBtn>
-      <MDBBtn
-        color="success"
-        @click="handlePrintTicket"
-        class="premium-print-btn"
-      >
+      <MDBBtn color="success" @click="handlePrintTicket" class="premium-print-btn">
         <MDBIcon icon="print" class="me-2" /> Sí, imprimir
       </MDBBtn>
     </MDBModalFooter>
@@ -196,18 +174,14 @@
         <div class="transfer-source-card mb-4">
           <div class="source-item">
             <span class="source-label">Mesa Actual</span>
-            <span class="source-value">{{
-              selectedTable.nombre || `Mesa ${selectedTable.indexMesa + 1}`
-            }}</span>
+            <span class="source-value">{{ selectedTable.nombre || `Mesa ${selectedTable.indexMesa + 1}` }}</span>
           </div>
           <div class="source-separator">
             <MDBIcon icon="arrow-right" />
           </div>
           <div class="source-item">
             <span class="source-label">Elementos</span>
-            <span class="source-value"
-              >{{ selectedTable.lista.length }} artículos</span
-            >
+            <span class="source-value">{{ selectedTable.lista.length }} artículos</span>
           </div>
         </div>
 
@@ -229,28 +203,15 @@
             @click="selectTargetTable(table)"
           >
             <div class="table-card-icon">
-              <MDBIcon
-                :icon="
-                  table.lista && table.lista.length > 0 ? 'utensils' : 'table'
-                "
-              />
+              <MDBIcon :icon="table.lista && table.lista.length > 0 ? 'utensils' : 'table'" />
             </div>
             <div class="table-card-info">
-              <span class="table-card-name">{{
-                table.nombre || `Mesa ${table.indexMesa + 1}`
-              }}</span>
+              <span class="table-card-name">{{ table.nombre || `Mesa ${table.indexMesa + 1}` }}</span>
               <span class="table-card-status">
-                {{
-                  table.lista && table.lista.length > 0
-                    ? `${table.lista.length} uds`
-                    : "Libre"
-                }}
+                {{ table.lista && table.lista.length > 0 ? `${table.lista.length} uds` : "Libre" }}
               </span>
             </div>
-            <div
-              v-if="selectedTargetTable?._id === table._id"
-              class="selection-check"
-            >
+            <div v-if="selectedTargetTable?._id === table._id" class="selection-check">
               <MDBIcon icon="check-circle" />
             </div>
           </div>
@@ -268,12 +229,7 @@
       >
         <MDBIcon icon="times" class="me-2" /> Cancelar
       </MDBBtn>
-      <MDBBtn
-        color="warning"
-        @click="confirmTransfer"
-        :disabled="!selectedTargetTable"
-        class="premium-confirm-btn"
-      >
+      <MDBBtn color="warning" @click="confirmTransfer" :disabled="!selectedTargetTable" class="premium-confirm-btn">
         <MDBIcon icon="check" class="me-2" /> Confirmar Traspaso
       </MDBBtn>
     </MDBModalFooter>
@@ -294,19 +250,13 @@
           <span class="room-pill">{{ currentSalaName }}</span>
           <br />
           <span class="table-text">
-            {{
-              selectedTable.nombre
-                ? selectedTable.nombre
-                : "Mesa " + (selectedTable.indexMesa + 1)
-            }}
+            {{ selectedTable.nombre ? selectedTable.nombre : "Mesa " + (selectedTable.indexMesa + 1) }}
           </span>
         </span>
       </div>
       <div class="header-item" @click="changeClients">
         <MDBIcon icon="users" class="header-icon" />
-        <span class="header-text"
-          >{{ selectedTable.comensales }} comensales</span
-        >
+        <span class="header-text">{{ selectedTable.comensales }} comensales</span>
       </div>
     </div>
 
@@ -316,16 +266,6 @@
         <MDBIcon icon="arrow-left" class="back-icon" />
         <span class="breadcrumb-text">Resumen de Ticket</span>
       </div>
-      <MDBBtn
-        size="sm"
-        color="primary"
-        class="ms-auto prepare-btn-badge"
-        @click="handleSendToPrepare"
-        :disabled="selectedTable.lista.length == 0"
-      >
-        <MDBIcon icon="print" class="me-1" />
-        Preparar
-      </MDBBtn>
     </div>
 
     <!-- Lista de productos (Grid de tarjetas) -->
@@ -336,9 +276,7 @@
           <MDBIcon icon="shopping-basket" />
         </div>
         <div class="empty-text">El ticket está vacío</div>
-        <div class="empty-subtext">
-          Vuelve a productos para añadir artículos
-        </div>
+        <div class="empty-subtext">Vuelve a productos para añadir artículos</div>
       </div>
 
       <!-- Tarjetas de productos -->
@@ -355,21 +293,15 @@
             <div class="item-qty-container">
               <span class="item-quantity">x{{ x.unidades }}</span>
               <MDBIcon
-                v-if="
-                  x.impresora ||
-                  (x.promocion &&
-                    x.promocion.grupos.flat().some((a) => a.impresora))
-                "
+                v-if="x.impresora || (x.promocion && x.promocion.grupos.flat().some((a) => a.impresora))"
                 icon="print"
                 class="status-icon-inline"
                 :class="{
                   'printed-success':
-                    !x.articulosMenu?.some((a) => a.printed != a.unidades) ||
+                    (x.articulosMenu && !x.articulosMenu.some((a) => a.printed != a.unidades)) ||
                     (x.promocion
-                      ? x.promocion.grupos
-                          .flat()
-                          .every((a) => a.printed >= a.unidades)
-                      : x?.printed == x.unidades),
+                      ? isPromoFullyPrinted(x)
+                      : x?.printed >= x.unidades),
                 }"
               />
             </div>
@@ -381,17 +313,10 @@
           </div>
 
           <!-- Detalles (Suplementos, promos, menús) -->
-          <div
-            class="item-secondary-details"
-            v-if="x.arraySuplementos?.length || x.promocion || x.articulosMenu"
-          >
+          <div class="item-secondary-details" v-if="x.arraySuplementos?.length || x.promocion || x.articulosMenu">
             <!-- Suplementos normales -->
             <div v-if="x.arraySuplementos" class="nested-details">
-              <div
-                v-for="(z, y) in x.arraySuplementos"
-                :key="y"
-                class="detail-row"
-              >
+              <div v-for="(z, y) in x.arraySuplementos" :key="y" class="detail-row">
                 <MDBIcon icon="level-up-alt" class="detail-icon" />
                 <span>{{ z.nombre }}</span>
               </div>
@@ -399,11 +324,7 @@
 
             <!-- Menús -->
             <div v-if="x.articulosMenu" class="nested-details">
-              <div
-                v-for="(z, y) in x.articulosMenu"
-                :key="y"
-                class="detail-row"
-              >
+              <div v-for="(z, y) in x.articulosMenu" :key="y" class="detail-row">
                 <MDBIcon icon="utensils" class="detail-icon menu-icon" />
                 <span>{{ z.nombre }}</span>
                 <div v-if="z.comentario" class="menu-item-comment-text">
@@ -425,18 +346,14 @@
             <!-- Promociones: articulos de la promo -->
             <div v-if="x.promocion" class="nested-details promo-details">
               <template v-for="(grupo, gi) in x.promocion.grupos" :key="gi">
-                <div
-                  v-for="(art, ai) in grupo"
-                  :key="ai"
-                  class="detail-row promo-article-row"
-                >
+                <div v-for="(art, ai) in grupo" :key="ai" class="detail-row promo-article-row">
                   <MDBIcon icon="tag" class="detail-icon promo-icon" />
                   <span>{{ art.unidades }}x {{ art.nombre }}</span>
                   <MDBIcon
                     v-if="art.impresora"
                     icon="print"
                     class="status-icon-inline"
-                    :class="{ 'printed-success': art.printed >= art.unidades }"
+                    :class="{ 'printed-success': isPromoArtPrinted(art, x) }"
                   />
                 </div>
               </template>
@@ -487,6 +404,24 @@
           Vaciar
         </MDBBtn>
         <MDBBtn
+          color="primary"
+          class="footer-action-btn prepare-btn"
+          @click="handleSendToPrepare"
+          :disabled="selectedTable.lista.length == 0"
+        >
+          <MDBIcon icon="print" class="me-1" />
+          Preparar
+        </MDBBtn>
+        <MDBBtn
+          color="info"
+          class="footer-action-btn split-pay-btn"
+          @click="openSplitPayment"
+          :disabled="!canSplitPay"
+        >
+          <MDBIcon icon="divide" class="me-1" />
+          Separado
+        </MDBBtn>
+        <MDBBtn
           color="success"
           class="footer-action-btn checkout-btn"
           @click="paymentModal = true"
@@ -523,6 +458,7 @@ import Swal from "sweetalert2";
 import axios from "axios";
 import EditProductModal from "@/components/EditProductModal.vue";
 import MenuModal from "@/components/MenuModal.vue";
+import CobroSeparadoMesas from "@/components/CobroSeparadoMesas.vue";
 export default {
   name: "MenuPrincipalView",
   components: {
@@ -538,13 +474,12 @@ export default {
     MDBModalFooter,
     MenuModal,
     EditProductModal,
+    CobroSeparadoMesas,
   },
   setup() {
     const store = useStore();
     const route = useRouter();
-    const SelectEmployer = computed(
-      () => store.state.Employers.selectedEmployer,
-    );
+    const SelectEmployer = computed(() => store.state.Employers.selectedEmployer);
     const hideInfo = ref(false);
     const tables = computed(() => store.state.Tables.arrayTables);
     let selectedTable = computed(() => store.state.Tables.selectedTable);
@@ -554,6 +489,7 @@ export default {
     const printTicketModal = ref(false);
     const lastCreatedTicketId = ref(null);
     const transferModal = ref(false);
+    const splitPaymentRef = ref(null);
     const paytefLoading = ref(false);
     const estadoDatafono = computed(() => store.state.Datafono.estado);
     const procesoDatafono = computed(() => store.state.Datafono.procesoActual);
@@ -605,10 +541,25 @@ export default {
 
     // Computed para mesas disponibles (excluyendo la mesa actual)
     const availableTables = computed(() => {
-      return tables.value.filter(
-        (table) => table._id !== selectedTable.value._id,
-      );
+      return tables.value.filter((table) => table._id !== selectedTable.value._id);
     });
+
+    const canSplitPay = computed(() => {
+      const list = selectedTable.value?.lista || [];
+      if (list.length === 0) return false;
+      return list.length > 1 || (list[0]?.unidades || 0) > 1;
+    });
+
+    const openSplitPayment = () => {
+      if (!canSplitPay.value) return;
+      splitPaymentRef.value?.openModal(selectedTable.value);
+    };
+
+    const handleSplitPaymentPaid = () => {
+      if (!selectedTable.value?.lista || selectedTable.value.lista.length === 0) {
+        router.push("/tableselection");
+      }
+    };
 
     // Función para seleccionar mesa destino
     const selectTargetTable = (table) => {
@@ -620,15 +571,11 @@ export default {
       if (!selectedTargetTable.value) return;
 
       // Si la mesa destino tiene productos, mostrar advertencia
-      if (
-        selectedTargetTable.value.lista &&
-        selectedTargetTable.value.lista.length > 0
-      ) {
+      if (selectedTargetTable.value.lista && selectedTargetTable.value.lista.length > 0) {
         const result = await Swal.fire({
           title: "¡Atención!",
           text: `La mesa "${
-            selectedTargetTable.value.nombre ||
-            `Mesa ${selectedTargetTable.value.indexMesa + 1}`
+            selectedTargetTable.value.nombre || `Mesa ${selectedTargetTable.value.indexMesa + 1}`
           }" ya tiene productos. Debes vaciarla primero antes de traspasar.`,
           icon: "warning",
           showCancelButton: true,
@@ -643,8 +590,7 @@ export default {
         const result = await Swal.fire({
           title: "¿Confirmar traspaso?",
           text: `¿Estás seguro de traspasar todos los productos a "${
-            selectedTargetTable.value.nombre ||
-            `Mesa ${selectedTargetTable.value.indexMesa + 1}`
+            selectedTargetTable.value.nombre || `Mesa ${selectedTargetTable.value.indexMesa + 1}`
           }"?`,
           icon: "question",
           showCancelButton: true,
@@ -680,8 +626,7 @@ export default {
         Swal.fire({
           icon: "error",
           title: "Error",
-          text:
-            error.response?.data?.message || "No se pudo realizar el traspaso",
+          text: error.response?.data?.message || "No se pudo realizar el traspaso",
         });
       }
     };
@@ -734,8 +679,7 @@ export default {
       let z = selectedTable.value.lista.filter(
         (products) =>
           products.idArticulo == x.idArticulo &&
-          JSON.stringify(products.arraySuplementos) ==
-            JSON.stringify(x.arraySuplementos),
+          JSON.stringify(products.arraySuplementos) == JSON.stringify(x.arraySuplementos),
       );
       if (z.length > 0) {
         if (z[0].unidades > 1) {
@@ -770,8 +714,7 @@ export default {
       let z = selectedTable.value.lista.filter(
         (products) =>
           products.idArticulo == x.idArticulo &&
-          JSON.stringify(products.arraySuplementos) ==
-            JSON.stringify(x.arraySuplementos),
+          JSON.stringify(products.arraySuplementos) == JSON.stringify(x.arraySuplementos),
       );
       await store.dispatch("Tables/removeProduct", EditProductModalInfo.value);
       return x;
@@ -795,8 +738,7 @@ export default {
       const now = Date.now();
       const DOUBLE_CLICK_THRESHOLD = 300;
       const alreadySelected = actProd.value === x;
-      const isDoubleClick =
-        now - lastClickTime.value < DOUBLE_CLICK_THRESHOLD && alreadySelected;
+      const isDoubleClick = now - lastClickTime.value < DOUBLE_CLICK_THRESHOLD && alreadySelected;
 
       actProd.value = x;
       lastClickTime.value = now;
@@ -810,7 +752,6 @@ export default {
     };
 
     const openEditProduct = async (i) => {
-      console.log("Double click detected for product index:", i);
       await selectProduct(i, true);
     };
 
@@ -836,6 +777,7 @@ export default {
       paymentModal.value = false;
       try {
         const resultado = await axios.post("tickets/crearTicket", {
+          tipoTicket: "NORMAL",
           total: getTotal(),
           idCesta: selectedTable.value._id,
           idTrabajador: SelectEmployer.value._id,
@@ -869,7 +811,8 @@ export default {
       paytefLoading.value = true;
       store.dispatch("Datafono/setEstado", "PENDIENTE");
       try {
-        const resultado = await axios.post("tickets/crearTicketPaytef", {
+        const resultado = await axios.post("tickets/crearTicket", {
+          tipoTicket: "PAYTEF",
           total: getTotal(),
           idCesta: selectedTable.value._id,
           idTrabajador: SelectEmployer.value._id,
@@ -905,7 +848,7 @@ export default {
 
     async function handlePrintTicket() {
       printTicketModal.value = false;
-      console.log(lastCreatedTicketId.value);
+
       try {
         if (lastCreatedTicketId.value) {
           await axios.post("impresora/imprimirTicket", {
@@ -939,6 +882,55 @@ export default {
       router.push("/tableselection");
     }
 
+    const getPromoArtPrintedCount = (sameIdItems) => {
+      const allInstances = sameIdItems.flatMap((item) => item.instancias || []);
+      const uniqueInstances = [];
+      const seenIds = new Set();
+      for (const inst of allInstances) {
+        if (inst && inst.instanceId && !seenIds.has(inst.instanceId)) {
+          seenIds.add(inst.instanceId);
+          uniqueInstances.push(inst);
+        }
+      }
+      if (uniqueInstances.length > 0) {
+        return uniqueInstances.filter((inst) => inst.printed).length;
+      }
+
+      const printedValues = sameIdItems.map((item) => item.printed || 0);
+      const allEqual = printedValues.every((val) => val === printedValues[0]);
+      if (allEqual) {
+        return printedValues[0] || 0;
+      } else {
+        return printedValues.reduce((sum, val) => sum + val, 0);
+      }
+    };
+
+    const isPromoArtPrinted = (art, x) => {
+      if (!x.promocion) return false;
+      const allPromoArts = x.promocion.grupos.flat();
+      const sameIdArts = allPromoArts.filter((a) => a.idArticulo === art.idArticulo);
+      const totalUnitsRequiredPerPromo = sameIdArts.reduce((sum, a) => sum + (a.unidades || 0), 0);
+      const totalRequired = totalUnitsRequiredPerPromo * x.unidades;
+      const printed = getPromoArtPrintedCount(sameIdArts);
+      return printed >= totalRequired;
+    };
+
+    const isPromoFullyPrinted = (x) => {
+      if (!x.promocion) return false;
+      const allPromoArts = x.promocion.grupos.flat();
+      const uniqueArtIds = Array.from(new Set(allPromoArts.map((a) => a.idArticulo)));
+      for (const idArt of uniqueArtIds) {
+        const sameIdArts = allPromoArts.filter((a) => a.idArticulo === idArt);
+        const totalUnitsRequiredPerPromo = sameIdArts.reduce((sum, a) => sum + (a.unidades || 0), 0);
+        const totalRequired = totalUnitsRequiredPerPromo * x.unidades;
+        const printed = getPromoArtPrintedCount(sameIdArts);
+        if (printed < totalRequired) {
+          return false;
+        }
+      }
+      return true;
+    };
+
     const isPreparing = ref(false);
 
     const handleSendToPrepare = async () => {
@@ -956,31 +948,26 @@ export default {
           selectedTable.value.lista[i].impresora &&
           !selectedTable.value.lista[i].promocion &&
           !selectedTable.value.lista[i].articulosMenu &&
-          selectedTable.value.lista[i].printed !=
-            selectedTable.value.lista[i].unidades
+          selectedTable.value.lista[i].printed != selectedTable.value.lista[i].unidades
         ) {
           ticketsWithPrinter.push(selectedTable.value.lista[i]);
         }
         if (selectedTable.value.lista[i].promocion) {
-          for (
-            let j = 0;
-            j < selectedTable.value.lista[i].promocion.grupos.length;
-            j++
-          ) {
-            for (
-              let k = 0;
-              k < selectedTable.value.lista[i].promocion.grupos[j].length;
-              k++
-            ) {
-              if (
-                selectedTable.value.lista[i].promocion.grupos[j][k].impresora &&
-                selectedTable.value.lista[i].promocion.grupos[j][k].printed !=
-                  selectedTable.value.lista[i].promocion.grupos[j][k].unidades
-              ) {
-                ticketsWithPrinter.push(
-                  selectedTable.value.lista[i].promocion.grupos[j][k],
-                );
-              }
+          const promoItems = selectedTable.value.lista[i].promocion.grupos.flat();
+          const uniqueArtIds = Array.from(new Set(promoItems.map((item) => item.idArticulo)));
+          for (const artId of uniqueArtIds) {
+            const sameIdItems = promoItems.filter((item) => item.idArticulo === artId);
+            const totalUnitsRequiredPerPromo = sameIdItems.reduce((sum, item) => sum + (item.unidades || 0), 0);
+            const totalRequired = totalUnitsRequiredPerPromo * selectedTable.value.lista[i].unidades;
+            const printed = getPromoArtPrintedCount(sameIdItems);
+
+            if (sameIdItems[0]?.impresora && printed < totalRequired) {
+              const unprintedCount = totalRequired - printed;
+              ticketsWithPrinter.push({
+                ...sameIdItems[0],
+                unidades: unprintedCount,
+                printed: 0
+              });
             }
           }
         }
@@ -991,23 +978,17 @@ export default {
           const menuPrinters = new Set();
           const itemsToProcess = [];
 
-          for (
-            let j = 0;
-            j < selectedTable.value.lista[i].articulosMenu.length;
-            j++
-          ) {
+          for (let j = 0; j < selectedTable.value.lista[i].articulosMenu.length; j++) {
             let artMenu = selectedTable.value.lista[i].articulosMenu[j];
             if (artMenu.impresora) {
               let unprintedCount = 0;
               let instancesToPrint = null;
 
               if (artMenu.instancias && artMenu.instancias.length > 0) {
-                instancesToPrint = artMenu.instancias.filter(
-                  (inst) => !inst.printed,
-                );
+                instancesToPrint = artMenu.instancias.filter((inst) => !inst.printed);
                 unprintedCount = instancesToPrint.length;
-              } else if (artMenu.printed < artMenu.unidades) {
-                unprintedCount = artMenu.unidades - artMenu.printed;
+              } else if ((artMenu.printed || 0) < artMenu.unidades) {
+                unprintedCount = artMenu.unidades - (artMenu.printed || 0);
               }
 
               if (unprintedCount > 0) {
@@ -1016,6 +997,7 @@ export default {
                   ...artMenu,
                   unidades: unprintedCount,
                   instancias: instancesToPrint,
+                  printed: 0
                 });
               }
             }
@@ -1041,17 +1023,13 @@ export default {
         try {
           const res2 = await axios.post("impresora/imprimirTicketComandero", {
             products: ticketsWithPrinter,
-            table:
-              selectedTable.value.nombre ||
-              "TAULA: " + (selectedTable.value.indexMesa + 1),
+            table: selectedTable.value.nombre || "TAULA: " + (selectedTable.value.indexMesa + 1),
             worker: SelectEmployer.value.nombreCorto,
             clients: selectedTable.value.comensales,
           });
           const res = await axios.post("cestas/setArticuloImprimido", {
             idCesta: selectedTable.value._id,
-            articulos: ticketsWithPrinter
-              .filter((item) => item.idArticulo !== -1)
-              .map((item) => item.idArticulo),
+            articulos: ticketsWithPrinter.filter((item) => item.idArticulo !== -1).map((item) => item.idArticulo),
           });
 
           if (res.data && res2.data) {
@@ -1088,6 +1066,8 @@ export default {
     });
 
     return {
+      isPromoArtPrinted,
+      isPromoFullyPrinted,
       selectedTable,
       actualPage,
       selectOtherEmployer,
@@ -1103,6 +1083,10 @@ export default {
       handlePrintTicket,
       handleSkipPrint,
       transferModal,
+      splitPaymentRef,
+      canSplitPay,
+      openSplitPayment,
+      handleSplitPaymentPaid,
       selectOtherTable,
       removeProduct,
       tables,
@@ -1252,11 +1236,14 @@ export default {
 .unified-layout {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100dvh;
+  max-height: 100dvh;
+  box-sizing: border-box;
   padding: 15px;
   gap: 15px;
   background-color: #f8f9fa;
   overflow: hidden;
+  overscroll-behavior: none;
 }
 
 /* Header: Trabajador | Mesa | Comensales */
@@ -1264,6 +1251,7 @@ export default {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
+  flex: 0 0 auto;
 }
 
 .header-item {
@@ -1316,6 +1304,7 @@ export default {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex: 0 0 auto;
   padding: 8px 15px;
   background: rgba(255, 255, 255, 0.6);
   backdrop-filter: blur(10px);
@@ -1345,22 +1334,17 @@ export default {
   color: #1e293b;
 }
 
-.prepare-btn-badge {
-  font-weight: 700;
-  border-radius: 10px;
-  padding: 8px 16px;
-  box-shadow: 0 4px 10px rgba(59, 130, 246, 0.2);
-}
-
 /* Products Layout (Ticket Grid) */
 .ticket-grid-layout {
   flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 12px;
   overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
   padding-right: 5px;
-  min-height: 0;
   mask-image: linear-gradient(to bottom, black 95%, transparent 100%);
 
   &::-webkit-scrollbar {
@@ -1538,6 +1522,7 @@ export default {
 
 /* Footer Premium */
 .unified-footer {
+  flex: 0 0 auto;
   margin-top: auto;
   display: flex;
   flex-direction: column;
@@ -1576,9 +1561,9 @@ export default {
 
 .action-buttons-group {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   grid-template-rows: auto auto;
-  gap: 10px;
+  gap: 8px;
   padding-top: 3px;
 
   .checkout-btn {
@@ -1587,11 +1572,12 @@ export default {
 }
 
 .footer-action-btn {
-  padding: 12px !important;
-  border-radius: 16px !important;
+  min-height: 46px;
+  padding: 10px 8px !important;
+  border-radius: 12px !important;
   font-weight: 800 !important;
-  font-size: 1rem !important;
-  letter-spacing: 0.02em;
+  font-size: 0.92rem !important;
+  letter-spacing: 0;
   transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 
   &:hover:not(:disabled) {
@@ -1601,7 +1587,17 @@ export default {
 }
 
 .checkout-btn {
+  min-height: 52px;
+  font-size: 1.04rem !important;
   box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
+}
+
+.prepare-btn {
+  box-shadow: 0 8px 20px rgba(59, 130, 246, 0.16);
+}
+
+.split-pay-btn {
+  box-shadow: 0 8px 20px rgba(14, 165, 233, 0.18);
 }
 
 /* Paytef Status */
@@ -2051,6 +2047,17 @@ export default {
   }
   .action-buttons-group {
     grid-template-columns: 1fr 1fr;
+    gap: 7px;
+  }
+  .footer-action-btn {
+    min-height: 42px;
+    padding: 8px 6px !important;
+    border-radius: 10px !important;
+    font-size: 0.84rem !important;
+  }
+  .checkout-btn {
+    min-height: 48px;
+    font-size: 0.98rem !important;
   }
 }
 

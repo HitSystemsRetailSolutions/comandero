@@ -60,7 +60,7 @@
                 class="delete-line-btn"
                 @click.stop="handleTicketDelete(x, i)"
               >
-                <MDBIcon :icon="x.unidades > 1 ? 'minus' : 'trash-alt'" />
+                <MDBIcon :icon="x.unidades > 1 && !x.promocion ? 'minus' : 'trash-alt'" />
               </button>
             </template>
             <template v-else>
@@ -280,7 +280,7 @@ export default {
 
     // Si hay más de 1 unidad → decrementa sin confirmar; si queda 1 → muestra confirmación
     const handleTicketDelete = async (item, index) => {
-      if (item.unidades > 1) {
+      if (item.unidades > 1 && !item.promocion) {
         await axios.post("teclado/clickTeclaArticulo", {
           idArticulo: item.idArticulo,
           gramos: 0,

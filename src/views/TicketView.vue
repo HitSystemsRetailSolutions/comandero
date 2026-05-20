@@ -300,9 +300,7 @@
                   'printed-success':
                     (x.articulosMenu && !x.articulosMenu.some((a) => a.printed != a.unidades)) ||
                     (x.promocion
-                      ? x.promocion.grupos
-                          .flat()
-                          .every((a) => a.printed >= a.unidades * x.unidades)
+                      ? isPromoFullyPrinted(x)
                       : x?.printed >= x.unidades),
                 }"
               />
@@ -355,7 +353,7 @@
                     v-if="art.impresora"
                     icon="print"
                     class="status-icon-inline"
-                    :class="{ 'printed-success': art.printed >= art.unidades * x.unidades }"
+                    :class="{ 'printed-success': isPromoArtPrinted(art, x) }"
                   />
                 </div>
               </template>
@@ -885,6 +883,32 @@ export default {
       router.push("/tableselection");
     }
 
+    const isPromoArtPrinted = (art, x) => {
+      if (!x.promocion) return false;
+      const allPromoArts = x.promocion.grupos.flat();
+      const sameIdArts = allPromoArts.filter((a) => a.idArticulo === art.idArticulo);
+      const totalUnitsRequiredPerPromo = sameIdArts.reduce((sum, a) => sum + (a.unidades || 0), 0);
+      const totalRequired = totalUnitsRequiredPerPromo * x.unidades;
+      const printed = art.printed || 0;
+      return printed >= totalRequired;
+    };
+
+    const isPromoFullyPrinted = (x) => {
+      if (!x.promocion) return false;
+      const allPromoArts = x.promocion.grupos.flat();
+      const uniqueArtIds = Array.from(new Set(allPromoArts.map((a) => a.idArticulo)));
+      for (const idArt of uniqueArtIds) {
+        const sameIdArts = allPromoArts.filter((a) => a.idArticulo === idArt);
+        const totalUnitsRequiredPerPromo = sameIdArts.reduce((sum, a) => sum + (a.unidades || 0), 0);
+        const totalRequired = totalUnitsRequiredPerPromo * x.unidades;
+        const printed = sameIdArts[0]?.printed || 0;
+        if (printed < totalRequired) {
+          return false;
+        }
+      }
+      return true;
+    };
+
     const isPreparing = ref(false);
 
     const handleSendToPrepare = async () => {
@@ -907,23 +931,21 @@ export default {
           ticketsWithPrinter.push(selectedTable.value.lista[i]);
         }
         if (selectedTable.value.lista[i].promocion) {
-          for (let j = 0; j < selectedTable.value.lista[i].promocion.grupos.length; j++) {
-            for (let k = 0; k < selectedTable.value.lista[i].promocion.grupos[j].length; k++) {
-              let artPromo = selectedTable.value.lista[i].promocion.grupos[j][k];
-              let totalUnidades = artPromo.unidades * selectedTable.value.lista[i].unidades;
-              let printed = artPromo.printed || 0;
-              
-              if (
-                artPromo.impresora &&
-                printed < totalUnidades
-              ) {
-                let unprintedCount = totalUnidades - printed;
-                ticketsWithPrinter.push({
-                  ...artPromo,
-                  unidades: unprintedCount,
-                  printed: 0
-                });
-              }
+          const promoItems = selectedTable.value.lista[i].promocion.grupos.flat();
+          const uniqueArtIds = Array.from(new Set(promoItems.map((item) => item.idArticulo)));
+          for (const artId of uniqueArtIds) {
+            const sameIdItems = promoItems.filter((item) => item.idArticulo === artId);
+            const totalUnitsRequiredPerPromo = sameIdItems.reduce((sum, item) => sum + (item.unidades || 0), 0);
+            const totalRequired = totalUnitsRequiredPerPromo * selectedTable.value.lista[i].unidades;
+            const printed = sameIdItems[0]?.printed || 0;
+
+            if (sameIdItems[0]?.impresora && printed < totalRequired) {
+              const unprintedCount = totalRequired - printed;
+              ticketsWithPrinter.push({
+                ...sameIdItems[0],
+                unidades: unprintedCount,
+                printed: 0
+              });
             }
           }
         }
@@ -977,6 +999,7 @@ export default {
       }
       if (ticketsWithPrinter.length > 0) {
         try {
+          console.log(ticketsWithPrinter);
           const res2 = await axios.post("impresora/imprimirTicketComandero", {
             products: ticketsWithPrinter,
             table: selectedTable.value.nombre || "TAULA: " + (selectedTable.value.indexMesa + 1),
@@ -1022,6 +1045,8 @@ export default {
     });
 
     return {
+      isPromoArtPrinted,
+      isPromoFullyPrinted,
       selectedTable,
       actualPage,
       selectOtherEmployer,

@@ -296,7 +296,6 @@ export default {
     };
 
     const selectSuplements = async (x, i) => {
-      console.log(x);
       if (!x?.suplementos?.length) return;
       const sup = x.suplementos;
       const res = await axios.post("articulos/getSuplementos", {

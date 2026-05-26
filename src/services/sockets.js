@@ -139,6 +139,13 @@ socket.on("resDatafono", (data) => {
   }
 });
 
+socket.on("nuevoTrabajadorActivo", (data) => {
+  if (data.id) {
+    store.dispatch("Employers/setNewActive", data.id);
+  }
+});
+
+
 // socket.on("ponerImagen", async (data) => {
 //   const image = document.createElement("img");
 //   image.src = require("./imagen");

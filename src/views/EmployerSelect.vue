@@ -69,7 +69,7 @@ import { useStore } from "vuex";
 import { ref, computed, onMounted } from "vue";
 import router from "@/router";
 import { useRouter } from "vue-router";
-
+import axios from "axios";
 export default {
   name: "EmployerSelectView",
   components: {
@@ -79,6 +79,7 @@ export default {
     const store = useStore();
     const route = useRouter();
     const employers = computed(() => store.state.Employers.arrayEmployers);
+    const selectedEmployer = computed(() => store.state.Employers.selectedEmployer);
     const searchQuery = ref("");
 
     const filteredEmployers = computed(() => {
@@ -98,8 +99,15 @@ export default {
         .slice(0, 2);
     }
 
+    // se le asigna la propiedad selectedEmployer en el store y se le envia a la api
     function SelectEmployer(employer) {
+      const idAntiguo = selectedEmployer.value?._id || null;
+      const idNuevo = employer._id;
       store.dispatch("Employers/setSelectedEmployer", employer);
+      axios.post("trabajadores/cambiarTrabajador",{idAntiguo, idNuevo,forced:true})
+      .catch((error) => {
+        console.error(error);
+      })
     }
 
     onMounted(() => {});

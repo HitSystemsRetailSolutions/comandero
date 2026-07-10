@@ -565,7 +565,6 @@ export default {
     async function cleanupSplitBasket(idCesta) {
       if (!idCesta) return;
       try {
-        console.log("fulminarCesta", idCesta);
         await axios.post("cestas/fulminarCesta", { idCesta });
       } catch {
         // Si el backend ya la ha finalizado, no hay nada que limpiar.

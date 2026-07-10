@@ -49,12 +49,8 @@
               <span class="split-item-name">{{ item.nombre }}</span>
               <span class="split-item-price">{{ money(item.subtotal) }}</span>
               <span v-if="item.promocion" class="split-badge promo">Promo</span>
-              <span v-else-if="item.articulosMenu" class="split-badge menu">
-                Menú
-              </span>
-              <span v-else-if="item.isSubItem" class="split-badge part">
-                Parte
-              </span>
+              <span v-else-if="item.articulosMenu" class="split-badge menu"> Menú </span>
+              <span v-else-if="item.isSubItem" class="split-badge part"> Parte </span>
               <button
                 v-if="item.promocion && !item.isSubItem"
                 type="button"
@@ -96,11 +92,7 @@
               :key="`${item.pID}_selected_${index}`"
               class="split-receipt-row"
             >
-              <button
-                type="button"
-                class="split-remove-btn"
-                @click="removeItem(index)"
-              >
+              <button type="button" class="split-remove-btn" @click="removeItem(index)">
                 <MDBIcon icon="minus-circle" />
               </button>
               <span class="split-receipt-name">{{ item.nombre }}</span>
@@ -130,12 +122,7 @@
     </MDBModalBody>
 
     <MDBModalFooter class="split-modal-footer">
-      <MDBBtn
-        outline="dark"
-        class="split-footer-btn"
-        :disabled="isProcessing"
-        @click="closeModal"
-      >
+      <MDBBtn outline="dark" class="split-footer-btn" :disabled="isProcessing" @click="closeModal">
         <MDBIcon icon="times" class="me-2" />
         Cerrar
       </MDBBtn>
@@ -165,18 +152,12 @@
 </template>
 
 <script>
-import {
-  MDBBtn,
-  MDBIcon,
-  MDBModal,
-  MDBModalBody,
-  MDBModalFooter,
-  MDBModalHeader,
-} from "mdb-vue-ui-kit";
-import { computed, ref } from "vue";
+import { MDBBtn, MDBIcon, MDBModal, MDBModalBody, MDBModalFooter, MDBModalHeader } from "mdb-vue-ui-kit";
+import { computed, ref, watch } from "vue";
 import { useStore } from "vuex";
 import axios from "axios";
 import Swal from "sweetalert2";
+import { useTicketErrors } from "@/composables/useTicketErrors";
 
 export default {
   name: "CobroSeparadoMesas",
@@ -197,10 +178,38 @@ export default {
     const selectedItems = ref([]);
     const availableItems = ref([]);
     const createdTicketId = ref(null);
+    const currentIdTicket = ref(null);
 
-    const selectedEmployer = computed(
-      () => store.state.Employers.selectedEmployer,
-    );
+    let isProcessingValue = false;
+
+    watch(modalOpen, async (newValue, oldValue) => {
+      if (oldValue === true && newValue === false) {
+        if (isProcessingValue) return;
+
+        isProcessingValue = true;
+        modalOpen.value = true;
+
+        isProcessing.value = true;
+        try {
+          // 4. Tu proceso asíncrono (ej: cancelar datáfono)
+          await anularCurrentIdTicket();
+        } catch (error) {
+          console.error("Error en el proceso:", error);
+        } finally {
+          isProcessing.value = false;
+
+          modalOpen.value = false;
+
+          setTimeout(() => {
+            isProcessingValue = false;
+          }, 100);
+        }
+      }
+    });
+
+    const { handleTicketError, getTicketErrorCode, TicketErrorCode } = useTicketErrors();
+
+    const selectedEmployer = computed(() => store.state.Employers.selectedEmployer);
     const estadoDatafono = computed(() => store.state.Datafono.estado);
     const procesoDatafono = computed(() => store.state.Datafono.procesoActual);
     const paytefStatusClass = computed(() => {
@@ -209,15 +218,10 @@ export default {
       if (estadoDatafono.value === "PERDIDA") return "status-lost";
       return "status-pending";
     });
-    const totalPrice = computed(() =>
-      roundMoney(selectedItems.value.reduce((sum, item) => sum + item.subtotal, 0)),
-    );
+    const totalPrice = computed(() => roundMoney(selectedItems.value.reduce((sum, item) => sum + item.subtotal, 0)));
     const currentTableName = computed(() => {
       if (!currentTable.value) return "";
-      return (
-        currentTable.value.nombre ||
-        `Mesa ${(currentTable.value.indexMesa ?? 0) + 1}`
-      );
+      return currentTable.value.nombre || `Mesa ${(currentTable.value.indexMesa ?? 0) + 1}`;
     });
 
     function roundMoney(value) {
@@ -272,26 +276,55 @@ export default {
       modalOpen.value = false;
     }
 
-    function addItem(item, index) {
+    async function anularCurrentTicket() {
+      await anularCurrentIdTicket();
+    }
+
+    async function checkModificationAllowed() {
+      if (currentIdTicket.value) {
+        const result = await Swal.fire({
+          title: "Advertencia",
+          text: "Ya existe un ticket asociado a la operación y, si continúa, dicho ticket será anulado porque la información del cobro ha cambiado.",
+          icon: "warning",
+          showCancelButton: true,
+          confirmButtonText: "Continuar",
+          cancelButtonText: "Cancelar",
+        });
+        if (result.isConfirmed) {
+          await anularCurrentTicket();
+          return true;
+        }
+        return false;
+      }
+      return true;
+    }
+
+    async function addItem(item, index) {
+      if (!(await checkModificationAllowed())) return;
       availableItems.value.splice(index, 1);
       selectedItems.value.push(item);
     }
 
-    function removeItem(index) {
+    async function removeItem(index) {
+      if (!(await checkModificationAllowed())) return;
       const item = selectedItems.value[index];
       selectedItems.value.splice(index, 1);
       availableItems.value.push(item);
     }
 
-    function removeAll() {
-      while (selectedItems.value.length > 0) removeItem(0);
+    async function removeAll() {
+      if (selectedItems.value.length === 0) return;
+      if (!(await checkModificationAllowed())) return;
+      while (selectedItems.value.length > 0) {
+        const item = selectedItems.value[0];
+        selectedItems.value.splice(0, 1);
+        availableItems.value.push(item);
+      }
     }
 
     async function getSubItems(item) {
       const subItems = [];
-      const parts = item.promocion
-        ? item.promocion.grupos.flat()
-        : item.articulosMenu || [];
+      const parts = item.promocion ? item.promocion.grupos.flat() : item.articulosMenu || [];
 
       if (parts.length === 0) return subItems;
 
@@ -317,10 +350,7 @@ export default {
         const fallbackPrice = item.promocion
           ? part.precioPromoPorUnidad || item.subtotal / totalUnits
           : item.subtotal / totalUnits;
-        const unitPrice =
-          pricesMap[part.idArticulo] !== undefined
-            ? pricesMap[part.idArticulo]
-            : fallbackPrice;
+        const unitPrice = pricesMap[part.idArticulo] !== undefined ? pricesMap[part.idArticulo] : fallbackPrice;
         const numUnits = part.unidades || 1;
 
         for (let unit = 0; unit < numUnits; unit++) {
@@ -330,8 +360,7 @@ export default {
           let inheritedSupplements = null;
 
           if (Array.isArray(part.suplementosPorArticulo)) {
-            inheritedSupplements =
-              part.suplementosPorArticulo[instanceIndex]?.suplementos || null;
+            inheritedSupplements = part.suplementosPorArticulo[instanceIndex]?.suplementos || null;
           }
 
           subItems.push({
@@ -361,6 +390,7 @@ export default {
     }
 
     async function divideItem(item, index) {
+      if (!(await checkModificationAllowed())) return;
       const subItems = await getSubItems(item);
       if (subItems.length > 0) availableItems.value.splice(index, 1, ...subItems);
     }
@@ -390,9 +420,9 @@ export default {
 
     async function removeSelectedFromOriginal() {
       const originalCestaId = currentTable.value._id;
-      const affectedIndices = Array.from(
-        new Set(selectedItems.value.map((item) => item.parentIndex)),
-      ).sort((a, b) => b - a);
+      const affectedIndices = Array.from(new Set(selectedItems.value.map((item) => item.parentIndex))).sort(
+        (a, b) => b - a,
+      );
 
       for (const parentIndex of affectedIndices) {
         await axios.post("cestas/borrarItemCesta", {
@@ -403,16 +433,11 @@ export default {
           },
         });
 
-        const remaining = availableItems.value.filter(
-          (item) => item.parentIndex === parentIndex,
-        );
+        const remaining = availableItems.value.filter((item) => item.parentIndex === parentIndex);
         const explodedRemaining = [];
 
         for (const item of remaining) {
-          if (
-            (item.promocion || item.articulosMenu?.length > 0) &&
-            !item.isSubItem
-          ) {
+          if ((item.promocion || item.articulosMenu?.length > 0) && !item.isSubItem) {
             const subItems = await getSubItems(item);
             explodedRemaining.push(...(subItems.length > 0 ? subItems : [item]));
           } else {
@@ -442,6 +467,19 @@ export default {
       }
     }
 
+    async function anularCurrentIdTicket() {
+      if (!currentIdTicket.value) return;
+      try {
+        await axios.post("tickets/anularTicket", {
+          ticketId: currentIdTicket.value,
+          reason: "Anulacion automática en modal cobro",
+        });
+        currentIdTicket.value = null;
+      } catch (err) {
+        logger.Error(1074, err);
+      }
+    }
+
     async function cobrarEfectivo(idCesta, tipo) {
       const resultado = await axios.post("tickets/crearTicket", {
         tipoTicket: "NORMAL",
@@ -453,14 +491,19 @@ export default {
           cantidadTkrs: 0,
           formaPago: "EFECTIVO",
         },
+        idTicket: currentIdTicket.value,
       });
+      if (getTicketErrorCode(resultado.data) === TicketErrorCode.TICKET_ID_INVALID) {
+        currentIdTicket.value = null;
+        throw new Error("No se ha podido crear el ticket");
+      }
 
       if (!resultado.data) throw new Error("No se ha podido crear el ticket");
     }
 
     async function cobrarPaytef(idCesta) {
       store.dispatch("Datafono/setEstado", "PENDIENTE");
-      const resultado = await axios.post("tickets/crearTicketPaytef", {
+      const resultado = await axios.post("tickets/crearTicket", {
         tipoTicket: "PAYTEF",
         total: totalPrice.value,
         idCesta,
@@ -470,14 +513,18 @@ export default {
           cantidadTkrs: 0,
           formaPago: "EFECTIVO",
         },
+        idTicket: currentIdTicket.value,
       });
-
+      if (getTicketErrorCode(resultado.data) === TicketErrorCode.TICKET_ID_INVALID) {
+        currentIdTicket.value = null;
+        throw new Error("Pago con datáfono inválido");
+      }
       if (!resultado.data) throw new Error("Pago con datáfono inválido");
     }
 
     async function charge(idCesta, method) {
-      if (method === "DATAFONO_3G") {
-        try {
+      try {
+        if (method === "DATAFONO_3G") {
           const res = await axios.post("parametros/getParametros");
           const params = res.data;
           if (params?.tipoDatafono === "3G" || params?.ipTefpay === "0.0.0.0") {
@@ -485,12 +532,11 @@ export default {
           } else {
             await cobrarPaytef(idCesta);
           }
-        } catch (err) {
-          if (err.message === "Pago con datáfono inválido") throw err;
-          await cobrarEfectivo(idCesta, "DATAFONO_3G");
+        } else {
+          await cobrarEfectivo(idCesta, method);
         }
-      } else {
-        await cobrarEfectivo(idCesta, method);
+      } catch (err) {
+        throw err;
       }
     }
 
@@ -519,9 +565,24 @@ export default {
     async function cleanupSplitBasket(idCesta) {
       if (!idCesta) return;
       try {
+        console.log("fulminarCesta", idCesta);
         await axios.post("cestas/fulminarCesta", { idCesta });
       } catch {
         // Si el backend ya la ha finalizado, no hay nada que limpiar.
+      }
+    }
+
+    async function getProximoId() {
+      if (currentIdTicket.value) return currentIdTicket.value;
+      try {
+        const res = await axios.get("tickets/getProximoId");
+        if (res.data) {
+          currentIdTicket.value = res.data;
+          return res.data;
+        }
+        return null;
+      } catch (err) {
+        return null;
       }
     }
 
@@ -532,9 +593,10 @@ export default {
       isProcessing.value = true;
 
       try {
+        await getProximoId();
         splitBasketId = await createSplitBasket();
         await charge(splitBasketId, method);
-
+        currentIdTicket.value = null;
         await loadLastTicket();
         await removeSelectedFromOriginal();
         modalOpen.value = false;
@@ -747,8 +809,7 @@ export default {
   gap: 6px;
   text-align: center;
   cursor: pointer;
-  transition: transform 0.15s ease, border-color 0.15s ease,
-    box-shadow 0.15s ease;
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 
   &:hover {
     transform: translateY(-1px);
@@ -837,12 +898,7 @@ export default {
   overscroll-behavior: contain;
   padding: 10px 12px;
   background: linear-gradient(#fff, #fff) padding-box,
-    repeating-linear-gradient(
-      0deg,
-      transparent 0,
-      transparent 26px,
-      rgba(148, 163, 184, 0.18) 27px
-    );
+    repeating-linear-gradient(0deg, transparent 0, transparent 26px, rgba(148, 163, 184, 0.18) 27px);
 }
 
 .split-receipt-row {

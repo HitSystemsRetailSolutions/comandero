@@ -1,8 +1,5 @@
 <template>
-  <EditProductModal
-    v-model="openEditProductModal"
-    :index="EditProductModalInfo"
-  />
+  <EditProductModal v-model="openEditProductModal" :index="EditProductModalInfo" />
   <CobroSeparadoMesas ref="splitPaymentRef" @paid="handleSplitPaymentPaid" />
 
   <!-- Modal de método de pago -->
@@ -226,6 +223,7 @@
           selectedTargetTable = null;
         "
         class="premium-cancel-btn me-3"
+        :disabled="paytefLoading"
       >
         <MDBIcon icon="times" class="me-2" /> Cancelar
       </MDBBtn>
@@ -299,9 +297,7 @@
                 :class="{
                   'printed-success':
                     (x.articulosMenu && !x.articulosMenu.some((a) => a.printed != a.unidades)) ||
-                    (x.promocion
-                      ? isPromoFullyPrinted(x)
-                      : x?.printed >= x.unidades),
+                    (x.promocion ? isPromoFullyPrinted(x) : x?.printed >= x.unidades),
                 }"
               />
             </div>
@@ -412,12 +408,7 @@
           <MDBIcon icon="print" class="me-1" />
           Preparar
         </MDBBtn>
-        <MDBBtn
-          color="info"
-          class="footer-action-btn split-pay-btn"
-          @click="openSplitPayment"
-          :disabled="!canSplitPay"
-        >
+        <MDBBtn color="info" class="footer-action-btn split-pay-btn" @click="openSplitPayment" :disabled="!canSplitPay">
           <MDBIcon icon="divide" class="me-1" />
           Separado
         </MDBBtn>
@@ -450,7 +441,7 @@ import {
 } from "mdb-vue-ui-kit";
 
 import { useStore } from "vuex";
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import { io } from "socket.io-client";
 import { useRouter } from "vue-router";
 import router from "@/router";
@@ -459,6 +450,7 @@ import axios from "axios";
 import EditProductModal from "@/components/EditProductModal.vue";
 import MenuModal from "@/components/MenuModal.vue";
 import CobroSeparadoMesas from "@/components/CobroSeparadoMesas.vue";
+import { useTicketErrors } from "@/composables/useTicketErrors";
 export default {
   name: "MenuPrincipalView",
   components: {
@@ -485,12 +477,46 @@ export default {
     let selectedTable = computed(() => store.state.Tables.selectedTable);
     const actualPage = computed(() => route.currentRoute.value.path);
     const openEditProductModal = ref(false);
-    const paymentModal = ref(false);
+
     const printTicketModal = ref(false);
     const lastCreatedTicketId = ref(null);
     const transferModal = ref(false);
     const splitPaymentRef = ref(null);
     const paytefLoading = ref(false);
+
+    const paymentModal = ref(false); // Esta es la variable que vinculas a tus componentes
+
+    // Candado para evitar que el proceso se ejecute más de una vez
+    let isProcessing = false;
+
+    watch(paymentModal, async (newValue, oldValue) => {
+      if (oldValue === true && newValue === false) {
+        if (isProcessing) return;
+
+        isProcessing = true;
+        paymentModal.value = true;
+
+        paytefLoading.value = true;
+
+        try {
+          // 4. Tu proceso asíncrono (ej: cancelar datáfono)
+          await anularCurrentIdTicket();
+        } catch (error) {
+          console.error("Error en el proceso:", error);
+        } finally {
+          paytefLoading.value = false;
+
+          paymentModal.value = false;
+
+          setTimeout(() => {
+            isProcessing = false;
+          }, 100);
+        }
+      }
+    });
+
+    const { handleTicketError, getTicketErrorCode, TicketErrorCode } = useTicketErrors();
+
     const estadoDatafono = computed(() => store.state.Datafono.estado);
     const procesoDatafono = computed(() => store.state.Datafono.procesoActual);
     const paytefStatusClass = computed(() => {
@@ -510,6 +536,7 @@ export default {
       const found = list.find((s) => s.id === id);
       return found ? found.name : id === "MESAS" ? "Principal" : id;
     });
+    const currentIdTicket = ref(null);
 
     // menu
     const menuArticles = ref(null);
@@ -756,8 +783,9 @@ export default {
     };
 
     async function cobrar(fm) {
-      if (fm === "DATAFONO_3G") {
-        try {
+      try {
+        if (fm === "DATAFONO_3G") {
+          await getProximoId();
           const res = await axios.post("parametros/getParametros");
           const params = res.data;
           if (params?.tipoDatafono === "3G" || params?.ipTefpay === "0.0.0.0") {
@@ -765,16 +793,29 @@ export default {
           } else {
             await cobrarConPaytef();
           }
-        } catch {
-          await cobrarEfectivo("DATAFONO_3G");
+        } else {
+          await cobrarEfectivo(fm);
         }
-      } else {
-        await cobrarEfectivo(fm);
+      } catch (err) {
+        throw err;
+      }
+    }
+
+    async function getProximoId() {
+      if (currentIdTicket.value) return currentIdTicket.value;
+      try {
+        const res = await axios.get("tickets/getProximoId");
+        if (res.data) {
+          currentIdTicket.value = res.data;
+          return res.data;
+        }
+        return null;
+      } catch (err) {
+        return null;
       }
     }
 
     async function cobrarEfectivo(fm) {
-      paymentModal.value = false;
       try {
         const resultado = await axios.post("tickets/crearTicket", {
           tipoTicket: "NORMAL",
@@ -786,11 +827,19 @@ export default {
             cantidadTkrs: 0,
             formaPago: "EFECTIVO",
           },
+          idTicket: currentIdTicket.value,
         });
+
+        if (getTicketErrorCode(resultado.data) === TicketErrorCode.TICKET_ID_INVALID) {
+          currentIdTicket.value = null;
+        }
+
+        if (handleTicketError(resultado.data)) return;
 
         if (!resultado.data) {
           throw Error("No se ha podido crear el ticket");
         } else {
+          currentIdTicket.value = null;
           await axios.post("tickets/getUltimoTicket").then(async (res) => {
             lastCreatedTicketId.value = res.data[0]?._id;
           });
@@ -799,6 +848,7 @@ export default {
             clients: 0,
             cesta: selectedTable.value._id,
           });
+          paymentModal.value = false;
 
           printTicketModal.value = true;
         }
@@ -821,11 +871,19 @@ export default {
             cantidadTkrs: 0,
             formaPago: "EFECTIVO",
           },
+          idTicket: currentIdTicket.value,
         });
+
+        if (getTicketErrorCode(resultado.data) === TicketErrorCode.TICKET_ID_INVALID) {
+          currentIdTicket.value = null;
+        }
+
+        if (handleTicketError(resultado.data)) return;
 
         if (!resultado.data) {
           throw Error("Pago con datáfono inválido");
         } else {
+          currentIdTicket.value = null;
           paytefLoading.value = false;
           paymentModal.value = false;
 
@@ -841,8 +899,9 @@ export default {
           printTicketModal.value = true;
         }
       } catch (err) {
-        paytefLoading.value = false;
         Swal.fire("Oops...", err.message, "error");
+      } finally {
+        paytefLoading.value = false;
       }
     }
 
@@ -966,7 +1025,7 @@ export default {
               ticketsWithPrinter.push({
                 ...sameIdItems[0],
                 unidades: unprintedCount,
-                printed: 0
+                printed: 0,
               });
             }
           }
@@ -997,7 +1056,7 @@ export default {
                   ...artMenu,
                   unidades: unprintedCount,
                   instancias: instancesToPrint,
-                  printed: 0
+                  printed: 0,
                 });
               }
             }
@@ -1056,6 +1115,19 @@ export default {
       }
     };
 
+    async function anularCurrentIdTicket() {
+      if (!currentIdTicket.value) return;
+      try {
+        await axios.post("tickets/anularTicket", {
+          ticketId: currentIdTicket.value,
+          reason: "Anulacion automática en modal cobro",
+        });
+        currentIdTicket.value = null;
+      } catch (err) {
+        logger.Error(1074, err);
+      }
+    }
+
     onMounted(() => {
       if (tables.value.length == 0) {
         router.push("/");
@@ -1112,6 +1184,7 @@ export default {
       estadoDatafono,
       procesoDatafono,
       paytefStatusClass,
+      paytefLoading,
     };
   },
 };

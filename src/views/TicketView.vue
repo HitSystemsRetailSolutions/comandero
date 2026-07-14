@@ -490,6 +490,11 @@ export default {
     let isProcessing = false;
 
     watch(paymentModal, async (newValue, oldValue) => {
+      if (paytefLoading.value && !newValue) {
+        paymentModal.value = true;
+        return;
+      }
+
       if (oldValue === true && newValue === false) {
         if (isProcessing) return;
 

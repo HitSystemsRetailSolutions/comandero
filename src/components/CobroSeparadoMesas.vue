@@ -183,6 +183,11 @@ export default {
     let isProcessingValue = false;
 
     watch(modalOpen, async (newValue, oldValue) => {
+      if (isProcessing.value && !newValue) {
+        modalOpen.value = true;
+        return;
+      }
+
       if (oldValue === true && newValue === false) {
         if (isProcessingValue) return;
 

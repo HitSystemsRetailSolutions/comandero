@@ -509,7 +509,7 @@ export default {
     async function cobrarPaytef(idCesta) {
       store.dispatch("Datafono/setEstado", "PENDIENTE");
       const resultado = await axios.post("tickets/crearTicket", {
-        tipoTicket: "PAYTEF",
+        tipoTicket: "DATAFONOINT",
         total: totalPrice.value,
         idCesta,
         idTrabajador: selectedEmployer.value._id,
@@ -604,6 +604,7 @@ export default {
         await loadLastTicket();
         await removeSelectedFromOriginal();
         modalOpen.value = false;
+        selectedItems.value = [];
         await deleteCesta(splitBasketId);
 
         await offerPrintTicket();

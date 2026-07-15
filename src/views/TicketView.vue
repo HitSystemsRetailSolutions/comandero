@@ -867,7 +867,7 @@ export default {
       store.dispatch("Datafono/setEstado", "PENDIENTE");
       try {
         const resultado = await axios.post("tickets/crearTicket", {
-          tipoTicket: "PAYTEF",
+          tipoTicket: "DATAFONOINT",
           total: getTotal(),
           idCesta: selectedTable.value._id,
           idTrabajador: SelectEmployer.value._id,

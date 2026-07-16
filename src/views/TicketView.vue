@@ -1,7 +1,6 @@
 <template>
   <EditProductModal v-model="openEditProductModal" :index="EditProductModalInfo" />
   <CobroSeparadoMesas ref="splitPaymentRef" @paid="handleSplitPaymentPaid" />
-
   <!-- Modal de método de pago -->
   <MDBModal
     id="paymentModal"
@@ -56,7 +55,7 @@
             <MDBIcon icon="chevron-right" class="method-arrow" />
           </div>
 
-          <div class="method-card credit-card" @click="cobrar('DATAFONO_3G')">
+          <div class="method-card credit-card" @click="openDatafonoSelection()">
             <div class="method-icon-box">
               <MDBIcon icon="credit-card" />
             </div>
@@ -424,6 +423,8 @@
       </div>
     </div>
   </div>
+
+  <SelectDatafonoModal v-model="datafonoModal" @select="handleSelectDatafono" @cancel="closeDatafonoSelection" />
 </template>
 
 <script>
@@ -450,6 +451,7 @@ import axios from "axios";
 import EditProductModal from "@/components/EditProductModal.vue";
 import MenuModal from "@/components/MenuModal.vue";
 import CobroSeparadoMesas from "@/components/CobroSeparadoMesas.vue";
+import SelectDatafonoModal from "@/components/SelectDatafonoModal.vue";
 import { useTicketErrors } from "@/composables/useTicketErrors";
 export default {
   name: "MenuPrincipalView",
@@ -467,6 +469,7 @@ export default {
     MenuModal,
     EditProductModal,
     CobroSeparadoMesas,
+    SelectDatafonoModal,
   },
   setup() {
     const store = useStore();
@@ -485,6 +488,7 @@ export default {
     const paytefLoading = ref(false);
 
     const paymentModal = ref(false); // Esta es la variable que vinculas a tus componentes
+    const datafonoModal = ref(false);
 
     // Candado para evitar que el proceso se ejecute más de una vez
     let isProcessing = false;
@@ -519,6 +523,23 @@ export default {
         }
       }
     });
+
+    const openDatafonoSelection = () => {
+      datafonoModal.value = true;
+    };
+
+    const closeDatafonoSelection = () => {
+      datafonoModal.value = false;
+    };
+
+    const handleSelectDatafono = async (tipo) => {
+      datafonoModal.value = false;
+      if (tipo === "DATAFONO_INTEGRADO") {
+        await cobrar("DATAFONO_INTEGRADO");
+      } else {
+        await cobrar("DATAFONO_3G");
+      }
+    };
 
     const { handleTicketError, getTicketErrorCode, TicketErrorCode } = useTicketErrors();
 
@@ -789,15 +810,12 @@ export default {
 
     async function cobrar(fm) {
       try {
-        if (fm === "DATAFONO_3G") {
-          await getProximoId();
-          const res = await axios.post("parametros/getParametros");
-          const params = res.data;
-          if (params?.tipoDatafono === "3G" || params?.ipTefpay === "0.0.0.0") {
-            await cobrarEfectivo("DATAFONO_3G");
-          } else {
-            await cobrarConPaytef();
-          }
+        if (fm === "DATAFONO_INTEGRADO") {
+          await getProximoId(fm);
+          await cobrarConPaytef();
+        } else if (fm === "DATAFONO_3G") {
+          await getProximoId(fm);
+          await cobrarEfectivo("DATAFONO_3G");
         } else {
           await cobrarEfectivo(fm);
         }
@@ -806,10 +824,15 @@ export default {
       }
     }
 
-    async function getProximoId() {
+    async function getProximoId(method) {
       if (currentIdTicket.value) return currentIdTicket.value;
+      const datafonoIntegrado = method === "DATAFONO_INTEGRADO";
       try {
-        const res = await axios.get("tickets/getProximoId");
+        const res = await axios.get("tickets/getProximoId", {
+          params: {
+            datafonoIntegrado: datafonoIntegrado,
+          },
+        });
         if (res.data) {
           currentIdTicket.value = res.data;
           return res.data;
@@ -1154,8 +1177,11 @@ export default {
       handleSendToPrepare,
       sendToPrepare,
       selectProduct,
-      openEditProductModal,
       paymentModal,
+      datafonoModal,
+      openDatafonoSelection,
+      closeDatafonoSelection,
+      handleSelectDatafono,
       printTicketModal,
       handlePrintTicket,
       handleSkipPrint,
@@ -2223,4 +2249,6 @@ export default {
   border-radius: 20px;
   font-size: 0.9rem;
 }
+
+/* Datáfono styles live in SelectDatafonoModal.vue */
 </style>

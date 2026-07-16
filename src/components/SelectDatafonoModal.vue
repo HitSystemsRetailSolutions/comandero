@@ -16,7 +16,7 @@
         </div>
         <div class="title-text-group">
           <span class="modal-main-title">Selecciona el tipo de datáfono</span>
-          <span class="modal-subtitle">Elige cómo deseas procesar el cobro</span>
+          <!-- <span class="modal-subtitle">Elige cómo deseas procesar el cobro</span> -->
         </div>
       </div>
     </MDBModalHeader>
@@ -26,12 +26,12 @@
         <!-- Opción A: Datáfono Integrado -->
         <div class="datafono-option-card" @click="select('DATAFONO_INTEGRADO')">
           <div class="option-icon-wrapper connected">
-            <MDBIcon icon="network-wired" class="option-icon" />
+            <MDBIcon icon="network-wired" size="sm" class="option-icon" />
           </div>
           <div class="option-info">
             <h5 class="option-title">Datáfono Integrado</h5>
             <p class="option-subtitle">Conectado al programa</p>
-            <p class="option-description">Cobro automático desde el sistema.</p>
+            <!-- <p class="option-description">Cobro automático desde el sistema.</p> -->
           </div>
           <MDBBtn color="primary" class="select-option-btn w-100"> Seleccionar integrado </MDBBtn>
         </div>
@@ -39,12 +39,12 @@
         <!-- Opción B: Datáfono Independiente -->
         <div class="datafono-option-card" @click="select('DATAFONO_3G')">
           <div class="option-icon-wrapper independent">
-            <MDBIcon icon="wifi" class="option-icon" />
+            <MDBIcon icon="wifi" size="sm" class="option-icon" />
           </div>
           <div class="option-info">
             <h5 class="option-title">Datáfono Independiente</h5>
             <p class="option-subtitle">3G / Portátil</p>
-            <p class="option-description">Introducir importe manualmente en el terminal.</p>
+            <!-- <p class="option-description">Introducir importe manualmente en el terminal.</p> -->
           </div>
           <MDBBtn color="dark" class="select-option-btn w-100"> Seleccionar independiente / 3G </MDBBtn>
         </div>
@@ -194,8 +194,8 @@ export default {
 }
 
 .option-icon-wrapper {
-  width: 60px;
-  height: 60px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
   display: flex;
   align-items: center;

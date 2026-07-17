@@ -6,93 +6,70 @@
           <MDBIcon icon="utensils" class="title-icon" />
         </div>
         <div class="title-text-group">
-          <span class="product-name-title">{{
-            menuSelected?.nombreArticulo || menuSelected?.nombre
-          }}</span
+          <span class="product-name-title">{{ menuSelected?.nombreArticulo || menuSelected?.nombre }}</span
           ><br />
-          <span class="product-category-subtitle"
-            >Selecciona tus preferencias</span
-          >
+          <span class="product-category-subtitle">Selecciona tus preferencias</span>
         </div>
       </div>
     </MDBModalHeader>
     <MDBModalBody class="modal-body-premium">
       <div class="scrollable-content-premium">
-        <div
-          v-for="(suplementos, familia) in suplByFamily"
-          :key="familia"
-          class="premium-family-section"
-        >
+        <div v-for="(suplementos, familia) in suplByFamily" :key="familia" class="premium-family-section">
           <div class="family-header-premium" @click="onToggleFamilia(familia)">
-            <h5 class="family-name-premium">{{ familia }}</h5>
+            <div class="family-title-block">
+              <h5 class="family-name-premium">{{ familia }}</h5>
+            </div>
             <div class="family-controls-premium">
-              <div
-                v-if="seleccionadoPorFamilia[familia]"
-                class="selection-pill-premium animate-pop-in"
-              >
-                <MDBIcon icon="check" class="me-1" />
-                {{ seleccionadoPorFamilia[familia].nombre }}
+              <div v-if="getSelectedItemsForFamily(familia).length" class="selection-meta-premium">
+                <div class="selection-pill-premium animate-pop-in">
+                  <MDBIcon icon="check" class="me-1" />
+                  {{ getSelectedItemsForFamily(familia).length }}
+                  {{ getSelectedItemsForFamily(familia).length > 1 ? "seleccionados" : "seleccionado" }}
+                </div>
+                <div v-if="getSelectedItemsForFamily(familia).length" class="selection-details-premium">
+                  <span
+                    v-for="(selectedItem, index) in getSelectedItemsForFamily(familia).slice(0, 2)"
+                    :key="selectedItem.idArticulo || selectedItem._id || index"
+                    class="selection-detail-pill"
+                  >
+                    {{ selectedItem.nombre }}
+                  </span>
+                  <span v-if="getSelectedItemsForFamily(familia).length > 2" class="selection-detail-pill more">
+                    +{{ getSelectedItemsForFamily(familia).length - 2 }}
+                  </span>
+                </div>
               </div>
               <div class="toggle-icon-box">
-                <MDBIcon
-                  :icon="
-                    familiasAbiertas[familia] ? 'chevron-up' : 'chevron-down'
-                  "
-                />
+                <MDBIcon :icon="familiasAbiertas[familia] ? 'chevron-up' : 'chevron-down'" />
               </div>
             </div>
           </div>
 
-          <div
-            v-show="familiasAbiertas[familia]"
-            class="suplementos-grid-premium animate-slide-down"
-          >
+          <div v-show="familiasAbiertas[familia]" class="suplementos-grid-premium animate-slide-down">
             <div
               v-for="(suplemento, index) in suplementos"
               :key="index"
               class="premium-suple-card"
               :class="{
-                selected:
-                  seleccionadoPorFamilia[familia]?.idArticulo ===
-                  (suplemento.idArticulo || suplemento._id),
+                selected: isSelectedInFamily(familia, suplemento),
                 disabled: suplemento.esSumable === false,
               }"
-              @click="
-                suplemento.esSumable !== false &&
-                  onSetSeleccionFamilia(familia, suplemento)
-              "
+              @click="suplemento.esSumable !== false && onSetSeleccionFamilia(familia, suplemento)"
             >
-              <div
-                class="card-glow"
-                v-if="
-                  seleccionadoPorFamilia[familia]?.idArticulo ===
-                  (suplemento.idArticulo || suplemento._id)
-                "
-              ></div>
+              <div class="card-glow" v-if="isSelectedInFamily(familia, suplemento)"></div>
               <div class="suple-card-inner">
-                <div
-                  class="check-icon-wrapper"
-                  v-if="
-                    seleccionadoPorFamilia[familia]?.idArticulo ===
-                    (suplemento.idArticulo || suplemento._id)
-                  "
-                >
+                <div class="check-icon-wrapper" v-if="isSelectedInFamily(familia, suplemento)">
                   <MDBIcon icon="check" />
                 </div>
                 <span class="suple-name-premium">{{ suplemento.nombre }}</span>
-                <span v-if="!suplemento.esSumable" class="badge-status-pill"
-                  >A peso</span
-                >
+                <span v-if="!suplemento.esSumable" class="badge-status-pill">A peso</span>
               </div>
             </div>
           </div>
         </div>
       </div>
     </MDBModalBody>
-    <MDBModalFooter
-      v-if="!initialSeleccionadoPorFamilia || closeBtn"
-      class="modal-footer-premium sticky-footer"
-    >
+    <MDBModalFooter v-if="!initialSeleccionadoPorFamilia || closeBtn" class="modal-footer-premium sticky-footer">
       <MDBBtn
         v-if="!initialSeleccionadoPorFamilia"
         outline="danger"
@@ -126,17 +103,12 @@
   <SuplementosModal
     v-model="showSuplModal"
     :suplArticle="suplArticle"
+    :selectedSuplementos="selectedSuplementosForModal"
     @confirmarSuplementos="onConfirmarSuplementos"
   />
 </template>
 <script>
-import {
-  MDBModalHeader,
-  MDBModalBody,
-  MDBModalFooter,
-  MDBBtn,
-  MDBIcon,
-} from "mdb-vue-ui-kit";
+import { MDBModalHeader, MDBModalBody, MDBModalFooter, MDBBtn, MDBIcon } from "mdb-vue-ui-kit";
 import { ref, watch, toRef, computed } from "vue";
 import axios from "axios";
 import { useMenuSelection } from "../composables/useMenuSelection";
@@ -161,18 +133,15 @@ export default {
   emits: ["update:modelValue", "confirmarMenu", "aplicarCambios"],
   setup(props, { emit }) {
     const suplByFamilyRef = toRef(props, "suplByFamily");
-    const {
-      familiasAbiertas,
-      seleccionadoPorFamilia,
-      onToggleFamilia,
-      resetSelection,
-      initFamilies,
-    } = useMenuSelection(suplByFamilyRef);
+    const { familiasAbiertas, seleccionadoPorFamilia, onToggleFamilia, resetSelection, initFamilies } =
+      useMenuSelection(suplByFamilyRef);
 
     const showSuplModal = ref(false);
     const suplArticle = ref(null);
+    const selectedSuplementosForModal = ref([]);
     const pendingFamilia = ref(null);
     const pendingProducto = ref(null);
+    const pendingSelection = ref(null);
 
     const modalVisible = computed({
       get: () => props.modelValue,
@@ -194,7 +163,14 @@ export default {
         if (val && typeof val === "object") {
           resetSelection();
           Object.entries(val).forEach(([familia, art]) => {
-            seleccionadoPorFamilia[familia] = art;
+            const normalized = Array.isArray(art)
+              ? art.filter((item) => item && typeof item === "object")
+              : art && typeof art === "object"
+              ? [art]
+              : [];
+            if (normalized.length) {
+              seleccionadoPorFamilia[familia] = normalized;
+            }
           });
         }
       },
@@ -215,14 +191,40 @@ export default {
       { deep: true },
     );
 
-    async function onSetSeleccionFamilia(familia, producto) {
-      const idSel = seleccionadoPorFamilia[familia]?.idArticulo;
-      const idSup = producto.idArticulo ?? producto._id ?? null;
+    function normalizeFamilySelections(value) {
+      if (Array.isArray(value)) {
+        return value.filter((item) => item && typeof item === "object");
+      }
+      if (value && typeof value === "object") {
+        return [value];
+      }
+      return [];
+    }
 
-      if (idSel === idSup) {
-        delete seleccionadoPorFamilia[familia];
+    function getSelectedItemsForFamily(familia) {
+      return normalizeFamilySelections(seleccionadoPorFamilia[familia]);
+    }
+
+    function isSelectedInFamily(familia, producto) {
+      const idSup = producto.idArticulo ?? producto._id ?? null;
+      return getSelectedItemsForFamily(familia).some((item) => (item.idArticulo ?? item._id ?? null) === idSup);
+    }
+
+    async function onSetSeleccionFamilia(familia, producto) {
+      const idSup = producto.idArticulo ?? producto._id ?? null;
+      const selectedItems = getSelectedItemsForFamily(familia);
+      const existingSelection = selectedItems.find((item) => (item.idArticulo ?? item._id ?? null) === idSup);
+
+      if (existingSelection) {
+        const remaining = selectedItems.filter((item) => (item.idArticulo ?? item._id ?? null) !== idSup);
+        if (remaining.length) {
+          seleccionadoPorFamilia[familia] = remaining;
+        } else {
+          delete seleccionadoPorFamilia[familia];
+        }
         return;
       }
+
       const { data } = await axios.post("articulos/getArticuloById", {
         idArticulo: producto.idArticulo || producto._id,
       });
@@ -233,10 +235,22 @@ export default {
         });
         pendingFamilia.value = familia;
         pendingProducto.value = producto;
+        pendingSelection.value = {
+          idArticulo: idSup,
+          nombre: producto.nombre ?? null,
+          unidades: producto.unidades ?? 1,
+          gramos: producto.gramos ?? null,
+          printed: 0,
+          impresora: data.impresora ?? null,
+        };
+        selectedSuplementosForModal.value = Array.isArray(existingSelection?.arraySuplementos)
+          ? existingSelection.arraySuplementos
+          : [];
         suplArticle.value = res.data;
         showSuplModal.value = true;
         return;
       }
+
       const objectInstances = [];
       for (let i = 0; i < (producto.unidades ?? 1); i++) {
         objectInstances.push({
@@ -255,13 +269,14 @@ export default {
         impresora: data.impresora ?? null,
         instancias: objectInstances,
       };
-      seleccionadoPorFamilia[familia] = obj;
+      const currentSelections = getSelectedItemsForFamily(familia);
+      currentSelections.push(obj);
+      seleccionadoPorFamilia[familia] = currentSelections;
     }
 
     function onConfirmarSuplementos(suplementosSeleccionados) {
       if (!pendingFamilia.value || !pendingProducto.value) return;
-      const idSup =
-        pendingProducto.value.idArticulo ?? pendingProducto.value._id ?? null;
+
       const objectInstances = [];
       for (let i = 0; i < (pendingProducto.value.unidades ?? 1); i++) {
         objectInstances.push({
@@ -271,18 +286,17 @@ export default {
       }
 
       const obj = {
-        idArticulo: idSup,
-        nombre: pendingProducto.value.nombre ?? null,
+        ...pendingSelection.value,
         arraySuplementos: suplementosSeleccionados ?? null,
-        unidades: pendingProducto.value.unidades ?? 1,
-        gramos: pendingProducto.value.gramos ?? null,
-        printed: 0,
-        impresora: pendingProducto.value.impresora ?? null,
         instancias: objectInstances,
       };
-      seleccionadoPorFamilia[pendingFamilia.value] = obj;
+      const currentSelections = getSelectedItemsForFamily(pendingFamilia.value);
+      currentSelections.push(obj);
+      seleccionadoPorFamilia[pendingFamilia.value] = currentSelections;
       pendingFamilia.value = null;
       pendingProducto.value = null;
+      pendingSelection.value = null;
+      selectedSuplementosForModal.value = [];
       suplArticle.value = null;
       showSuplModal.value = false;
     }
@@ -291,6 +305,7 @@ export default {
       emit("confirmarMenu", seleccionadoPorFamilia);
       emit("update:modelValue", false);
       resetSelection();
+      selectedSuplementosForModal.value = [];
     }
 
     return {
@@ -298,10 +313,13 @@ export default {
       seleccionadoPorFamilia,
       onToggleFamilia,
       onSetSeleccionFamilia,
+      getSelectedItemsForFamily,
+      isSelectedInFamily,
       confirmarMenu,
       modelValue: modalVisible,
       showSuplModal,
       suplArticle,
+      selectedSuplementosForModal,
       onConfirmarSuplementos,
     };
   },
@@ -373,14 +391,21 @@ export default {
 .family-header-premium {
   padding: 12px 15px;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
+  gap: 10px;
   cursor: pointer;
   background-color: rgba(255, 255, 255, 0.3);
+  flex-wrap: wrap;
 
   &:hover {
     background-color: rgba(255, 255, 255, 0.5);
   }
+}
+
+.family-title-block {
+  flex: 1 1 220px;
+  min-width: 0;
 }
 
 .family-name-premium {
@@ -388,6 +413,27 @@ export default {
   font-size: 1rem;
   font-weight: bold;
   color: #343a40;
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+.family-controls-premium {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.selection-meta-premium {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  min-width: 0;
 }
 
 .selection-pill-premium {
@@ -397,6 +443,63 @@ export default {
   border-radius: 15px;
   font-size: 0.8rem;
   font-weight: bold;
+  white-space: nowrap;
+}
+
+.selection-details-premium {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.selection-detail-pill {
+  background-color: #f8f9fa;
+  color: #6c757d;
+  border: 1px solid #e9ecef;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+
+  &.more {
+    color: #007bff;
+    background-color: #edf6ff;
+  }
+}
+
+.toggle-icon-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+@media (max-width: 576px) {
+  .family-header-premium {
+    padding: 10px 12px;
+  }
+
+  .family-title-block {
+    flex-basis: 100%;
+  }
+
+  .family-controls-premium {
+    width: 100%;
+    justify-content: space-between;
+    margin-top: 6px;
+  }
+
+  .selection-meta-premium {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .selection-details-premium {
+    justify-content: flex-start;
+  }
 }
 
 .suplementos-grid-premium {

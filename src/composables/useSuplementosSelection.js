@@ -1,17 +1,28 @@
 // Composable para la lógica de selección de suplementos
 import { ref, watch } from "vue";
 
-export function useSuplementosSelection(suplArticle) {
+function getSupplementKey(supplement) {
+  return String(supplement?.idArticulo ?? supplement?._id ?? supplement?.nombre ?? "");
+}
+
+export function useSuplementosSelection(suplArticle, initialSelectedSuplementos = []) {
   // Estado local reactivo para los suplementos
   const localSuplArticle = ref([]);
 
-  // Sincroniza el estado local con el prop
+  // Sincroniza el estado local con el prop y marca los suplementos ya seleccionados
   watch(
-    suplArticle,
-    (val) => {
-      localSuplArticle.value = val ? val.map((s) => ({ ...s })) : [];
+    [suplArticle, initialSelectedSuplementos],
+    ([val, selected]) => {
+      const selectedKeys = (selected || []).map((item) => getSupplementKey(item)).filter(Boolean);
+
+      localSuplArticle.value = val
+        ? val.map((s) => ({
+            ...s,
+            selected: selectedKeys.includes(getSupplementKey(s)),
+          }))
+        : [];
     },
-    { immediate: true }
+    { immediate: true, deep: true },
   );
 
   // Alternar selección

@@ -15,13 +15,9 @@
         </div>
         <div class="title-text-group">
           <span class="product-name-title">{{ product?.nombre }}</span>
-          <span class="product-category-subtitle" v-if="product?.familia">{{
-            product.familia
-          }}</span>
+          <span class="product-category-subtitle" v-if="product?.familia">{{ product.familia }}</span>
         </div>
-        <div class="ms-auto product-price-badge" v-if="product">
-          {{ product.subtotal?.toFixed(2) }}€
-        </div>
+        <div class="ms-auto product-price-badge" v-if="product">{{ product.subtotal?.toFixed(2) }}€</div>
       </div>
     </MDBModalHeader>
     <MDBModalBody class="modal-body-premium scrollable-modal-body">
@@ -50,11 +46,7 @@
                 <span class="qty-unit">uds</span>
               </div>
 
-              <button
-                class="qty-btn plus"
-                @click="handleAddProduct"
-                v-if="!product.nombre.includes('Promo. ')"
-              >
+              <button class="qty-btn plus" @click="handleAddProduct" v-if="!product.nombre.includes('Promo. ')">
                 <MDBIcon icon="plus" />
               </button>
             </div>
@@ -67,11 +59,7 @@
               <span>Acciones</span>
             </div>
             <div class="actions-group">
-              <MDBBtn
-                color="danger"
-                class="premium-action-btn delete-btn w-100"
-                @click="handleRemoveProduct"
-              >
+              <MDBBtn color="danger" class="premium-action-btn delete-btn w-100" @click="handleRemoveProduct">
                 <MDBIcon icon="trash-alt" class="me-2" /> Eliminar artículo
               </MDBBtn>
             </div>
@@ -89,11 +77,7 @@
           </div>
 
           <div class="supplements-grid">
-            <div
-              v-for="(x, i) in product.arraySuplementos"
-              :key="i"
-              class="premium-supplement-card"
-            >
+            <div v-for="(x, i) in product.arraySuplementos" :key="i" class="premium-supplement-card">
               <div class="sup-content">
                 <div class="sup-icon-box">
                   <MDBIcon icon="puzzle-piece" />
@@ -121,12 +105,7 @@
               @blur="updateProductComment"
             ></textarea>
             <div class="quick-notes-grid">
-              <button
-                v-for="note in quickNotes"
-                :key="note"
-                class="quick-note-btn"
-                @click="addQuickNote(note)"
-              >
+              <button v-for="note in quickNotes" :key="note" class="quick-note-btn" @click="addQuickNote(note)">
                 {{ note }}
               </button>
             </div>
@@ -142,11 +121,7 @@
 
           <!-- Menu Items Comments -->
           <div class="menu-items-comments mt-2">
-            <div
-              v-for="(item, i) in product.articulosMenu"
-              :key="i"
-              class="menu-item-comment-box mb-3"
-            >
+            <div v-for="(item, i) in product.articulosMenu" :key="i" class="menu-item-comment-box mb-3">
               <div class="menu-item-name-slim mb-1">
                 <MDBIcon icon="chevron-right" class="me-1 small" />
                 {{ item.nombre }}
@@ -176,23 +151,13 @@
       </div>
     </MDBModalBody>
     <MDBModalFooter class="modal-footer-premium sticky-footer">
-      <MDBBtn
-        outline="primary"
-        @click="isOpen = false"
-        class="premium-close-btn"
-      >
+      <MDBBtn outline="primary" @click="isOpen = false" class="premium-close-btn">
         <MDBIcon icon="times" class="me-2" /> Cerrar
       </MDBBtn>
     </MDBModalFooter>
   </MDBModal>
   <!-- Menu Modal extracted from body -->
-  <MDBModal
-    id="menuModalContainer"
-    tabindex="-1"
-    v-model="isMenuModalOpen"
-    :staticBackdrop="true"
-    size="lg"
-  >
+  <MDBModal id="menuModalContainer" tabindex="-1" v-model="isMenuModalOpen" :staticBackdrop="true" size="lg">
     <MenuModal
       v-if="menuDataLoaded && product?.articulosMenu"
       id="menuModal"
@@ -207,14 +172,7 @@
 </template>
 
 <script>
-import {
-  MDBModal,
-  MDBModalHeader,
-  MDBModalBody,
-  MDBModalFooter,
-  MDBBtn,
-  MDBIcon,
-} from "mdb-vue-ui-kit";
+import { MDBModal, MDBModalHeader, MDBModalBody, MDBModalFooter, MDBBtn, MDBIcon } from "mdb-vue-ui-kit";
 import MenuModal from "@/components/MenuModal.vue";
 import { computed, ref, watch } from "vue";
 import { useStore } from "vuex";
@@ -276,9 +234,7 @@ export default {
 
     const addQuickNote = (note) => {
       if (productComment.value.includes(note)) return;
-      productComment.value = productComment.value
-        ? `${productComment.value}, ${note}`
-        : note;
+      productComment.value = productComment.value ? `${productComment.value}, ${note}` : note;
       updateProductComment();
     };
 
@@ -357,7 +313,10 @@ export default {
         articulosMenu.forEach((art) => {
           const match = suplMap[String(art.idArticulo)];
           if (match) {
-            result[match.familia] = {
+            if (!result[match.familia]) {
+              result[match.familia] = [];
+            }
+            result[match.familia].push({
               idArticulo: art.idArticulo ?? art._id ?? null,
               nombre: art.nombre ?? null,
               arraySuplementos: art.arraySuplementos ?? null,
@@ -366,7 +325,7 @@ export default {
               printed: art.printed ?? 0,
               impresora: art.impresora ?? null,
               instancias: art.instancias ?? [],
-            };
+            });
           }
         });
       }
@@ -436,7 +395,9 @@ export default {
     };
 
     const onAplicarCambios = async (menu) => {
-      const seleccionadoPorFamilia = Object.values(menu);
+      const seleccionadoPorFamilia = Object.values(menu).flatMap((items) =>
+        Array.isArray(items) ? items : items ? [items] : [],
+      );
       try {
         await axios.post("cestas/modificarArticuloMenu", {
           idCesta: selectedTable.value._id,

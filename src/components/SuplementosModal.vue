@@ -20,6 +20,14 @@
       </div>
     </MDBModalHeader>
     <MDBModalBody class="modal-body-premium scrollable-modal-body">
+      <div class="selection-summary-premium" v-if="selectedCount > 0">
+        <MDBIcon icon="check-circle" class="me-2" />
+        <span
+          >{{ selectedCount }} suplemento{{ selectedCount > 1 ? "s" : "" }} seleccionado{{
+            selectedCount > 1 ? "s" : ""
+          }}</span
+        >
+      </div>
       <div class="supplements-grid-premium animate-fade-in">
         <div
           v-for="(x, y) in localSuplArticle"
@@ -41,8 +49,7 @@
             <span class="suple-name-premium">{{ x.nombre }}</span>
 
             <div class="price-tag-premium" v-if="x.precioConIva > 0">
-              <span class="price-currency">+</span
-              >{{ x.precioConIva.toFixed(2) }}€
+              <span class="price-currency">+</span>{{ x.precioConIva.toFixed(2) }}€
             </div>
             <div class="price-tag-premium free" v-else>Gratis</div>
           </div>
@@ -50,19 +57,11 @@
       </div>
     </MDBModalBody>
     <MDBModalFooter class="modal-footer-premium sticky-footer">
-      <MDBBtn
-        outline="danger"
-        @click="$emit('update:modelValue', false)"
-        class="premium-footer-btn cancel"
-      >
+      <MDBBtn outline="danger" @click="$emit('update:modelValue', false)" class="premium-footer-btn cancel">
         <MDBIcon icon="times" class="me-2" />
         Cancelar
       </MDBBtn>
-      <MDBBtn
-        color="primary"
-        @click="confirmarSuplementos"
-        class="premium-footer-btn confirm"
-      >
+      <MDBBtn color="primary" @click="confirmarSuplementos" class="premium-footer-btn confirm">
         <MDBIcon icon="check" class="me-2" />
         Aplicar
       </MDBBtn>
@@ -70,14 +69,7 @@
   </MDBModal>
 </template>
 <script>
-import {
-  MDBModal,
-  MDBModalHeader,
-  MDBModalBody,
-  MDBModalFooter,
-  MDBBtn,
-  MDBIcon,
-} from "mdb-vue-ui-kit";
+import { MDBModal, MDBModalHeader, MDBModalBody, MDBModalFooter, MDBBtn, MDBIcon } from "mdb-vue-ui-kit";
 import { toRef, computed } from "vue";
 import { useSuplementosSelection } from "../composables/useSuplementosSelection";
 
@@ -94,16 +86,16 @@ export default {
   props: {
     modelValue: Boolean,
     suplArticle: Array,
+    selectedSuplementos: Array,
   },
   emits: ["update:modelValue", "confirmarSuplementos"],
   setup(props, { emit }) {
     const suplArticleRef = toRef(props, "suplArticle");
-    const {
-      localSuplArticle,
-      toggleSuplemento,
-      getSeleccionados,
-      resetSelection,
-    } = useSuplementosSelection(suplArticleRef);
+    const selectedSuplementosRef = toRef(props, "selectedSuplementos");
+    const { localSuplArticle, toggleSuplemento, getSeleccionados, resetSelection } = useSuplementosSelection(
+      suplArticleRef,
+      selectedSuplementosRef,
+    );
 
     // Computed para v-model compatible
     const modalVisible = computed({
@@ -117,11 +109,14 @@ export default {
       resetSelection();
     }
 
+    const selectedCount = computed(() => localSuplArticle.value.filter((s) => s.selected).length);
+
     return {
       localSuplArticle,
       toggleSuplemento,
       confirmarSuplementos,
       modelValue: modalVisible,
+      selectedCount,
     };
   },
 };
@@ -177,6 +172,19 @@ export default {
 .modal-body-premium {
   padding: 20px;
   background-color: #f8f9fa;
+}
+
+.selection-summary-premium {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 12px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background-color: #e3f2fd;
+  color: #1565c0;
+  font-size: 0.85rem;
+  font-weight: 600;
 }
 
 .supplements-grid-premium {

@@ -16,24 +16,28 @@
       <div class="scrollable-content-premium">
         <div v-for="(suplementos, familia) in suplByFamily" :key="familia" class="premium-family-section">
           <div class="family-header-premium" @click="onToggleFamilia(familia)">
-            <h5 class="family-name-premium">{{ familia }}</h5>
+            <div class="family-title-block">
+              <h5 class="family-name-premium">{{ familia }}</h5>
+            </div>
             <div class="family-controls-premium">
-              <div v-if="getSelectedItemsForFamily(familia).length" class="selection-pill-premium animate-pop-in">
-                <MDBIcon icon="check" class="me-1" />
-                {{ getSelectedItemsForFamily(familia).length }}
-                {{ getSelectedItemsForFamily(familia).length > 1 ? "seleccionados" : "seleccionado" }}
-              </div>
-              <div v-if="getSelectedItemsForFamily(familia).length" class="selection-details-premium">
-                <span
-                  v-for="(selectedItem, index) in getSelectedItemsForFamily(familia).slice(0, 2)"
-                  :key="selectedItem.idArticulo || selectedItem._id || index"
-                  class="selection-detail-pill"
-                >
-                  {{ selectedItem.nombre }}
-                </span>
-                <span v-if="getSelectedItemsForFamily(familia).length > 2" class="selection-detail-pill more">
-                  +{{ getSelectedItemsForFamily(familia).length - 2 }}
-                </span>
+              <div v-if="getSelectedItemsForFamily(familia).length" class="selection-meta-premium">
+                <div class="selection-pill-premium animate-pop-in">
+                  <MDBIcon icon="check" class="me-1" />
+                  {{ getSelectedItemsForFamily(familia).length }}
+                  {{ getSelectedItemsForFamily(familia).length > 1 ? "seleccionados" : "seleccionado" }}
+                </div>
+                <div v-if="getSelectedItemsForFamily(familia).length" class="selection-details-premium">
+                  <span
+                    v-for="(selectedItem, index) in getSelectedItemsForFamily(familia).slice(0, 2)"
+                    :key="selectedItem.idArticulo || selectedItem._id || index"
+                    class="selection-detail-pill"
+                  >
+                    {{ selectedItem.nombre }}
+                  </span>
+                  <span v-if="getSelectedItemsForFamily(familia).length > 2" class="selection-detail-pill more">
+                    +{{ getSelectedItemsForFamily(familia).length - 2 }}
+                  </span>
+                </div>
               </div>
               <div class="toggle-icon-box">
                 <MDBIcon :icon="familiasAbiertas[familia] ? 'chevron-up' : 'chevron-down'" />
@@ -387,14 +391,21 @@ export default {
 .family-header-premium {
   padding: 12px 15px;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
+  gap: 10px;
   cursor: pointer;
   background-color: rgba(255, 255, 255, 0.3);
+  flex-wrap: wrap;
 
   &:hover {
     background-color: rgba(255, 255, 255, 0.5);
   }
+}
+
+.family-title-block {
+  flex: 1 1 220px;
+  min-width: 0;
 }
 
 .family-name-premium {
@@ -402,6 +413,27 @@ export default {
   font-size: 1rem;
   font-weight: bold;
   color: #343a40;
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+.family-controls-premium {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.selection-meta-premium {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  min-width: 0;
 }
 
 .selection-pill-premium {
@@ -411,6 +443,7 @@ export default {
   border-radius: 15px;
   font-size: 0.8rem;
   font-weight: bold;
+  white-space: nowrap;
 }
 
 .selection-details-premium {
@@ -418,7 +451,7 @@ export default {
   flex-wrap: wrap;
   gap: 6px;
   justify-content: flex-end;
-  margin-top: 4px;
+  min-width: 0;
 }
 
 .selection-detail-pill {
@@ -429,10 +462,43 @@ export default {
   border-radius: 999px;
   font-size: 0.72rem;
   font-weight: 600;
+  white-space: nowrap;
 
   &.more {
     color: #007bff;
     background-color: #edf6ff;
+  }
+}
+
+.toggle-icon-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+@media (max-width: 576px) {
+  .family-header-premium {
+    padding: 10px 12px;
+  }
+
+  .family-title-block {
+    flex-basis: 100%;
+  }
+
+  .family-controls-premium {
+    width: 100%;
+    justify-content: space-between;
+    margin-top: 6px;
+  }
+
+  .selection-meta-premium {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .selection-details-premium {
+    justify-content: flex-start;
   }
 }
 

@@ -12,11 +12,7 @@
           <span class="room-pill">{{ currentSalaName }}</span>
           <span class="separator">|</span>
           <span class="table-text">
-            {{
-              selectTable?.nombre
-                ? selectTable.nombre
-                : "Mesa " + (selectTable.indexMesa + 1)
-            }}
+            {{ selectTable?.nombre ? selectTable.nombre : "Mesa " + (selectTable.indexMesa + 1) }}
           </span>
           <span class="separator">|</span>
           <span class="diners-text">
@@ -30,10 +26,7 @@
     <!-- Ticket Section -->
     <div class="unified-ticket-section">
       <div class="ticket-lines-container">
-        <div
-          v-if="!selectTable.lista || selectTable.lista.length === 0"
-          class="empty-ticket"
-        >
+        <div v-if="!selectTable.lista || selectTable.lista.length === 0" class="empty-ticket">
           No hay productos en esta cesta
         </div>
         <div v-else class="ticket-scroll">
@@ -56,10 +49,7 @@
                 <span class="ticket-name">{{ x.nombre }}</span>
                 <span class="ticket-price">{{ x.subtotal?.toFixed(2) }}€</span>
               </div>
-              <button
-                class="delete-line-btn"
-                @click.stop="handleTicketDelete(x, i)"
-              >
+              <button class="delete-line-btn" @click.stop="handleTicketDelete(x, i)">
                 <MDBIcon :icon="x.unidades > 1 && !x.promocion ? 'minus' : 'trash-alt'" />
               </button>
             </template>
@@ -69,12 +59,7 @@
                 >?</span
               >
               <div class="confirm-actions">
-                <button
-                  class="confirm-cancel-btn"
-                  @click.stop="pendingDelete = null"
-                >
-                  No
-                </button>
+                <button class="confirm-cancel-btn" @click.stop="pendingDelete = null">No</button>
                 <button
                   class="confirm-delete-btn"
                   @click.stop="
@@ -89,9 +74,7 @@
           </div>
         </div>
       </div>
- <div class="ticket-actions-container">
-
-
+      <div class="ticket-actions-container">
         <button class="action-btn cobrar-btn" @click="router.push('/ticketview')">
           <span class="btn-icon-wrap"><MDBIcon icon="cash-register" /></span>
           <span class="btn-label">Cobrar</span>
@@ -103,14 +86,14 @@
           <span class="btn-label">Nota</span>
         </button>
       </div>
-       <div class="breadcrumb-container" @click="selectOtherCategory">
-      <MDBIcon icon="arrow-left" class="back-icon" />
-      <span class="breadcrumb-text">{{ products.nombre }}</span>
-      <span class="products-count-badge">
-        {{ products.arrayTeclas.filter((prods) => prods.esSumable).length }}
-        prods.
-      </span>
-    </div>
+      <div class="breadcrumb-container" @click="selectOtherCategory">
+        <MDBIcon icon="arrow-left" class="back-icon" />
+        <span class="breadcrumb-text">{{ products.nombre }}</span>
+        <span class="products-count-badge">
+          {{ products.arrayTeclas.filter((prods) => prods.esSumable).length }}
+          prods.
+        </span>
+      </div>
     </div>
 
     <!-- Grid de Productos -->
@@ -119,9 +102,7 @@
         v-for="(x, i) in sortedProducts"
         :key="i"
         class="product-grid-item"
-        @click="
-          x?.suplementos?.length > 0 ? selectSuplements(x, i) : addProduct(x, i)
-        "
+        @click="x?.suplementos?.length > 0 ? selectSuplements(x, i) : addProduct(x, i)"
       >
         <div class="product-grid-header">
           <span class="product-grid-name">{{ x.nombreArticulo }}</span>
@@ -132,20 +113,14 @@
           <div
             class="grid-qty-display-badge"
             v-if="
-              selectTable.lista.filter((p) => p.idArticulo == x.idArticle)
-                .length > 0 ||
-              selectTable.lista.filter((p) => p.idArticulo == x.idArticle)[0]
-                ?.unidades > 0
+              selectTable.lista.filter((p) => p.idArticulo == x.idArticle).length > 0 ||
+              selectTable.lista.filter((p) => p.idArticulo == x.idArticle)[0]?.unidades > 0
             "
           >
             {{
-              (selectTable.lista.filter((p) => p.idArticulo == x.idArticle)[0]
-                ?.arraySuplementos?.length > 0
-                ? selectTable.lista.filter((p) => p.idArticulo == x.idArticle)
-                    .length
-                : selectTable.lista.filter(
-                    (p) => p.idArticulo == x.idArticle,
-                  )[0]?.unidades) || 0
+              (selectTable.lista.filter((p) => p.idArticulo == x.idArticle)[0]?.arraySuplementos?.length > 0
+                ? selectTable.lista.filter((p) => p.idArticulo == x.idArticle).length
+                : selectTable.lista.filter((p) => p.idArticulo == x.idArticle)[0]?.unidades) || 0
             }}
           </div>
         </div>
@@ -153,11 +128,7 @@
     </div>
 
     <!-- Modales de suplementos y menú -->
-    <SuplementosModal
-      v-model="suplModal"
-      :suplArticle="suplArticle"
-      @confirmarSuplementos="confirmarSuplementos"
-    />
+    <SuplementosModal v-model="suplModal" :suplArticle="suplArticle" @confirmarSuplementos="confirmarSuplementos" />
     <MDBModal
       id="menuModal"
       v-model="menuModal"
@@ -233,9 +204,7 @@ export default {
     const suplArticle = ref(null);
     const arraySuplementosSelected = ref(null);
     const suplSelected = ref(null);
-    const SelectEmployer = computed(
-      () => store.state.Employers.selectedEmployer,
-    );
+    const SelectEmployer = computed(() => store.state.Employers.selectedEmployer);
     let selectTable = computed(() => store.state.Tables.selectedTable);
     let products = computed(() => store.state.Categories.selectedCategory);
     const sortedProducts = computed(() => {
@@ -317,8 +286,7 @@ export default {
 
     const familiaEnUso = ref("");
     async function setSeleccionFamilia(familia, producto) {
-      const tieneSuplementos =
-        producto.suplementos && producto.suplementos.length > 0;
+      const tieneSuplementos = producto.suplementos && producto.suplementos.length > 0;
       familia = familia || familiaEnUso.value;
       const idSel = seleccionadoPorFamilia.value[familia]?.idArticulo;
       const idSup = producto.idArticulo ?? producto._id ?? null;
@@ -381,10 +349,7 @@ export default {
       const now = Date.now();
       const DOUBLE_CLICK_THRESHOLD = 300; // ms
 
-      if (
-        now - lastClickTime.value < DOUBLE_CLICK_THRESHOLD &&
-        editProductIndex.value === index
-      ) {
+      if (now - lastClickTime.value < DOUBLE_CLICK_THRESHOLD && editProductIndex.value === index) {
         openEditModal(index);
         lastClickTime.value = 0; // Reset
       } else {
@@ -394,8 +359,7 @@ export default {
     };
 
     const imprimirNota = () => {
-      if (!selectTable.value._id)
-        return Swal.fire("Oops...", "Mesa inactiva. No se puede imprimir", "error");
+      if (!selectTable.value._id) return Swal.fire("Oops...", "Mesa inactiva. No se puede imprimir", "error");
       axios
         .post("cestas/imprimirNotaMesa", {
           idCesta: selectTable.value._id,
@@ -404,15 +368,22 @@ export default {
         .then((res) => {
           if (!res.data) throw Error("No se ha podido imprimir la cesta");
           Swal.fire({
-            toast: true, position: "top-end", icon: "success",
+            toast: true,
+            position: "top-end",
+            icon: "success",
             title: "Se ha enviado la mesa a imprimir",
-            showConfirmButton: false, timer: 1500,
+            showConfirmButton: false,
+            timer: 1500,
           });
         })
         .catch((err) => {
           Swal.fire({
-            toast: true, position: "top-end", icon: "error",
-            title: err.message, showConfirmButton: false, timer: 1500,
+            toast: true,
+            position: "top-end",
+            icon: "error",
+            title: err.message,
+            showConfirmButton: false,
+            timer: 1500,
           });
         });
     };
@@ -461,7 +432,9 @@ export default {
           nombre: x.nombreArticulo,
           menu: products.value.nombre,
           articulosMenu: seleccionadoPorFamilia.value
-            ? Object.values(seleccionadoPorFamilia.value)
+            ? Object.values(seleccionadoPorFamilia.value).flatMap((items) =>
+                Array.isArray(items) ? items : items ? [items] : [],
+              )
             : null,
         },
         {
@@ -477,9 +450,7 @@ export default {
       seleccionadoPorFamilia.value = null;
     };
     const removeProduct = async (x, i) => {
-      let z = selectTable.value.lista.filter(
-        (products) => products.idArticulo == x.idArticle,
-      );
+      let z = selectTable.value.lista.filter((products) => products.idArticulo == x.idArticle);
       if (z.length > 0) {
         if (z[0].unidades > 1) {
           await axios.post("teclado/clickTeclaArticulo", {
@@ -493,10 +464,7 @@ export default {
           });
         } else if (z[0].unidades == 1) {
           totalTable.value -= x.precioConIva;
-          store.dispatch(
-            "Tables/removeProduct",
-            selectTable.value.lista.indexOf(z[0]),
-          );
+          store.dispatch("Tables/removeProduct", selectTable.value.lista.indexOf(z[0]));
         }
       }
     };
@@ -826,7 +794,8 @@ export default {
 
 .ticket-total-amount {
   color: #28a745;
-}.confirm-delete-btn {
+}
+.confirm-delete-btn {
   background: #fa5252;
   color: white;
   border: none;
@@ -958,8 +927,6 @@ export default {
     box-shadow: 0 6px 20px rgba(59, 107, 219, 0.1);
   }
 }
-
-
 
 .action-btn {
   display: flex;

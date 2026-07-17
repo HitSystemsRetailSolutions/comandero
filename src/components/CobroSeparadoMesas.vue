@@ -141,7 +141,7 @@
           color="primary"
           class="split-footer-btn"
           :disabled="selectedItems.length === 0 || isProcessing"
-          @click="checkout('DATAFONO_3G')"
+          @click="datafonoModal = true"
         >
           <MDBIcon icon="credit-card" class="me-2" />
           Tarjeta
@@ -149,6 +149,8 @@
       </div>
     </MDBModalFooter>
   </MDBModal>
+
+  <SelectDatafonoModal v-model="datafonoModal" @select="handleSelectDatafono" @cancel="datafonoModal = false" />
 </template>
 
 <script>
@@ -158,6 +160,7 @@ import { useStore } from "vuex";
 import axios from "axios";
 import Swal from "sweetalert2";
 import { useTicketErrors } from "@/composables/useTicketErrors";
+import SelectDatafonoModal from "@/components/SelectDatafonoModal.vue";
 
 export default {
   name: "CobroSeparadoMesas",
@@ -168,11 +171,13 @@ export default {
     MDBModalBody,
     MDBModalFooter,
     MDBModalHeader,
+    SelectDatafonoModal,
   },
   emits: ["paid"],
   setup(_props, { emit, expose }) {
     const store = useStore();
     const modalOpen = ref(false);
+    const datafonoModal = ref(false);
     const isProcessing = ref(false);
     const currentTable = ref(null);
     const selectedItems = ref([]);
@@ -509,7 +514,7 @@ export default {
     async function cobrarPaytef(idCesta) {
       store.dispatch("Datafono/setEstado", "PENDIENTE");
       const resultado = await axios.post("tickets/crearTicket", {
-        tipoTicket: "PAYTEF",
+        tipoTicket: "DATAFONOINT",
         total: totalPrice.value,
         idCesta,
         idTrabajador: selectedEmployer.value._id,
@@ -529,14 +534,10 @@ export default {
 
     async function charge(idCesta, method) {
       try {
-        if (method === "DATAFONO_3G") {
-          const res = await axios.post("parametros/getParametros");
-          const params = res.data;
-          if (params?.tipoDatafono === "3G" || params?.ipTefpay === "0.0.0.0") {
-            await cobrarEfectivo(idCesta, "DATAFONO_3G");
-          } else {
-            await cobrarPaytef(idCesta);
-          }
+        if (method === "DATAFONO_INTEGRADO") {
+          await cobrarPaytef(idCesta);
+        } else if (method === "DATAFONO_3G") {
+          await cobrarEfectivo(idCesta, "DATAFONO_3G");
         } else {
           await cobrarEfectivo(idCesta, method);
         }
@@ -544,6 +545,11 @@ export default {
         throw err;
       }
     }
+
+    const handleSelectDatafono = (tipo) => {
+      datafonoModal.value = false;
+      checkout(tipo);
+    };
 
     async function loadLastTicket() {
       const res = await axios.post("tickets/getUltimoTicket");
@@ -576,10 +582,16 @@ export default {
       }
     }
 
-    async function getProximoId() {
+    async function getProximoId(method) {
       if (currentIdTicket.value) return currentIdTicket.value;
+      const datafonoIntegrado = method === "DATAFONO_INTEGRADO";
       try {
-        const res = await axios.get("tickets/getProximoId");
+        const res = await axios.get("tickets/getProximoId", {
+          params: {
+            datafonoIntegrado,
+          },
+        });
+
         if (res.data) {
           currentIdTicket.value = res.data;
           return res.data;
@@ -597,13 +609,14 @@ export default {
       isProcessing.value = true;
 
       try {
-        await getProximoId();
+        await getProximoId(method);
         splitBasketId = await createSplitBasket();
         await charge(splitBasketId, method);
         currentIdTicket.value = null;
         await loadLastTicket();
         await removeSelectedFromOriginal();
         modalOpen.value = false;
+        selectedItems.value = [];
         await deleteCesta(splitBasketId);
 
         await offerPrintTicket();
@@ -642,9 +655,9 @@ export default {
       }
     }
     expose({ openModal, abrirModal: openModal });
-
     return {
       modalOpen,
+      datafonoModal,
       isProcessing,
       currentTableName,
       availableItems,
@@ -659,6 +672,7 @@ export default {
       divideItem,
       closeModal,
       checkout,
+      handleSelectDatafono,
     };
   },
 };
@@ -1261,4 +1275,6 @@ export default {
     font-size: 0.82rem !important;
   }
 }
+
+/* Datáfono styles live in SelectDatafonoModal.vue */
 </style>

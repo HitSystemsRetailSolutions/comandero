@@ -30,6 +30,7 @@ export default {
       tocGame.cargarTrabajadoresFichados();
       tocGame.cargarConfigurador();
       tocGame.iniciarToc();
+      tocGame.cargarNotas();
     }, 4000);
     return {};
   },

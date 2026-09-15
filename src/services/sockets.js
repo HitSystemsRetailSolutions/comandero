@@ -146,6 +146,19 @@ socket.on("nuevoTrabajadorActivo", (data) => {
 });
 
 
+socket.on("cargarNotas", (notas) => {
+  try {
+    if (notas) {
+      store.dispatch("Notas/setNotas", notas);
+    } else {
+      throw Error("Error, notas no es correcto");
+    }
+  } catch (err) {
+    Swal.fire("Oops...", err.message, "error");
+  }
+});
+
+
 // socket.on("ponerImagen", async (data) => {
 //   const image = document.createElement("img");
 //   image.src = require("./imagen");

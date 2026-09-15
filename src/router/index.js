@@ -43,6 +43,18 @@ const routes = [
     component: () => import("../views/clientsInTableSelection.vue"),
     children: [],
   },
+  {
+    path: "/notasconfig",
+    name: "notasconfig",
+    component: () => import("../views/NotasConfigView.vue"),
+    children: [],
+  },
+  {
+    path: "/configmenu",
+    name: "configmenu",
+    component: () => import("../views/ConfigMenuView.vue"),
+    children: [],
+  },
 ];
 
 const router = createRouter({

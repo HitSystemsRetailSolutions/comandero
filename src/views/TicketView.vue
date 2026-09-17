@@ -1022,8 +1022,9 @@ export default {
 
     const handleSendToPrepare = async () => {
       if (isPreparing.value) return;
-      const ticketsWithPrinter = buildTicketsWithPrinter();
       isPreparing.value = true;
+      const ticketsWithPrinter = buildTicketsWithPrinter();
+      
       await sendToPrepare(ticketsWithPrinter).finally(() => {
         isPreparing.value = false;
       });

@@ -402,7 +402,7 @@
           color="primary"
           class="footer-action-btn prepare-btn"
           @click="handleSendToPrepare"
-          :disabled="selectedTable.lista.length == 0"
+          :disabled="selectedTable.lista.length == 0 || isPreparing || isRefreshingPreparation"
         >
           <MDBIcon icon="print" class="me-1" />
           Preparar
@@ -442,7 +442,8 @@ import {
 } from "mdb-vue-ui-kit";
 
 import { useStore } from "vuex";
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, computed, onMounted, onUnmounted, watch } from "vue";
+import { socket } from "@/services/sockets";
 import { io } from "socket.io-client";
 import { useRouter } from "vue-router";
 import router from "@/router";
@@ -1019,15 +1020,40 @@ export default {
     };
 
     const isPreparing = ref(false);
+    const isRefreshingPreparation = ref(false);
+    let preparationRefresh = null;
+
+    const refreshPreparation = () => {
+      if (preparationRefresh) return preparationRefresh;
+      const idCesta = selectedTable.value._id;
+      if (!idCesta) return Promise.resolve();
+      isRefreshingPreparation.value = true;
+      preparationRefresh = store.dispatch("Tables/refreshSelectedTable", idCesta).finally(() => {
+        preparationRefresh = null;
+        isRefreshingPreparation.value = false;
+      });
+      return preparationRefresh;
+    };
+
+    const refreshOnResume = () => {
+      if (document.visibilityState === "visible") {
+        refreshPreparation().catch((error) => console.error("Error al actualizar la mesa:", error));
+      }
+    };
 
     const handleSendToPrepare = async () => {
-      if (isPreparing.value) return;
+      if (isPreparing.value || isRefreshingPreparation.value) return;
       isPreparing.value = true;
-      const ticketsWithPrinter = buildTicketsWithPrinter();
-      
-      await sendToPrepare(ticketsWithPrinter).finally(() => {
+      try {
+        await refreshPreparation();
+        const ticketsWithPrinter = buildTicketsWithPrinter();
+        await sendToPrepare(ticketsWithPrinter);
+      } catch (error) {
+        console.error("Error al actualizar la mesa:", error);
+        Swal.fire("Oops...", "No se ha podido actualizar la mesa. Inténtalo de nuevo", "error");
+      } finally {
         isPreparing.value = false;
-      });
+      }
     };
 
     const buildTicketsWithPrinter = () => {
@@ -1125,6 +1151,13 @@ export default {
           });
 
           if (res.data) {
+            try {
+              await refreshPreparation();
+            } catch (error) {
+              console.error("Error al actualizar la mesa después de preparar:", error);
+              Swal.fire("Comanda enviada", "No se ha podido actualizar la mesa. Actualízala antes de volver a preparar", "warning");
+              return;
+            }
             Swal.fire({
               icon: "success",
               title: "Se ha enviado el ticket a imprimir",
@@ -1162,12 +1195,20 @@ export default {
     }
 
     onMounted(() => {
+      document.addEventListener("visibilitychange", refreshOnResume);
+      socket.on("connect", refreshOnResume);
+      refreshOnResume();
       if (tables.value.length == 0) {
         router.push("/");
       }
       if (selectedTable.value.lista.length == 0) {
         router.push("/tableselection");
       }
+    });
+
+    onUnmounted(() => {
+      document.removeEventListener("visibilitychange", refreshOnResume);
+      socket.off("connect", refreshOnResume);
     });
 
     return {
@@ -1180,6 +1221,8 @@ export default {
       router,
       hideInfo,
       handleSendToPrepare,
+      isPreparing,
+      isRefreshingPreparation,
       sendToPrepare,
       selectProduct,
       paymentModal,

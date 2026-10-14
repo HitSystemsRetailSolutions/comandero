@@ -88,6 +88,30 @@ export default {
       state.selectedTable = payload;
       state.indexTable = payload.indexMesa;
     },
+    refreshBasket(state, basket) {
+      const rawIndex = state.rawBaskets.findIndex((item) => item._id == basket._id);
+      if (rawIndex === -1) state.rawBaskets.push(basket);
+      else state.rawBaskets.splice(rawIndex, 1, basket);
+
+      const tableIndex = state.arrayTables.findIndex((item) => item._id == basket._id);
+      if (tableIndex !== -1) {
+        const table = state.arrayTables[tableIndex];
+        state.arrayTables.splice(tableIndex, 1, {
+          ...basket,
+          nombre: table.nombre,
+          indexMesa: table.indexMesa,
+        });
+      }
+
+      if (state.selectedTable._id == basket._id) {
+        const table = state.selectedTable;
+        state.selectedTable = tableIndex !== -1 ? state.arrayTables[tableIndex] : {
+          ...basket,
+          nombre: table.nombre,
+          indexMesa: table.indexMesa,
+        };
+      }
+    },
     addProduct(state, payload) { },
     removeProduct(state, payload) {
       axios
@@ -113,6 +137,15 @@ export default {
     getSelectedTable: (state) => state.selectedTable,
   },
   actions: {
+    async refreshSelectedTable({ commit, state }, idCesta = state.selectedTable._id) {
+      if (!idCesta) throw new Error("No hay una cesta seleccionada");
+      const { data } = await axios.post("cestas/getCestaById", { idCesta }, { timeout: 15000 });
+      if (!data || data._id != idCesta || !Array.isArray(data.lista)) {
+        throw new Error("No se ha podido actualizar la mesa");
+      }
+      commit("refreshBasket", data);
+      if (state.selectedTable._id != idCesta) throw new Error("La mesa seleccionada ha cambiado");
+    },
     async arrayTablesMutation({ commit, state, dispatch }, data) {
       if (state.mesas.length === 0) {
         await dispatch("fetchMesas", state.salaId);

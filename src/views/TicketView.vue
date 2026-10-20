@@ -1023,12 +1023,14 @@ export default {
     const handleSendToPrepare = async () => {
       if (isPreparing.value) return;
       isPreparing.value = true;
-      await sendToPrepare().finally(() => {
+      const ticketsWithPrinter = buildTicketsWithPrinter();
+      
+      await sendToPrepare(ticketsWithPrinter).finally(() => {
         isPreparing.value = false;
       });
     };
 
-    const sendToPrepare = async () => {
+    const buildTicketsWithPrinter = () => {
       let ticketsWithPrinter = [];
       for (let i = 0; i < selectedTable.value.lista.length; i++) {
         if (
@@ -1106,20 +1108,23 @@ export default {
           }
         }
       }
+      return ticketsWithPrinter;
+    };
+
+    const sendToPrepare = async (ticketsWithPrinter) => {
       if (ticketsWithPrinter.length > 0) {
         try {
-          const res2 = await axios.post("impresora/imprimirTicketComandero", {
+          // Imprimir y marcar como impreso van en una sola petición al backend
+          const res = await axios.post("cestas/imprimirYMarcarComandero", {
+            idCesta: selectedTable.value._id,
             products: ticketsWithPrinter,
             table: selectedTable.value.nombre || "TAULA: " + (selectedTable.value.indexMesa + 1),
             worker: SelectEmployer.value.nombreCorto,
             clients: selectedTable.value.comensales,
-          });
-          const res = await axios.post("cestas/setArticuloImprimido", {
-            idCesta: selectedTable.value._id,
             articulos: ticketsWithPrinter.filter((item) => item.idArticulo !== -1).map((item) => item.idArticulo),
           });
 
-          if (res.data && res2.data) {
+          if (res.data) {
             Swal.fire({
               icon: "success",
               title: "Se ha enviado el ticket a imprimir",

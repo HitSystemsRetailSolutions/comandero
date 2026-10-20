@@ -209,16 +209,11 @@ export default {
     const menuDataLoaded = ref(false);
     const productComment = ref(product.value?.comentario || "");
 
-    const quickNotes = [
-      "SIN CEBOLLA",
-      "SIN SAL",
-      "POCO HECHO",
-      "AL PUNTO",
-      "MUY HECHO",
-      "ALÉRGICO",
-      "SIN TOMATE",
-      "PARA LLEVAR",
-    ];
+    const quickNotes = computed(() =>
+      store.getters["Notas/sortedNotas"]
+        .map((nota) => nota.texto)
+        .filter((texto) => texto.trim() !== ""),
+    );
 
     const updateProductComment = async () => {
       try {

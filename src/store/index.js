@@ -3,6 +3,7 @@ import Employers from "./Employers";
 import Tables from "./Tables";
 import Categories from "./Categories&products.js";
 import Datafono from "./Datafono";
+import Notas from "./Notas";
 export default createStore({
   state: {
     vistaEspecial: false,
@@ -34,5 +35,6 @@ export default createStore({
     Tables,
     Categories,
     Datafono,
+    Notas,
   },
 });

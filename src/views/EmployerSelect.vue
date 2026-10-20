@@ -59,6 +59,10 @@
         registrado{{ employers.length !== 1 ? "s" : "" }}</span
       >
     </div>
+
+    <button class="floating-config-btn" @click="goToConfigMenu">
+      <MDBIcon icon="cog" />
+    </button>
   </div>
 </template>
 
@@ -110,6 +114,10 @@ export default {
       })
     }
 
+    function goToConfigMenu() {
+      router.push("/configmenu");
+    }
+
     onMounted(() => {});
 
     return {
@@ -118,6 +126,7 @@ export default {
       searchQuery,
       getInitials,
       SelectEmployer,
+      goToConfigMenu,
     };
   },
 };
@@ -218,43 +227,55 @@ export default {
   }
 }
 
-/* ── Employers Grid ── */
-.employers-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 0 5%;
-}
+  .floating-config-btn {
+    position: fixed;
+    right: 20px;
+    bottom: 24px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    border: none;
+    background: #007bff;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 10px 20px rgba(0, 123, 255, 0.25);
+    z-index: 20;
+    cursor: pointer;
+  }
 
-.employer-card {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  padding: 14px 18px;
-  background-color: #ffffff69;
-  border-radius: 12px;
-  border: 1px solid transparent;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-  cursor: pointer;
-  transition: all 0.2s ease;
+  .floating-config-btn:hover {
+    background: #0056d6;
+  }
 
-  &:hover {
+  .employer-card {
+    gap: 15px;
+    padding: 14px 18px;
+    background-color: #ffffff69;
+    border-radius: 12px;
+    border: 1px solid transparent;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .employer-card:hover {
     background-color: #ffffff90;
     border-color: #007bff44;
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0, 123, 255, 0.12);
-
-    .employer-arrow {
-      color: #007bff;
-      transform: translateX(3px);
-    }
   }
 
-  &:active {
+  .employer-card:hover .employer-arrow {
+    color: #007bff;
+    transform: translateX(3px);
+  }
+
+  .employer-card:active {
     transform: translateY(0);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   }
-}
 
 .employer-avatar {
   width: 48px;

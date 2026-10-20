@@ -70,6 +70,10 @@ socket.on("cargarTeclado", (teclado) => {
   }
 });
 
+socket.on("connect", () => {
+  socket.emit("cargarNotas");
+});
+
 socket.on("disconnect", () => {
   socket.sendBuffer = [];
 });
@@ -142,6 +146,19 @@ socket.on("resDatafono", (data) => {
 socket.on("nuevoTrabajadorActivo", (data) => {
   if (data.id) {
     store.dispatch("Employers/setNewActive", data.id);
+  }
+});
+
+
+socket.on("cargarNotas", (notas) => {
+  try {
+    if (notas) {
+      store.dispatch("Notas/setNotas", notas);
+    } else {
+      throw Error("Error, notas no es correcto");
+    }
+  } catch (err) {
+    Swal.fire("Oops...", err.message, "error");
   }
 });
 

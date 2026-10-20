@@ -30,18 +30,21 @@
           'confirm-mode': pendingDelete === index,
         }"
         :data-index="index"
-        draggable="true"
-        @dragstart="onDragStart($event, index)"
         @dragover="onDragOver($event, index)"
         @drop="onDrop($event, index)"
-        @dragend="onDragEnd"
         @touchstart="onTouchStart($event, index)"
         @touchmove="onTouchMove($event)"
         @touchend="onTouchEnd"
         @touchcancel="onTouchEnd"
       >
         <template v-if="pendingDelete !== index">
-          <div class="drag-handle">
+          <div
+            class="drag-handle"
+            draggable="true"
+            title="Arrastra para cambiar el orden"
+            @dragstart.stop="onDragStart($event, index)"
+            @dragend.stop="onDragEnd"
+          >
             <MDBIcon icon="grip-vertical" />
           </div>
           <div class="nota-order">{{ index + 1 }}</div>
@@ -102,8 +105,8 @@ import { ref, onMounted } from "vue";
 import { useStore } from "vuex";
 import router from "@/router";
 import { v4 as uuidv4 } from "uuid";
-
-const DEFAULT_TEXTS = ["POCO HECHO", "AL PUNTO", "MUY HECHO", "PARA LLEVAR"];
+import Swal from "sweetalert2";
+import { DEFAULT_TEXTS } from "@/constants/notas";
 
 export default {
   name: "NotasConfigView",
@@ -179,16 +182,17 @@ export default {
       }));
     };
 
-    // El arrastre (ratón y táctil) solo se inicia desde el icono .drag-handle,
-    // así el input de texto y el botón de borrar siguen funcionando con normalidad.
+    // El icono es el origen nativo del arrastre; la fila sólo recibe el destino.
     const onDragStart = (event, index) => {
-      if (!event.target.closest(".drag-handle")) {
-        event.preventDefault();
-        return;
-      }
+      pendingDelete.value = null;
       dragIndex.value = index;
       event.dataTransfer.effectAllowed = "move";
-      event.dataTransfer.setData("text/plain", String(index));
+      event.dataTransfer.setData("text/plain", notas.value[index].id);
+      const row = event.currentTarget.closest(".nota-item");
+      if (row) {
+        const rect = row.getBoundingClientRect();
+        event.dataTransfer.setDragImage(row, event.clientX - rect.left, event.clientY - rect.top);
+      }
     };
 
     const onDragOver = (event, index) => {
@@ -196,11 +200,16 @@ export default {
       event.preventDefault();
       event.dataTransfer.dropEffect = "move";
       if (dragIndex.value === index) return;
+      const rect = event.currentTarget.getBoundingClientRect();
+      const middle = rect.top + rect.height / 2;
+      if (dragIndex.value < index && event.clientY < middle) return;
+      if (dragIndex.value > index && event.clientY > middle) return;
       swapNotas(dragIndex.value, index);
       dragIndex.value = index;
     };
 
     const onDrop = (event) => {
+      if (dragIndex.value === null) return;
       event.preventDefault();
       dragIndex.value = null;
     };
@@ -233,6 +242,21 @@ export default {
     };
 
     const saveNotas = async () => {
+      const textos = new Map();
+      for (const [index, nota] of notas.value.entries()) {
+        const clave = nota.texto.normalize("NFC").trim().replace(/\s+/g, " ").toLocaleUpperCase("es");
+        if (!clave) continue;
+        if (textos.has(clave)) {
+          await Swal.fire(
+            "Notas duplicadas",
+            `Las notas ${textos.get(clave) + 1} y ${index + 1} tienen el mismo texto: "${nota.texto.trim()}". Modifica o elimina una antes de guardar.`,
+            "warning",
+          );
+          return;
+        }
+        textos.set(clave, index);
+      }
+
       const timestamp = Date.now();
       const originalById = new Map(
         originalNotas.value.map((nota) => [nota.id, nota]),
@@ -244,26 +268,32 @@ export default {
       const prepared = notas.value.map((nota, index) => {
         const texto = nota.texto.trim();
         const orden = index + 1;
+        const original = originalById.get(nota.id);
+        const haCambiado = !original || original.texto !== texto || original.orden !== orden;
+        const fechaNota = haCambiado || (nota.isNew && !nota.timestamp) ? timestamp : nota.timestamp;
 
         if (nota?.isNew) {
-          crear.push({id: nota.id, texto, orden, timestamp });
+          crear.push({ id: nota.id, texto, orden, timestamp: fechaNota });
         } else {
-          const original = originalById.get(nota.id);
-          if (!original || original.texto !== texto || original.orden !== orden) {
-            modificar.push({ id: nota.id, value: texto, orden, timestamp });
+          if (haCambiado) {
+            modificar.push({ id: nota.id, texto, value: texto, orden, timestamp: fechaNota });
           }
         }
 
-        return { ...nota, texto, orden, timestamp };
+        return { ...nota, texto, orden, timestamp: fechaNota };
       });
 
-      await store.dispatch("Notas/saveNotas", {
-        notas: prepared,
-        crear,
-        modificar,
-        eliminar: deletedIds.value,
-      });
-      router.push("/employer");
+      try {
+        await store.dispatch("Notas/saveNotas", {
+          notas: prepared,
+          crear,
+          modificar,
+          eliminar: deletedIds.value,
+        });
+        router.push("/employer");
+      } catch (error) {
+        Swal.fire("Error", "No se han podido guardar las notas. Inténtalo de nuevo.", "error");
+      }
     };
 
     const volver = () => {
@@ -427,6 +457,7 @@ export default {
   border-radius: 8px;
   color: #adb5bd;
   cursor: grab;
+  user-select: none;
   touch-action: none;
   transition: all 0.2s ease;
 

@@ -70,6 +70,10 @@ socket.on("cargarTeclado", (teclado) => {
   }
 });
 
+socket.on("connect", () => {
+  socket.emit("cargarNotas");
+});
+
 socket.on("disconnect", () => {
   socket.sendBuffer = [];
 });

@@ -10,6 +10,7 @@
     :staticBackdrop="true"
     size="lg"
     class="premium-modal payment-modal"
+    :scrollable="true"
   >
     <MDBModalHeader class="modal-header-premium">
       <div class="modal-title-premium d-flex w-100 align-items-center">
@@ -25,7 +26,7 @@
     <MDBModalBody class="modal-body-premium">
       <div class="payment-glass-container">
         <!-- Resumen del Total -->
-        <div class="payment-summary-card">
+        <div v-if="!mixedVisible" class="payment-summary-card">
           <div class="summary-label">TOTAL A COBRAR</div>
           <div class="summary-value">
             {{
@@ -43,7 +44,7 @@
         </div>
 
         <!-- Métodos de Pago Grid -->
-        <div v-if="!paytefLoading" class="methods-grid">
+        <div v-if="!paytefLoading && !mixedBlocked" class="methods-grid">
           <div class="method-card cash" @click="cobrar('EFECTIVO')">
             <div class="method-icon-box">
               <MDBIcon icon="money-bill-wave" />
@@ -66,6 +67,20 @@
             <MDBIcon icon="chevron-right" class="method-arrow" />
           </div>
         </div>
+
+        <button v-if="!paytefLoading && !mixedBlocked" type="button" class="method-card mixed-method"
+          :disabled="!!currentIdTicket" @click="mixedPaymentRef.open()">
+          <span class="method-icon-box"><MDBIcon icon="wallet" /></span>
+          <span class="method-info"><span class="method-name">Efectivo + tarjeta</span>
+            <span class="method-hint">Reparte el total entre los dos métodos</span></span>
+          <MDBIcon icon="chevron-right" class="method-arrow" />
+        </button>
+        <PagoMixtoPanel ref="mixedPaymentRef" :active="paymentModal" :basket="selectedTable" :worker="SelectEmployer"
+          :proceso="procesoDatafono" @blocked="mixedBlocked = $event" @busy="mixedBusy = $event"
+          @pending="mixedPending = $event" @visibility-change="mixedVisible = $event" @paid="handleMixedPaid" />
+        <p v-if="mixedPending" class="mixed-pending-notice" role="status">
+          Hay un pago mixto pendiente. Continúa el cobro o usa «Cancelar pago mixto» antes de salir.
+        </p>
 
         <!-- Estado Paytef: Spinner + proceso -->
         <div v-if="paytefLoading" class="paytef-status-container">
@@ -97,7 +112,7 @@
         outline="primary"
         @click="paymentModal = false"
         class="premium-cancel-btn"
-        :disabled="paytefLoading && estadoDatafono === 'PENDIENTE'"
+        :disabled="mixedBusy || mixedPending || (paytefLoading && estadoDatafono === 'PENDIENTE')"
       >
         <MDBIcon icon="times" class="me-2" /> Cancelar
       </MDBBtn>
@@ -445,13 +460,14 @@ import { useStore } from "vuex";
 import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import { socket } from "@/services/sockets";
 import { io } from "socket.io-client";
-import { useRouter } from "vue-router";
+import { onBeforeRouteLeave, useRouter } from "vue-router";
 import router from "@/router";
 import Swal from "sweetalert2";
 import axios from "axios";
 import EditProductModal from "@/components/EditProductModal.vue";
 import MenuModal from "@/components/MenuModal.vue";
 import CobroSeparadoMesas from "@/components/CobroSeparadoMesas.vue";
+import PagoMixtoPanel from "@/components/PagoMixtoPanel.vue";
 import SelectDatafonoModal from "@/components/SelectDatafonoModal.vue";
 import { useTicketErrors } from "@/composables/useTicketErrors";
 export default {
@@ -470,6 +486,7 @@ export default {
     MenuModal,
     EditProductModal,
     CobroSeparadoMesas,
+    PagoMixtoPanel,
     SelectDatafonoModal,
   },
   setup() {
@@ -487,15 +504,32 @@ export default {
     const transferModal = ref(false);
     const splitPaymentRef = ref(null);
     const paytefLoading = ref(false);
+    const mixedPaymentRef = ref(null);
+    const mixedBlocked = ref(true);
+    const mixedBusy = ref(false);
+    const mixedPending = ref(false);
+    const mixedVisible = ref(false);
+    const handleMixedPaid = (idTicket) => {
+      lastCreatedTicketId.value = idTicket;
+      paymentModal.value = false;
+      printTicketModal.value = true;
+    };
 
     const paymentModal = ref(false); // Esta es la variable que vinculas a tus componentes
     const datafonoModal = ref(false);
+
+    onBeforeRouteLeave(() => {
+      if (!mixedPending.value && !mixedBusy.value) return true;
+      paymentModal.value = true;
+      Swal.fire("Cobro pendiente", "Termina o cancela el pago mixto antes de salir de esta pantalla.", "info");
+      return false;
+    });
 
     // Candado para evitar que el proceso se ejecute más de una vez
     let isProcessing = false;
 
     watch(paymentModal, async (newValue, oldValue) => {
-      if (paytefLoading.value && !newValue) {
+      if ((paytefLoading.value || mixedBusy.value || mixedPending.value) && !newValue) {
         paymentModal.value = true;
         return;
       }
@@ -810,6 +844,7 @@ export default {
     };
 
     async function cobrar(fm) {
+      if (mixedBlocked.value || mixedBusy.value) return;
       try {
         if (fm === "DATAFONO_INTEGRADO") {
           await getProximoId(fm);
@@ -1218,6 +1253,13 @@ export default {
       actualPage,
       selectOtherEmployer,
       cobrar,
+      mixedPaymentRef,
+      mixedBlocked,
+      mixedBusy,
+      mixedPending,
+      mixedVisible,
+      handleMixedPaid,
+      currentIdTicket,
       router,
       hideInfo,
       handleSendToPrepare,
@@ -1976,7 +2018,44 @@ export default {
     background: #eff6ff;
     color: #3b82f6;
   }
+  &.mixed-method { width: 100%; text-align: left; font-family: inherit; }
+  &.mixed-method .method-icon-box { background: #f5f3ff; color: #7c3aed; }
+  &.mixed-method:disabled { opacity: .55; cursor: default; transform: none; }
 }
+
+.mixed-pending-notice { margin: 0; padding: 14px 16px; border-radius: 12px; background: #fffbeb; color: #92400e; font-size: .85rem; line-height: 1.5; }
+
+@media (max-width: 576px), (max-height: 500px) {
+  .payment-modal {
+    :deep(.modal-dialog) {
+      margin: 8px;
+      height: calc(100vh - 16px);
+      height: calc(100dvh - 16px);
+      max-width: none;
+    }
+    :deep(.modal-content) { max-height: 100%; border-radius: 20px; }
+    .modal-header-premium { padding: 14px 16px; flex-shrink: 0; }
+    .modal-body-premium { padding: 14px; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+    .modal-footer-premium { padding: 10px 14px; padding-bottom: max(10px, env(safe-area-inset-bottom)); flex-shrink: 0; }
+    .title-icon-wrapper { width: 38px; height: 38px; flex-shrink: 0; border-radius: 12px; }
+    .modal-main-title { font-size: 1.1rem; }
+    .modal-subtitle { font-size: .78rem; }
+    .payment-glass-container { gap: 14px; }
+    .payment-summary-card { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; border-radius: 16px; }
+    .summary-label { margin: 0; font-size: .7rem; text-align: left; letter-spacing: .05em; }
+    .summary-value { font-size: 2rem; white-space: nowrap; }
+    .methods-grid { gap: 12px; }
+    .method-card { min-width: 0; padding: 16px; gap: 12px; border-radius: 16px; }
+    .method-icon-box { width: 44px; height: 44px; flex-shrink: 0; font-size: 1.2rem; border-radius: 12px; }
+    .method-info { min-width: 0; }
+    .method-name { font-size: 1rem; }
+    .method-hint { font-size: .78rem; }
+    .premium-cancel-btn { min-height: 44px; width: 100%; margin: 0; }
+    .paytef-status-container { padding: 20px 14px; }
+    .mixed-pending-notice { padding: 12px; font-size: .78rem; }
+  }
+}
+@media (hover: none) { .method-card:hover { transform: none; } }
 
 .method-icon-box {
   width: 56px;

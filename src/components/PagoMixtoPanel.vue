@@ -2,12 +2,12 @@
   <section v-if="visible || busy || error" class="mixed-payment" aria-label="Pago mixto">
     <div v-if="busy" class="mixed-notice" role="status">
       <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
-      <span>Comprobando el cobro… {{ proceso }}</span>
+      <span>{{ recovering ? "Recuperando cobro…" : "Procesando el cobro…" }} {{ proceso }}</span>
     </div>
     <template v-if="visible">
       <div class="mixed-heading">
         <span class="mixed-icon"><i class="fas fa-wallet" aria-hidden="true"></i></span>
-        <div><h5>Efectivo + tarjeta</h5><p>Indica el efectivo. El resto se calcula en tarjeta.</p></div>
+        <div><h5>{{ 'Efectivo + tarjeta' }}</h5><p>{{ payment ? 'Cobro guardado' : 'Indica la parte en efectivo. El resto se cobra con tarjeta.' }}<span v-if="payment?.idTicket"> · {{ payment.idTicket }}</span></p></div>
       </div>
       <div class="mixed-amounts">
         <div class="mixed-amount cash-amount">
@@ -23,7 +23,7 @@
           <span class="mixed-caption">Resto a cobrar en el datáfono</span>
         </div>
       </div>
-      <fieldset class="mixed-terminals" :disabled="busy || !!payment">
+      <fieldset v-if="!payment" class="mixed-terminals" :disabled="busy || !!payment">
         <legend>Datáfono para la tarjeta</legend>
         <div class="mixed-terminal-options">
           <label v-for="option in terminalOptions" :key="option.value" class="mixed-terminal" :class="{ selected: terminal === option.value }">
@@ -44,35 +44,34 @@
       <p v-if="message" class="mixed-notice" role="status"><i class="fas fa-info-circle" aria-hidden="true"></i>{{ message }}</p>
       <p id="mixed-help" v-if="!payment" class="mixed-help">Ambos importes deben ser mayores que cero. Total inferior a 1.000 €.</p>
       <div class="mixed-actions">
-        <button type="button" class="btn btn-primary mixed-submit" :disabled="busy || (!payment && !valid)" @click="run">
-          <i class="fas fa-check-circle" aria-hidden="true"></i>
-          {{ payment ? 'Continuar / consultar estado' : 'Cobrar pago mixto' }}
+        <button v-if="ready" type="button" class="btn btn-primary mixed-submit" :disabled="busy || operationActive || (!payment && !valid)" @click="primaryAction">
+          <i class="fas fa-check-circle" aria-hidden="true"></i>{{ primaryLabel }}
         </button>
-        <button type="button" class="btn btn-outline-primary mixed-back" :disabled="busy" @click="cancel">{{ payment ? 'Cancelar pago mixto' : 'Volver' }}</button>
       </div>
     </template>
     <p v-if="error" class="mixed-notice mixed-error" role="alert">{{ error }}</p>
-    <button v-if="!ready && !busy" type="button" class="btn btn-outline-primary mixed-back" @click="recover">Reintentar consulta</button>
+    <button v-if="!ready && !busy" type="button" class="btn btn-outline-primary mixed-back" @click="recover">{{ "Reintentar recuperación" }}</button>
   </section>
 </template>
 
 <script>
-import { computed, nextTick, ref, watch } from "vue";
+import { computed, nextTick, ref, watch, onMounted, onUnmounted } from "vue";
 import axios from "axios";
+import { guardarCancelacionCobro, guardarSalidaCobro, estadoSalidaCobro, socket, mantenerSesionCobro, comprobarDisponibilidadDatafono } from "@/services/sockets";
 import Swal from "sweetalert2";
 
 const newId = () => window.crypto?.randomUUID?.() || `pago-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 const messages = {
-  PREPARANDO: "Reparto guardado. Continúa para comprobar el cobro.",
+  PREPARANDO: "Recupera el cobro antes de continuar.",
   PREPARADO: "Pendiente de cobrar la tarjeta.",
   TARJETA_EN_CURSO: "Operación en curso. Consulta el estado antes de continuar.",
   TARJETA_INCIERTA: "Comprueba la última operación del datáfono. No repitas el cargo.",
-  EFECTIVO_PENDIENTE: "Tarjeta confirmada. Recoge el efectivo y continúa.",
+  EFECTIVO_PENDIENTE: "Tarjeta confirmada. Completando el cobro.",
   FINALIZANDO: "Cobro recibido. Continúa para terminar el registro.",
   FINALIZADO: "Cobro registrado. Continúa para cerrar.",
   DEVOLUCION_EN_CURSO: "Comprueba la devolución en el datáfono y consulta el estado.",
-  DEVOLUCION_CONFIRMADA: "Devolución confirmada. Cancela para completar el registro.",
-  CANCELANDO_TICKET: "Cancela para completar el registro de la anulación.",
+  DEVOLUCION_CONFIRMADA: "Devolución confirmada. Finaliza el registro de la anulación.",
+  CANCELANDO_TICKET: "Finaliza el registro de la anulación.",
 };
 
 export default {
@@ -81,12 +80,14 @@ export default {
     basket: { type: Object, required: true },
     worker: { type: Object, required: true },
     proceso: String,
+    terminalOperation: Object,
   },
   emits: ["blocked", "busy", "pending", "paid", "visibility-change"],
   setup(props, { emit }) {
     const visible = ref(false);
     const busy = ref(false);
     const ready = ref(false);
+    const recovering = ref(false);
     const error = ref("");
     const cash = ref("");
     const terminal = ref("TARJETA");
@@ -96,8 +97,22 @@ export default {
       { value: "DATAFONO_3G", label: "Independiente / 3G", hint: "Introduce el importe en el terminal", icon: "wifi", iconClass: "independent" },
     ].sort((a, b) => Number(b.value === preferredTerminal.value) - Number(a.value === preferredTerminal.value)));
     const payment = ref(null);
+    const sesionCobro = newId();
+    let ticketEnSesion = null;
+    async function actualizarSesion() {
+      const id = props.active ? payment.value?.idTicket || payment.value?.idOperacion || payment.value?.solicitud?.idTicket : null;
+      if (ticketEnSesion && ticketEnSesion !== id) await mantenerSesionCobro(ticketEnSesion, sesionCobro, true).catch(() => {});
+      ticketEnSesion = id;
+      if (id) {
+        const data = await mantenerSesionCobro(id, sesionCobro);
+        if (!data?.ok) throw new Error(data?.mensaje || "El ticket está en uso en otra pantalla");
+      }
+    }
+    let latido;
+    onMounted(() => { latido = setInterval(() => actualizarSesion().catch(() => {}), 20000); });
+    onUnmounted(() => { clearInterval(latido); if (ticketEnSesion) mantenerSesionCobro(ticketEnSesion, sesionCobro, true).catch(() => {}); });
     const key = computed(() => `toc:pagoMixto:${props.basket._id}`);
-    const total = computed(() => Object.entries(props.basket.detalleIva || {})
+    const total = computed(() => payment.value?.pendiente ?? Object.entries(props.basket.detalleIva || {})
       .filter(([name]) => name.startsWith("importe"))
       .reduce((sum, [, amount]) => sum + Math.round(Number(amount) * 100), 0) / 100);
     const card = computed(() => payment.value?.pago?.tarjeta ??
@@ -108,12 +123,34 @@ export default {
         Math.abs(amount * 100 - Math.round(amount * 100)) < 0.000001 &&
         ["VENTA", "PAGO SEPARADO"].includes(props.basket.modo) && !props.basket.lista?.some((item) => item.pagado);
     });
-    const message = computed(() => messages[payment.value?.estado] || "");
-    watch([busy, ready, visible, payment], () => {
+    const message = computed(() => {
+      const estado = payment.value?.estado;
+      return messages[estado] || "";
+    });
+    const operationActive = computed(() => props.active && props.terminalOperation?.enCurso === true &&
+      [payment.value?.idTicket, payment.value?.idOperacion, payment.value?.solicitud?.idTicket]
+        .some(id => id != null && String(id) === String(props.terminalOperation.idTicket)));
+    const primaryLabel = computed(() => {
+      if (busy.value) return "En curso…";
+      if (operationActive.value) return "Esperando al datáfono…";
+      if (!payment.value) return "Cobrar pago mixto";
+      if (["TARJETA_EN_CURSO","TARJETA_INCIERTA","DEVOLUCION_EN_CURSO"].includes(payment.value.estado)) return "Comprobar tarjeta";
+      if (["DEVOLUCION_CONFIRMADA","CANCELANDO_TICKET"].includes(payment.value.estado)) return "Finalizar anulación";
+      if (["EFECTIVO_PENDIENTE","FINALIZANDO","FINALIZADO"].includes(payment.value.estado)) return "Finalizar registro";
+      return payment.value.efectivoRecibido || payment.value.efectivoCobrado
+        ? "Reintentar tarjeta" : "Continuar cobro";
+    });
+    async function primaryAction() {
+      if (!ready.value || busy.value || operationActive.value) return;
+      if (["TARJETA_EN_CURSO","TARJETA_INCIERTA","DEVOLUCION_EN_CURSO"].includes(payment.value?.estado)) return check();
+      if (["DEVOLUCION_CONFIRMADA","CANCELANDO_TICKET"].includes(payment.value?.estado)) return cancel();
+      return run();
+    }
+    watch([busy, ready, visible, payment, operationActive], () => {
       emit("visibility-change", visible.value);
-      emit("busy", busy.value);
+      emit("busy", busy.value || operationActive.value);
       emit("pending", !!payment.value);
-      emit("blocked", busy.value || !ready.value || visible.value || !!payment.value);
+      emit("blocked", busy.value || operationActive.value || !ready.value || visible.value || !!payment.value);
     }, { immediate: true });
 
     function save() {
@@ -122,25 +159,49 @@ export default {
         idPago: payment.value.idPago, solicitud: payment.value.solicitud,
         efectivoCobrado: payment.value.efectivoCobrado,
         efectivoEnCurso: payment.value.efectivoEnCurso,
+        cancelacionSolicitada: payment.value.cancelacionSolicitada, idTrabajador: props.worker._id,
       }));
     }
     function reset() {
-      localStorage.removeItem(key.value);
+      const guardado = JSON.parse(localStorage.getItem(key.value) || "null");
+      if (!guardado || guardado.idPago === payment.value?.idPago) localStorage.removeItem(key.value);
       payment.value = null;
       visible.value = false;
       cash.value = "";
     }
+    function cerrarCobroResuelto(data) {
+      if (data?.estado !== "FINALIZADO" || !payment.value || data.idPago !== payment.value.idPago) return false;
+      const idTicket = data.idTicket || payment.value.idTicket;
+      reset(); actualizarSesion().catch(() => {});
+      emit("resolved", idTicket);
+      return true;
+    }
+    let resolucionPendiente = null;
+    function recibirCobroResuelto(data) {
+      if (data?.estado !== "FINALIZADO" || !payment.value || data.idPago !== payment.value.idPago) return;
+      if (busy.value) { resolucionPendiente = data; return; }
+      cerrarCobroResuelto(data);
+    }
+    socket?.on("cobro:resuelto", recibirCobroResuelto);
+    onUnmounted(() => socket?.off("cobro:resuelto", recibirCobroResuelto));
+    watch(busy, enCurso => {
+      if (!enCurso && resolucionPendiente) {
+        const resuelto = resolucionPendiente; resolucionPendiente = null;
+        cerrarCobroResuelto(resuelto);
+      }
+    });
     async function action(accion, extra = {}) {
       const { data } = await axios.post("tickets/pagoMixto", {
-        idPago: payment.value?.idPago || newId(), idTrabajador: props.worker._id,
-        accion, ...extra,
+        ...extra, idPago: payment.value?.idPago || newId(), idTrabajador: props.worker._id,
+        accion, sesionCobro, conexionId: socket?.id,
       }, { timeout: 0 });
       if (!data?.ok) {
         if (accion === "PREPARAR" && data?.registrado === false) reset();
-        throw new Error(data?.msg || "No se ha podido completar el pago mixto");
+        throw Object.assign(new Error(data?.msg || "No se ha podido completar el pago mixto"), { devolucionNoRealizada: data?.devolucionNoRealizada === true });
       }
       if (data.idPago) {
         payment.value = { ...payment.value, ...data };
+        if (data.efectivoRecibido) payment.value.efectivoCobrado = true;
         cash.value = data.pago.efectivo;
         terminal.value = data.pago.tipoTarjeta;
         visible.value = true;
@@ -152,6 +213,7 @@ export default {
       if (busy.value) return;
       busy.value = true;
       ready.value = false;
+      recovering.value = true;
       error.value = "";
       try {
         const saved = JSON.parse(localStorage.getItem(key.value) || "null");
@@ -159,6 +221,7 @@ export default {
           payment.value = { ...saved, estado: "PREPARANDO" };
           visible.value = true;
           await action("PREPARAR", saved.solicitud || {});
+          if (saved.cancelacionSolicitada) { await action("CANCELAR"); reset(); return; }
         } else {
           await action("PENDIENTE", { idCesta: props.basket._id });
           if (payment.value?.estado === "EFECTIVO_PENDIENTE") {
@@ -166,7 +229,9 @@ export default {
             save();
           }
         }
-        if (payment.value?.estado === "CANCELADO") reset();
+        if (payment.value?.estado === "FINALIZADO") { cerrarCobroResuelto(payment.value); ready.value = true; return; }
+        if (["CANCELADO", "ARCHIVADO_CIERRE"].includes(payment.value?.estado)) reset();
+        if (payment.value) await actualizarSesion();
         if (!payment.value) {
           try {
             // Usa la misma interpretación de parámetros que el TPV (incluye integrado apagado).
@@ -179,21 +244,36 @@ export default {
         }
         ready.value = true;
       } catch (err) { error.value = err.message; }
-      finally { busy.value = false; }
+      finally { recovering.value = false; busy.value = false; }
+    }
+    const recoverOnConnect = () => { if (props.active && !busy.value) recover(); };
+    socket?.on("connect", recoverOnConnect);
+    onUnmounted(() => socket?.off("connect", recoverOnConnect));
+    async function comprobarDisponibilidadParaCobro() {
+      try { await comprobarDisponibilidadDatafono(); return true; }
+      catch (err) {
+        await Swal.fire("Datáfono no disponible", err.message, "warning");
+        return false;
+      }
     }
     async function run() {
-      if (busy.value || !ready.value || (!payment.value && !valid.value)) return;
+      if (busy.value || operationActive.value || !ready.value || (!payment.value && !valid.value)) return;
       let completedId = null;
       busy.value = true;
       error.value = "";
       try {
+        let disponibilidadComprobada = false;
+        if ((!payment.value || payment.value.estado === "PREPARANDO") && terminal.value === "TARJETA") {
+          if (!await comprobarDisponibilidadParaCobro()) return;
+          disponibilidadComprobada = true;
+        }
         if (!payment.value) {
           const { data: idTicket } = await axios.get("tickets/getProximoId", {
             params: { datafonoIntegrado: terminal.value === "TARJETA" },
           });
           if (!idTicket || typeof idTicket !== "number") throw new Error("No se ha podido obtener el ID del ticket");
-          payment.value = { idPago: newId(), estado: "PREPARANDO", solicitud: {
-            idTicket, idCesta: props.basket._id, cantidadTkrs: 0, propina: 0,
+          payment.value = { idPago: newId(), estado: "PREPARANDO", efectivoCobrado: false, solicitud: {
+            idTicket, idCesta: props.basket._id, cantidadTkrs: 0, propina: 0, efectivoRecibido: false, sesionCobro,
             pago: { efectivo: Number(cash.value), tarjeta: card.value, tipoTarjeta: terminal.value },
           } };
           save();
@@ -202,19 +282,23 @@ export default {
           ? await action("PREPARAR", payment.value.solicitud || {}) : await action("ESTADO");
         if (data.estado === "CANCELADO") { reset(); return; }
         if (data.estado === "PREPARADO") {
+          if (data.pago.tipoTarjeta === "TARJETA" && !disponibilidadComprobada && !await comprobarDisponibilidadParaCobro()) return;
+          await actualizarSesion();
+          if (!payment.value.efectivoCobrado) {
+            payment.value.efectivoCobrado = true; save();
+          }
+          await action("EFECTIVO", { efectivoRecibido: true });
           if (data.pago.tipoTarjeta === "DATAFONO_3G") {
             const confirmation = await Swal.fire({ icon: "question", title: "Confirma el cobro con tarjeta",
               text: `${data.pago.tarjeta.toFixed(2)} € en el datáfono independiente`, showCancelButton: true,
               confirmButtonText: "Cobrado en el datáfono", cancelButtonText: "Volver" });
             if (!confirmation.isConfirmed) return;
           }
-          data = await action("TARJETA");
+          payment.value.estado = "TARJETA_EN_CURSO";
+          try { data = await action("TARJETA"); }
+          catch (err) { if (payment.value?.estado === "TARJETA_EN_CURSO") payment.value.estado = "TARJETA_INCIERTA"; throw err; }
         }
         if (data.estado === "EFECTIVO_PENDIENTE" && !payment.value.efectivoCobrado) {
-          const confirmation = await Swal.fire({ icon: "question", title: "Confirma el efectivo recibido",
-            text: `${data.pago.efectivo.toFixed(2)} €. Si ya lo has recibido, no vuelvas a cobrarlo.`,
-            showCancelButton: true, confirmButtonText: "Efectivo recibido", cancelButtonText: "Volver" });
-          if (!confirmation.isConfirmed) return;
           payment.value.efectivoCobrado = true;
           payment.value.efectivoEnCurso = false;
           save();
@@ -233,48 +317,69 @@ export default {
         if (completedId) emit("paid", completedId);
       }
     }
-    async function cancel() {
-      if (busy.value) return;
-      if (!payment.value) { visible.value = false; return; }
-      if (payment.value.efectivoCobrado || ["FINALIZANDO", "FINALIZADO"].includes(payment.value.estado)) {
-        error.value = "Comprueba el efectivo recibido y continúa para terminar el registro del cobro.";
-        return;
+    async function check() {
+      if (busy.value || operationActive.value || !ready.value || !payment.value) return;
+      busy.value = true; error.value = "";
+      let completedId = null;
+      try {
+        let data = await action("ESTADO");
+        if (["EFECTIVO_PENDIENTE", "FINALIZANDO"].includes(data.estado) && (data.efectivoRecibido || payment.value.efectivoCobrado)) data = await action("FINALIZAR");
+        if (data.estado === "FINALIZADO") { completedId = data.idTicket; reset(); }
+      } catch (err) { error.value = err.message; }
+      finally { busy.value = false; await nextTick(); if (completedId) emit("paid", completedId); }
+    }
+    async function leave() {
+      if (busy.value || operationActive.value) return false;
+      if (!ready.value) {
+        // No se adquirió el cobro: salir no modifica la sesión de otro dispositivo.
+        payment.value = null; visible.value = false; cash.value = ""; error.value = "";
+        await actualizarSesion().catch(() => {}); return true;
       }
+      if (!payment.value) { visible.value = false; return true; }
+      busy.value = true;
+      try {
+        const referencia = payment.value.idTicket || payment.value.idOperacion || payment.value.idPago;
+        const salida = estadoSalidaCobro(await guardarSalidaCobro({ idPago: payment.value.idPago, idTrabajador: props.worker._id, sesionCobro, claveLocal: key.value }));
+        if (salida.mensaje) await Swal.fire({ icon: "info", title: "Estado del cobro", text: salida.mensaje + " · " + referencia });
+        reset(); await actualizarSesion(); return true;
+      } finally { busy.value = false; }
+    }
+    async function cancel() {
+      if (busy.value) return false;
+      if (!payment.value) { visible.value = false; return true; }
+      if (!(await Swal.fire({ icon: "question", text: "¿Confirma ANULACIÓN de ticket?", showCancelButton: true })).isConfirmed) return false;
       busy.value = true;
       error.value = "";
       try {
-        if (payment.value.efectivoEnCurso) {
-          const cashCheck = await Swal.fire({ icon: "question", title: "Comprueba el efectivo del cobro anterior",
-            text: "Indica si ya has recibido el efectivo antes de cancelar.", showDenyButton: true, showCancelButton: true,
-            confirmButtonText: "Ya recibido", denyButtonText: "No recibido", cancelButtonText: "Volver" });
-          if (cashCheck.isDismissed) return;
-          if (cashCheck.isConfirmed) {
-            payment.value.efectivoCobrado = true;
-            save();
-            error.value = "Continúa para terminar el registro del efectivo recibido.";
-            return;
-          }
-          if (!cashCheck.isDenied) return;
-          payment.value.efectivoEnCurso = false;
-          save();
+        if (payment.value.estado === "PREPARANDO") await action("PREPARAR", payment.value.solicitud || {});
+        let devolucion3GConfirmada = false;
+        if (payment.value.pago?.tipoTarjeta === "DATAFONO_3G" && payment.value.estado === "EFECTIVO_PENDIENTE") {
+          const confirmacion = await Swal.fire({ icon: "question", title: "Devolución en datáfono independiente",
+            text: "Devuelve manualmente " + Number(payment.value.pago.tarjeta).toFixed(2) + " € en el datáfono antes de continuar.", showCancelButton: true });
+          if (!confirmacion.isConfirmed) return false;
+          devolucion3GConfirmada = true;
         }
-        const data = payment.value.estado === "PREPARANDO"
-          ? await action("PREPARAR", payment.value.solicitud || {}) : await action("ESTADO");
-        if (data.estado === "CANCELADO") { reset(); return; }
-        const manualRefund = data.estado === "EFECTIVO_PENDIENTE" && data.pago.tipoTarjeta === "DATAFONO_3G";
-        const confirmation = await Swal.fire({ icon: "question", title: "¿Cancelar el pago mixto?",
-          text: manualRefund ? `Devuelve manualmente ${data.pago.tarjeta.toFixed(2)} € en el datáfono 3G antes de confirmar.`
-            : "Si la tarjeta está cobrada, se devolverá esa parte.",
-          showCancelButton: true, confirmButtonText: manualRefund ? "Devolución realizada" : "Confirmar cancelación", cancelButtonText: "Volver" });
-        if (!confirmation.isConfirmed) return;
-        const result = await action("CANCELAR", { devolucion3GConfirmada: manualRefund });
-        if (result.estado === "CANCELADO") reset();
-      } catch (err) { error.value = err.message; }
-      finally { busy.value = false; }
+        const resultado = await action("CANCELAR", { devolucion3GConfirmada });
+        if (["ARCHIVADO_CIERRE", "FINALIZADO"].includes(resultado.estado)) { reset(); await actualizarSesion(); return true; }
+        if (resultado.estado !== "CANCELADO" && !resultado.cancelacionSolicitada) return false;
+        reset(); await actualizarSesion(); return true;
+      } catch (err) {
+        if (err.devolucionNoRealizada) {
+          payment.value.cancelacionSolicitada = false; save();
+          await action("ESTADO").catch(() => {});
+          error.value = "La devolución ha sido cancelada o denegada. El cargo original se mantiene y la venta no se ha anulado.";
+          return false;
+        }
+        payment.value.cancelacionSolicitada = true; save();
+        guardarCancelacionCobro({ idPago: payment.value.idPago, idTrabajador: props.worker._id, sesionCobro, claveLocal: key.value });
+        error.value = "La cancelación queda guardada para comprobarla al recuperar la conexión.";
+        payment.value = null; visible.value = false;
+        await actualizarSesion().catch(() => {}); return true;
+      } finally { busy.value = false; }
     }
     // MDBModal monta el contenido con active=true al abrirse por primera vez.
     watch(() => props.active, (active) => { if (active) recover(); }, { immediate: true });
-    return { visible, busy, ready, error, cash, terminal, preferredTerminal, terminalOptions, payment, card, valid, message, run, cancel, recover,
+    return { visible, busy, recovering, ready, operationActive, primaryLabel, primaryAction, error, cash, terminal, preferredTerminal, terminalOptions, payment, card, valid, message, run, check, cancel, leave, recover,
       open: () => { if (ready.value && !busy.value) visible.value = true; } };
   },
 };

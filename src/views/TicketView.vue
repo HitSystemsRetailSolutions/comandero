@@ -8,6 +8,7 @@
     labelledby="paymentModal"
     v-model="paymentModal"
     :staticBackdrop="true"
+    :keyboard="false"
     size="lg"
     class="premium-modal payment-modal"
     :scrollable="true"
@@ -44,7 +45,7 @@
         </div>
 
         <!-- Métodos de Pago Grid -->
-        <div v-if="!paytefLoading && !mixedBlocked" class="methods-grid">
+        <div v-if="!paytefLoading && !mixedBlocked && !currentIdTicket" class="methods-grid">
           <div class="method-card cash" @click="cobrar('EFECTIVO')">
             <div class="method-icon-box">
               <MDBIcon icon="money-bill-wave" />
@@ -68,7 +69,7 @@
           </div>
         </div>
 
-        <button v-if="!paytefLoading && !mixedBlocked" type="button" class="method-card mixed-method"
+        <button v-if="!paytefLoading && !mixedBlocked && !currentIdTicket" type="button" class="method-card mixed-method"
           :disabled="!!currentIdTicket" @click="mixedPaymentRef.open()">
           <span class="method-icon-box"><MDBIcon icon="wallet" /></span>
           <span class="method-info"><span class="method-name">Efectivo + tarjeta</span>
@@ -76,12 +77,14 @@
           <MDBIcon icon="chevron-right" class="method-arrow" />
         </button>
         <PagoMixtoPanel ref="mixedPaymentRef" :active="paymentModal" :basket="selectedTable" :worker="SelectEmployer"
-          :proceso="procesoDatafono" @blocked="mixedBlocked = $event" @busy="mixedBusy = $event"
-          @pending="mixedPending = $event" @visibility-change="mixedVisible = $event" @paid="handleMixedPaid" />
-        <p v-if="mixedPending" class="mixed-pending-notice" role="status">
-          Hay un pago mixto pendiente. Continúa el cobro o usa «Cancelar pago mixto» antes de salir.
-        </p>
+          :proceso="procesoDatafono" :terminal-operation="operacionDatafonoActual" @blocked="mixedBlocked = $event" @busy="mixedBusy = $event"
+          @pending="mixedPending = $event" @visibility-change="mixedVisible = $event" @paid="handleMixedPaid" @resolved="handleMixedResolved" />
 
+        <div v-if="currentIdTicket && !mixedPending && !paytefLoading" class="mixed-pending-notice" role="status">
+          <p v-if="mensajeComprobacion">{{ mensajeComprobacion }}</p>
+          <button class="btn btn-outline-primary" :disabled="paytefLoading" @click="estadoComprobacion === 'NO_COBRADO' ? cobrar('DATAFONO_INTEGRADO') : comprobarPagoActual()">{{ estadoComprobacion === 'NO_COBRADO' ? 'Reintentar tarjeta' : estadoComprobacion === 'EN_USO' ? 'Reintentar recuperación' : 'Comprobar tarjeta' }}</button>
+          <button v-if="estadoComprobacion === 'NO_COBRADO'" type="button" class="btn btn-link" @click="cobrar('EFECTIVO')">{{ 'Pagar con efectivo' }}</button>
+        </div>
         <!-- Estado Paytef: Spinner + proceso -->
         <div v-if="paytefLoading" class="paytef-status-container">
           <div class="paytef-spinner-wrapper">
@@ -112,9 +115,9 @@
         outline="primary"
         @click="paymentModal = false"
         class="premium-cancel-btn"
-        :disabled="mixedBusy || mixedPending || (paytefLoading && estadoDatafono === 'PENDIENTE')"
+        :disabled="mixedBusy || paytefLoading"
       >
-        <MDBIcon icon="times" class="me-2" /> Cancelar
+        <MDBIcon icon="arrow-left" class="me-2" /> {{ "Volver" }}
       </MDBBtn>
     </MDBModalFooter>
   </MDBModal>
@@ -464,6 +467,7 @@ import { onBeforeRouteLeave, useRouter } from "vue-router";
 import router from "@/router";
 import Swal from "sweetalert2";
 import axios from "axios";
+import { guardarSalidaCobro, estadoSalidaCobro, mantenerSesionCobro, comprobarDisponibilidadDatafono } from "@/services/sockets";
 import EditProductModal from "@/components/EditProductModal.vue";
 import MenuModal from "@/components/MenuModal.vue";
 import CobroSeparadoMesas from "@/components/CobroSeparadoMesas.vue";
@@ -509,7 +513,14 @@ export default {
     const mixedBusy = ref(false);
     const mixedPending = ref(false);
     const mixedVisible = ref(false);
+    let cerrandoCobroResuelto = false;
+    const handleMixedResolved = () => {
+      cerrandoCobroResuelto = true;
+      mixedPending.value = false; mixedBusy.value = false; mixedVisible.value = false;
+      paymentModal.value = false;
+    };
     const handleMixedPaid = (idTicket) => {
+      cerrandoCobroResuelto = true;
       lastCreatedTicketId.value = idTicket;
       paymentModal.value = false;
       printTicketModal.value = true;
@@ -518,18 +529,19 @@ export default {
     const paymentModal = ref(false); // Esta es la variable que vinculas a tus componentes
     const datafonoModal = ref(false);
 
-    onBeforeRouteLeave(() => {
-      if (!mixedPending.value && !mixedBusy.value) return true;
-      paymentModal.value = true;
-      Swal.fire("Cobro pendiente", "Termina o cancela el pago mixto antes de salir de esta pantalla.", "info");
-      return false;
+    onBeforeRouteLeave(async () => {
+      if (mixedBusy.value || paytefLoading.value) return false;
+      if (mixedPending.value) return await mixedPaymentRef.value.leave();
+      if (currentIdTicket.value) await salirCobroActual();
+      return true;
     });
 
     // Candado para evitar que el proceso se ejecute más de una vez
     let isProcessing = false;
 
     watch(paymentModal, async (newValue, oldValue) => {
-      if ((paytefLoading.value || mixedBusy.value || mixedPending.value) && !newValue) {
+      if (!newValue && cerrandoCobroResuelto) { cerrandoCobroResuelto = false; return; }
+      if ((paytefLoading.value || mixedBusy.value) && !newValue) {
         paymentModal.value = true;
         return;
       }
@@ -542,15 +554,18 @@ export default {
 
         paytefLoading.value = true;
 
+        let salir = true;
         try {
-          // 4. Tu proceso asíncrono (ej: cancelar datáfono)
-          await anularCurrentIdTicket();
+          // Salir conserva el resultado incierto; no solicita una devolución.
+          if (mixedPending.value) salir = await mixedPaymentRef.value.leave();
+          else await salirCobroActual();
         } catch (error) {
-          console.error("Error en el proceso:", error);
+          salir = false;
+          Swal.fire({ icon: "warning", text: error.message || "No se ha podido completar la salida del cobro." });
         } finally {
           paytefLoading.value = false;
 
-          paymentModal.value = false;
+          if (salir) { cerrandoCobroResuelto = true; paymentModal.value = false; }
 
           setTimeout(() => {
             isProcessing = false;
@@ -579,6 +594,7 @@ export default {
     const { handleTicketError, getTicketErrorCode, TicketErrorCode } = useTicketErrors();
 
     const estadoDatafono = computed(() => store.state.Datafono.estado);
+    const operacionDatafonoActual = computed(() => store.state.Datafono.operacionActual);
     const procesoDatafono = computed(() => store.state.Datafono.procesoActual);
     const paytefStatusClass = computed(() => {
       const estado = estadoDatafono.value;
@@ -598,6 +614,19 @@ export default {
       return found ? found.name : id === "MESAS" ? "Principal" : id;
     });
     const currentIdTicket = ref(null);
+    const sesionCobro = window.crypto?.randomUUID?.() || "comandero-" + Date.now() + "-" + Math.random().toString(36).slice(2);
+    let ticketEnSesion = null;
+    let latidoCobro;
+    async function actualizarSesionCobro() {
+      const id = paymentModal.value ? currentIdTicket.value : null;
+      if (ticketEnSesion && ticketEnSesion !== id) await mantenerSesionCobro(ticketEnSesion, sesionCobro, true).catch(() => {});
+      ticketEnSesion = id;
+      if (id) {
+        const data = await mantenerSesionCobro(id, sesionCobro);
+        if (!data?.ok) throw new Error(data?.mensaje || "El ticket está abierto en otra pantalla");
+      }
+    }
+    watch([paymentModal, currentIdTicket], () => actualizarSesionCobro().catch(err => Swal.fire("Oops...", err.message, "error")));
 
     // menu
     const menuArticles = ref(null);
@@ -844,9 +873,17 @@ export default {
     };
 
     async function cobrar(fm) {
-      if (mixedBlocked.value || mixedBusy.value) return;
+      if (mixedBlocked.value || mixedBusy.value || paytefLoading.value) return;
+      if (currentIdTicket.value && estadoComprobacion.value && estadoComprobacion.value !== "NO_COBRADO" && fm !== "DATAFONO_INTEGRADO") { await comprobarPagoActual(); return; }
       try {
         if (fm === "DATAFONO_INTEGRADO") {
+          if (!estadoComprobacion.value || estadoComprobacion.value === "NO_COBRADO") {
+            paytefLoading.value = true;
+            store.dispatch("Datafono/setProceso", "comprobandoConexion");
+            try { await comprobarDisponibilidadDatafono(); }
+            catch (err) { await Swal.fire("Datáfono no disponible", err.message, "warning"); return; }
+            finally { paytefLoading.value = false; }
+          }
           await getProximoId(fm);
           await cobrarConPaytef();
         } else if (fm === "DATAFONO_3G") {
@@ -922,6 +959,25 @@ export default {
     }
 
     async function cobrarConPaytef() {
+      if (currentIdTicket.value && estadoComprobacion.value) {
+        if (estadoComprobacion.value !== "NO_COBRADO") { await comprobarPagoActual(); return; }
+        paytefLoading.value = true;
+        estadoComprobacion.value = "DESCONOCIDO";
+        try {
+          const { data } = await axios.post("tickets/gestionarCobro", { idTicket: currentIdTicket.value, accion: "COBRAR", sesionCobro });
+          estadoComprobacion.value = data.estado;
+          if (data.estado === "DESCONOCIDO") {
+            paytefLoading.value = false;
+            await comprobarPagoActual(); return;
+          }
+          if (data.estado === "COBRADO") { currentIdTicket.value = null; cerrandoCobroResuelto = true; paymentModal.value = false; }
+          else mensajeComprobacion.value = data.estado === "NO_COBRADO"
+            ? "La tarjeta no se ha cobrado. Puedes cambiar el modo de pago o volver a intentarlo."
+            : "No se ha podido confirmar el resultado. No se repetirá el cargo.";
+        } catch { mensajeComprobacion.value = "No se ha podido consultar el pago por un problema de comunicación. No se ha confirmado si está cobrado."; }
+        finally { paytefLoading.value = false; }
+        return;
+      }
       paytefLoading.value = true;
       store.dispatch("Datafono/setEstado", "PENDIENTE");
       try {
@@ -944,8 +1000,11 @@ export default {
 
         if (handleTicketError(resultado.data)) return;
 
-        if (!resultado.data) {
-          throw Error("Pago con datáfono inválido");
+        if (!(resultado.data === true || resultado.data?.aprobada === true)) {
+          estadoComprobacion.value = "DESCONOCIDO";
+          paytefLoading.value = false;
+          await comprobarPagoActual();
+          return;
         } else {
           currentIdTicket.value = null;
           paytefLoading.value = false;
@@ -1216,20 +1275,45 @@ export default {
       }
     };
 
-    async function anularCurrentIdTicket() {
-      if (!currentIdTicket.value) return;
+    const mensajeComprobacion = ref("");
+    const estadoComprobacion = ref("");
+    async function comprobarPagoActual() {
+      if (paytefLoading.value || !currentIdTicket.value) return;
+      paytefLoading.value = true;
       try {
-        await axios.post("tickets/anularTicket", {
-          ticketId: currentIdTicket.value,
-          reason: "Anulacion automática en modal cobro",
-        });
-        currentIdTicket.value = null;
+        await actualizarSesionCobro();
+        const { data } = await axios.post("tickets/gestionarCobro", { idTicket: currentIdTicket.value, accion: "COMPROBAR", sesionCobro });
+        estadoComprobacion.value = data.estado === "NO_ENCONTRADO" ? "" : data.estado;
+        if (data.estado === "EN_USO") { mensajeComprobacion.value = "Este ticket está en uso en otra pantalla de cobro."; return; }
+        if (["COBRADO", "EFECTIVO"].includes(data.estado)) { currentIdTicket.value = null; cerrandoCobroResuelto = true; paymentModal.value = false; return; }
+        if (["CANCELADO", "ANULADO", "CAJA_CERRADA", "CERRADO", "NO_ENCONTRADO"].includes(data.estado)) {
+          currentIdTicket.value = null; estadoComprobacion.value = ""; mensajeComprobacion.value = "";
+          cerrandoCobroResuelto = true; paymentModal.value = false; return;
+        }
+        mensajeComprobacion.value = data.estado === "NO_COBRADO"
+          ? "La tarjeta no se ha cobrado. Puedes cambiar el modo de pago o volver a intentarlo."
+          : "No se ha podido confirmar el resultado. No se repetirá el cargo.";
       } catch (err) {
-        logger.Error(1074, err);
+        if (err.sesionCobro) {
+          estadoComprobacion.value = "EN_USO";
+          mensajeComprobacion.value = "No se ha podido recuperar la sesión del cobro." + " " + err.message;
+        } else mensajeComprobacion.value = "No se ha podido consultar el pago por un problema de comunicación. No se ha confirmado si está cobrado.";
       }
+      finally { paytefLoading.value = false; }
+    }
+    async function salirCobroActual() {
+      if (!currentIdTicket.value) return;
+      if (estadoComprobacion.value === "EN_USO") {
+        currentIdTicket.value = null; estadoComprobacion.value = ""; mensajeComprobacion.value = "";
+        await actualizarSesionCobro().catch(() => {}); return;
+      }
+      const salida = estadoSalidaCobro(await guardarSalidaCobro({ idTicket: currentIdTicket.value, sesionCobro }));
+      if (salida.mensaje) await Swal.fire({ icon: "info", title: "Estado del cobro", text: salida.mensaje + " · " + currentIdTicket.value });
+      currentIdTicket.value = null; estadoComprobacion.value = ""; mensajeComprobacion.value = "";
     }
 
     onMounted(() => {
+      latidoCobro = setInterval(() => actualizarSesionCobro().catch(() => {}), 20000);
       document.addEventListener("visibilitychange", refreshOnResume);
       socket.on("connect", refreshOnResume);
       refreshOnResume();
@@ -1242,11 +1326,14 @@ export default {
     });
 
     onUnmounted(() => {
+      clearInterval(latidoCobro);
+      if (ticketEnSesion) mantenerSesionCobro(ticketEnSesion, sesionCobro, true).catch(() => {});
       document.removeEventListener("visibilitychange", refreshOnResume);
       socket.off("connect", refreshOnResume);
     });
 
     return {
+      mensajeComprobacion, comprobarPagoActual, estadoComprobacion, operacionDatafonoActual,
       isPromoArtPrinted,
       isPromoFullyPrinted,
       selectedTable,
@@ -1259,6 +1346,7 @@ export default {
       mixedPending,
       mixedVisible,
       handleMixedPaid,
+      handleMixedResolved,
       currentIdTicket,
       router,
       hideInfo,

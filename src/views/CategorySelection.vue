@@ -99,9 +99,13 @@
           <span class="btn-arrow">→</span>
         </button>
 
-        <button class="action-btn nota-btn" @click="imprimirNota()">
-          <span class="btn-icon-wrap"><MDBIcon icon="sticky-note" /></span>
-          <span class="btn-label">Nota</span>
+        <button
+          class="action-btn prepare-btn"
+          @click="handleSendToPrepare"
+          :disabled="!selectTable.lista?.length || isPreparing || isRefreshingPreparation"
+        >
+          <span class="btn-icon-wrap"><MDBIcon icon="print" /></span>
+          <span class="btn-label">Preparar</span>
         </button>
       </div>
     </div>
@@ -316,13 +320,15 @@ import {
 } from "mdb-vue-ui-kit";
 
 import { useStore } from "vuex";
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, onUnmounted } from "vue";
 import { io } from "socket.io-client";
 import { useRouter } from "vue-router";
 import router from "@/router";
 import axios from "axios";
 import Swal from "sweetalert2";
 import EditProductModal from "@/components/EditProductModal.vue";
+import { usePreparation } from "@/composables/usePreparation";
+import { socket } from "@/services/sockets";
 
 export default {
   name: "MenuPrincipalView",
@@ -346,6 +352,8 @@ export default {
       () => store.state.Employers.selectedEmployer,
     );
     const selectTable = computed(() => store.state.Tables.selectedTable);
+    const { handleSendToPrepare, isPreparing, isRefreshingPreparation, refreshOnResume } =
+      usePreparation(store, selectTable, SelectEmployer);
     const categories = computed(() => store.state.Categories.arrayCategories);
     const subMenus = ref(null);
     const actualPage = computed(() => route.currentRoute.value.path);
@@ -356,30 +364,6 @@ export default {
     };
     const selectOtherTable = () => {
       router.push("/tableselection");
-    };
-
-    const imprimirNota = () => {
-      if (!selectTable.value._id)
-        return Swal.fire("Oops...", "Mesa inactiva. No se puede imprimir", "error");
-      axios
-        .post("cestas/imprimirNotaMesa", {
-          idCesta: selectTable.value._id,
-          idTrabajador: SelectEmployer.value._id,
-        })
-        .then((res) => {
-          if (!res.data) throw Error("No se ha podido imprimir la cesta");
-          Swal.fire({
-            toast: true, position: "top-end", icon: "success",
-            title: "Se ha enviado la mesa a imprimir",
-            showConfirmButton: false, timer: 1500,
-          });
-        })
-        .catch((err) => {
-          Swal.fire({
-            toast: true, position: "top-end", icon: "error",
-            title: err.message, showConfirmButton: false, timer: 1500,
-          });
-        });
     };
 
     const deleteAll = async () => {
@@ -462,10 +446,18 @@ export default {
     };
 
     onMounted(() => {
+      document.addEventListener("visibilitychange", refreshOnResume);
+      socket.on("connect", refreshOnResume);
+      refreshOnResume();
       if (!SelectEmployer.value) router.push("/");
 
       if (subMenus.value == null)
         subMenus.value = categories.value[0]?.arrayTeclas?.length == undefined;
+    });
+
+    onUnmounted(() => {
+      document.removeEventListener("visibilitychange", refreshOnResume);
+      socket.off("connect", refreshOnResume);
     });
 
     // Si hay más de 1 unidad → decrementa sin confirmar; si queda 1 → muestra confirmación
@@ -535,7 +527,9 @@ export default {
       editProductIndex,
       openEditModal,
       handleTicketClick,
-      imprimirNota,
+      handleSendToPrepare,
+      isPreparing,
+      isRefreshingPreparation,
 
       categories,
       currentSalaName: computed(() => {
@@ -874,7 +868,13 @@ export default {
   }
 }
 
-.nota-btn {
+.prepare-btn {
+  &:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+    transform: none;
+  }
+
   background: #edf2ff;
   color: #3b6bdb;
   border: 1.5px solid #c5d4f7;
@@ -1425,7 +1425,7 @@ export default {
     font-size: 1rem;
   }
 
-  .nota-btn {
+  .prepare-btn {
     flex: 1;
     height: 52px;
     font-size: 0.95rem;

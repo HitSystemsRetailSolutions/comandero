@@ -81,9 +81,13 @@
           <span class="btn-arrow">→</span>
         </button>
 
-        <button class="action-btn nota-btn" @click="imprimirNota()">
-          <span class="btn-icon-wrap"><MDBIcon icon="sticky-note" /></span>
-          <span class="btn-label">Nota</span>
+        <button
+          class="action-btn prepare-btn"
+          @click="handleSendToPrepare"
+          :disabled="!selectTable.lista?.length || isPreparing || isRefreshingPreparation"
+        >
+          <span class="btn-icon-wrap"><MDBIcon icon="print" /></span>
+          <span class="btn-label">Preparar</span>
         </button>
       </div>
       <div class="breadcrumb-container" @click="selectOtherCategory">
@@ -165,10 +169,12 @@ import {
 import SuplementosModal from "@/components/SuplementosModal.vue";
 import MenuModal from "@/components/MenuModal.vue";
 import EditProductModal from "@/components/EditProductModal.vue";
+import { usePreparation } from "@/composables/usePreparation";
+import { socket } from "@/services/sockets";
 
 import { useStore } from "vuex";
 import axios from "axios";
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
 import router from "@/router";
 import Swal from "sweetalert2";
@@ -206,6 +212,8 @@ export default {
     const suplSelected = ref(null);
     const SelectEmployer = computed(() => store.state.Employers.selectedEmployer);
     let selectTable = computed(() => store.state.Tables.selectedTable);
+    const { handleSendToPrepare, isPreparing, isRefreshingPreparation, refreshOnResume } =
+      usePreparation(store, selectTable, SelectEmployer);
     let products = computed(() => store.state.Categories.selectedCategory);
     const sortedProducts = computed(() => {
       if (!products.value || !products.value.arrayTeclas) return [];
@@ -358,36 +366,6 @@ export default {
       }
     };
 
-    const imprimirNota = () => {
-      if (!selectTable.value._id) return Swal.fire("Oops...", "Mesa inactiva. No se puede imprimir", "error");
-      axios
-        .post("cestas/imprimirNotaMesa", {
-          idCesta: selectTable.value._id,
-          idTrabajador: SelectEmployer.value._id,
-        })
-        .then((res) => {
-          if (!res.data) throw Error("No se ha podido imprimir la cesta");
-          Swal.fire({
-            toast: true,
-            position: "top-end",
-            icon: "success",
-            title: "Se ha enviado la mesa a imprimir",
-            showConfirmButton: false,
-            timer: 1500,
-          });
-        })
-        .catch((err) => {
-          Swal.fire({
-            toast: true,
-            position: "top-end",
-            icon: "error",
-            title: err.message,
-            showConfirmButton: false,
-            timer: 1500,
-          });
-        });
-    };
-
     const deleteAll = async () => {
       Swal.fire({
         title: "¿Estás seguro de que quieres vaciar la cesta?",
@@ -491,10 +469,18 @@ export default {
     };
 
     onMounted(() => {
+      document.addEventListener("visibilitychange", refreshOnResume);
+      socket.on("connect", refreshOnResume);
+      refreshOnResume();
       totalTable.value = 0;
       if (SelectEmployer.value == null) {
         router.push("/");
       }
+    });
+
+    onUnmounted(() => {
+      document.removeEventListener("visibilitychange", refreshOnResume);
+      socket.off("connect", refreshOnResume);
     });
 
     return {
@@ -523,7 +509,9 @@ export default {
       menuArticles,
       menuSelected,
       deleteAll,
-      imprimirNota,
+      handleSendToPrepare,
+      isPreparing,
+      isRefreshingPreparation,
       openEditModal,
       handleTicketClick,
       showEditModal,
@@ -910,7 +898,13 @@ export default {
   }
 }
 
-.nota-btn {
+.prepare-btn {
+  &:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+    transform: none;
+  }
+
   background: #edf2ff;
   color: #3b6bdb;
   border: 1.5px solid #c5d4f7;

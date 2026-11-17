@@ -42,10 +42,6 @@
               <MDBIcon icon="check" />
             </div>
 
-            <div class="suple-icon-box">
-              <MDBIcon icon="puzzle-piece" />
-            </div>
-
             <span class="suple-name-premium">{{ x.nombre }}</span>
 
             <div class="price-tag-premium" v-if="x.precioConIva > 0">
@@ -189,11 +185,13 @@ export default {
 
 .supplements-grid-premium {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 3px;
 }
 
 .premium-suplement-card {
+  min-width: 0;
+  overflow-wrap: anywhere;
   position: relative;
   background-color: #ffffff;
   border: 1px solid #dee2e6;
@@ -205,7 +203,7 @@ export default {
   align-items: center;
   justify-content: center;
   text-align: center;
-  min-height: 90px;
+  min-height: 80px;
   transition: all 0.2s;
 
   &:hover {

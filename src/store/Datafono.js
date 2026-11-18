@@ -6,15 +6,19 @@ let Diccionario = {
   amountConfirmation: "El cliente debe confirmar el monto...",
   finished: "Transacción procesada con éxito...",
   errorConexion: "Error de conexión, recuperando resultado...",
+  comprobandoConexion: "Comprobando conexión con el datáfono...",
+  resultadoIncierto: "No se ha podido confirmar el resultado del datáfono. No repitas el cargo.",
 };
 
 export default {
   namespaced: true,
   state: {
     estado: "",
+    operacionActual: null,
     procesoActual: "sin pagos pendientes...",
   },
   mutations: {
+    setOperacionMutation(state, payload) { state.operacionActual = payload; },
     setEstadoMutation(state, payload) {
       state.estado = payload;
     },
@@ -27,6 +31,7 @@ export default {
     },
   },
   actions: {
+    setOperacion({ commit }, payload) { commit("setOperacionMutation", payload); },
     setEstado({ commit }, payload) {
       if (
         payload == "APROBADA" ||

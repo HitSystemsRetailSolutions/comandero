@@ -8,6 +8,7 @@
     :staticBackdrop="true"
     size="md"
     class="premium-modal datafono-selection-modal"
+    :scrollable="true"
   >
     <MDBModalHeader class="modal-header-premium">
       <div class="modal-title-premium d-flex w-100 align-items-center">
@@ -22,32 +23,22 @@
     </MDBModalHeader>
 
     <MDBModalBody class="modal-body-premium">
-      <div class="datafono-options-grid">
-        <!-- Opción A: Datáfono Integrado -->
-        <div class="datafono-option-card" @click="select('DATAFONO_INTEGRADO')">
-          <div class="option-icon-wrapper connected">
-            <MDBIcon icon="network-wired" size="sm" class="option-icon" />
+      <div v-if="loading" class="terminal-loading" role="status">
+        <span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Consultando datáfono habitual…
+      </div>
+      <div v-else class="datafono-options-grid">
+        <button v-for="option in options" :key="option.value" type="button" class="datafono-option-card"
+          :class="{ preferred: option.value === preferred }" @click="select(option.value)">
+          <span v-if="option.value === preferred" class="preferred-badge">Datáfono habitual</span>
+          <div class="option-icon-wrapper" :class="option.iconClass">
+            <MDBIcon :icon="option.icon" size="sm" class="option-icon" />
           </div>
           <div class="option-info">
-            <h5 class="option-title">Datáfono Integrado</h5>
-            <p class="option-subtitle">Conectado al programa</p>
-            <!-- <p class="option-description">Cobro automático desde el sistema.</p> -->
+            <h5 class="option-title">{{ option.title }}</h5>
+            <p class="option-subtitle">{{ option.subtitle }}</p>
           </div>
-          <MDBBtn color="primary" class="select-option-btn w-100"> Seleccionar integrado </MDBBtn>
-        </div>
-
-        <!-- Opción B: Datáfono Independiente -->
-        <div class="datafono-option-card" @click="select('DATAFONO_3G')">
-          <div class="option-icon-wrapper independent">
-            <MDBIcon icon="wifi" size="sm" class="option-icon" />
-          </div>
-          <div class="option-info">
-            <h5 class="option-title">Datáfono Independiente</h5>
-            <p class="option-subtitle">3G / Portátil</p>
-            <!-- <p class="option-description">Introducir importe manualmente en el terminal.</p> -->
-          </div>
-          <MDBBtn color="dark" class="select-option-btn w-100"> Seleccionar independiente / 3G </MDBBtn>
-        </div>
+          <span class="select-option-btn w-100">{{ option.action }}</span>
+        </button>
       </div>
     </MDBModalBody>
 
@@ -59,6 +50,8 @@
 
 <script>
 import { MDBBtn, MDBIcon, MDBModal, MDBModalBody, MDBModalFooter, MDBModalHeader } from "mdb-vue-ui-kit";
+import { computed, ref, watch } from "vue";
+import axios from "axios";
 
 export default {
   name: "SelectDatafonoModal",
@@ -81,6 +74,21 @@ export default {
   },
   emits: ["update:modelValue", "select", "cancel"],
   setup(props, { emit }) {
+    const preferred = ref(null);
+    const loading = ref(false);
+    const options = computed(() => [
+      { value: "DATAFONO_INTEGRADO", title: "Datáfono Integrado", subtitle: "Conectado al programa", icon: "network-wired", iconClass: "connected", action: "Seleccionar integrado" },
+      { value: "DATAFONO_3G", title: "Datáfono Independiente", subtitle: "3G / Portátil", icon: "wifi", iconClass: "independent", action: "Seleccionar independiente / 3G" },
+    ].sort((a, b) => Number(b.value === preferred.value) - Number(a.value === preferred.value)));
+    watch(() => props.modelValue, async (open) => {
+      if (!open) return;
+      loading.value = true;
+      try {
+        const { data } = await axios.get("datafonoInt/es3G", { timeout: 5000 });
+        if (typeof data === "boolean") preferred.value = data ? "DATAFONO_3G" : "DATAFONO_INTEGRADO";
+      } catch { /* Ambas opciones siguen disponibles para selección manual. */ }
+      finally { loading.value = false; }
+    }, { immediate: true });
     const select = (tipo) => {
       emit("update:modelValue", false);
       emit("select", tipo);
@@ -91,7 +99,7 @@ export default {
       emit("cancel");
     };
 
-    return { select, cancel };
+    return { select, cancel, preferred, options, loading };
   },
 };
 </script>
@@ -165,6 +173,9 @@ export default {
 }
 
 .datafono-option-card {
+  font-family: inherit;
+  color: #1e293b;
+  position: relative;
   background: white;
   padding: 24px;
   border-radius: 20px;
@@ -176,6 +187,9 @@ export default {
   text-align: center;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+
+  &.preferred { border-color: #3b82f6; background: #f8fbff; }
+  &:focus-visible { outline: 3px solid #93c5fd; outline-offset: 3px; }
 
   &:hover {
     transform: translateY(-4px);
@@ -192,6 +206,9 @@ export default {
     }
   }
 }
+
+.preferred-badge { background: #dbeafe; color: #1d4ed8; padding: 5px 10px; border-radius: 20px; font-size: .7rem; font-weight: 700; margin-bottom: 16px; }
+.terminal-loading { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 24px 0; color: #64748b; font-size: .9rem; }
 
 .option-icon-wrapper {
   width: 30px;
@@ -247,6 +264,9 @@ export default {
 }
 
 .select-option-btn {
+  display: block;
+  background: #f1f5f9;
+  color: #334155;
   text-transform: none;
   font-weight: 600;
   padding: 10px 16px;
@@ -259,4 +279,28 @@ export default {
     box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
   }
 }
+.preferred .select-option-btn { background: #2563eb; color: white; }
+
+@media (max-width: 576px), (max-height: 500px) {
+  .datafono-selection-modal {
+    :deep(.modal-dialog) { margin: 8px; height: calc(100vh - 16px); height: calc(100dvh - 16px); max-width: none; }
+    :deep(.modal-content) { max-height: 100%; border-radius: 20px; overflow: hidden; }
+  }
+  .modal-header-premium { padding: 14px 16px; flex-shrink: 0; }
+  .modal-main-title { font-size: 1rem; }
+  .title-icon-wrapper { width: 36px; height: 36px; flex-shrink: 0; border-radius: 12px; }
+  .modal-body-premium { padding: 14px; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+  .modal-footer-premium { padding: 10px 14px; padding-bottom: max(10px, env(safe-area-inset-bottom)); flex-shrink: 0; }
+  .premium-cancel-btn { width: 100%; min-height: 44px; margin: 0; }
+  .datafono-options-grid { gap: 12px; margin-top: 0; grid-template-columns: 1fr; }
+  .datafono-option-card { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 12px; padding: 16px; border-radius: 16px; text-align: left; }
+  .preferred-badge { grid-column: 1 / -1; margin: 0; justify-self: start; }
+  .option-icon-wrapper { width: 36px; height: 36px; margin: 0; }
+  .option-icon-wrapper .option-icon { font-size: 1.25rem; }
+  .option-info { margin: 0; min-width: 0; }
+  .option-title { font-size: 1rem; }
+  .option-subtitle { margin: 0; font-size: .7rem; }
+  .select-option-btn { grid-column: 1 / -1; text-align: center; font-size: .8rem; padding: 12px; }
+}
+@media (hover: none) { .datafono-option-card:hover { transform: none; } }
 </style>

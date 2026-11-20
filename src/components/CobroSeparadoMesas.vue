@@ -4,24 +4,36 @@
     tabindex="-1"
     labelledby="splitPaymentModal"
     v-model="modalOpen"
-    :staticBackdrop="isProcessing"
+    :staticBackdrop="isProcessing || mostrarCatalogo"
+    :keyboard="false"
+    :focus="false"
+    @keyup.esc="cerrarConEscape"
     size="xl"
     class="split-payment-modal"
   >
     <MDBModalHeader class="split-modal-header">
       <div class="split-title">
         <div class="split-title-icon">
-          <MDBIcon icon="divide" />
+          <MDBIcon :icon="mostrarCatalogo ? 'cart-plus' : 'divide'" />
         </div>
         <div>
-          <span class="split-title-main">Pago separado</span>
+          <span class="split-title-main">{{ mostrarCatalogo ? "Añadir productos" : "Pago separado" }}</span>
           <span class="split-title-sub">{{ currentTableName }}</span>
         </div>
       </div>
     </MDBModalHeader>
 
     <MDBModalBody class="split-modal-body">
-      <div v-if="!isProcessing" class="split-workspace">
+      <ArticulosCobroSeparado
+        v-if="mostrarCatalogo"
+        :id-cesta="currentTable._id"
+        :trabajador="selectedEmployer"
+        :antes-de-guardar="checkModificationAllowed"
+        :actualizar-mesa="actualizarMesa"
+        @volver="mostrarCatalogo = false"
+        @confirmado="mostrarCatalogo = false"
+      />
+      <div v-else-if="!isProcessing" class="split-workspace">
         <section class="split-panel">
           <div class="split-panel-header available">
             <div>
@@ -47,6 +59,7 @@
               @keyup.enter="addItem(item, index)"
             >
               <span class="split-item-name">{{ item.nombre }}</span>
+              <small v-if="detalleArticulo(item)" class="split-item-detail">{{ detalleArticulo(item) }}</small>
               <span class="split-item-price">{{ money(item.subtotal) }}</span>
               <span v-if="item.promocion" class="split-badge promo">Promo</span>
               <span v-else-if="item.articulosMenu" class="split-badge menu"> Menú </span>
@@ -55,7 +68,7 @@
                 v-if="item.promocion && !item.isSubItem"
                 type="button"
                 class="split-divide-btn"
-                @click.stop="divideItem(item, index)"
+                @click.stop="divideItem(item)"
               >
                 <MDBIcon icon="columns" />
                 Dividir
@@ -95,7 +108,10 @@
               <button type="button" class="split-remove-btn" @click="removeItem(index)">
                 <MDBIcon icon="minus-circle" />
               </button>
-              <span class="split-receipt-name">{{ item.nombre }}</span>
+              <span class="split-receipt-name">
+                {{ item.nombre }}
+                <small v-if="detalleArticulo(item)" class="split-item-detail">{{ detalleArticulo(item) }}</small>
+              </span>
               <strong>{{ money(item.subtotal) }}</strong>
             </div>
 
@@ -121,10 +137,15 @@
       </div>
     </MDBModalBody>
 
-    <MDBModalFooter class="split-modal-footer">
+    <MDBModalFooter v-if="!mostrarCatalogo" class="split-modal-footer">
       <MDBBtn outline="dark" class="split-footer-btn" :disabled="isProcessing" @click="closeModal">
         <MDBIcon icon="times" class="me-2" />
         Cerrar
+      </MDBBtn>
+
+      <MDBBtn outline="primary" class="split-footer-btn split-add-btn" :disabled="isProcessing || !selectedEmployer"
+        @click="mostrarCatalogo = true">
+        <MDBIcon icon="cart-plus" class="me-2" />Añadir productos
       </MDBBtn>
 
       <div class="split-pay-actions">
@@ -161,6 +182,8 @@ import axios from "axios";
 import Swal from "sweetalert2";
 import { useTicketErrors } from "@/composables/useTicketErrors";
 import SelectDatafonoModal from "@/components/SelectDatafonoModal.vue";
+import ArticulosCobroSeparado from "@/components/ArticulosCobroSeparado.vue";
+import { claveConfiguracion, detalleArticulo, encontrarUnidad, firmaCesta, unidadesCesta } from "@/composables/cobroSeparadoArticulos";
 
 export default {
   name: "CobroSeparadoMesas",
@@ -172,6 +195,7 @@ export default {
     MDBModalFooter,
     MDBModalHeader,
     SelectDatafonoModal,
+    ArticulosCobroSeparado,
   },
   emits: ["paid"],
   setup(_props, { emit, expose }) {
@@ -180,6 +204,7 @@ export default {
     const datafonoModal = ref(false);
     const isProcessing = ref(false);
     const currentTable = ref(null);
+    const mostrarCatalogo = ref(false);
     const selectedItems = ref([]);
     const availableItems = ref([]);
     const createdTicketId = ref(null);
@@ -242,43 +267,55 @@ export default {
       return `${roundMoney(value).toFixed(2)}€`;
     }
 
-    function initItems(table) {
-      const initial = [];
-      table.lista.forEach((item, parentIndex) => {
-        if (item.pagado) return;
-
-        const units = item.unidades || 1;
-        for (let unitIndex = 0; unitIndex < units; unitIndex++) {
-          const instance = item.instancias?.[unitIndex] || {};
-          initial.push({
-            ...item,
-            instancias: [
-              {
-                instanceId: instance.instanceId,
-                printed: instance.printed,
-              },
-            ],
-            unidades: 1,
-            unitIndex,
-            subtotal: roundMoney((item.subtotal || 0) / units),
-            parentIndex,
-            instanceId: instance.instanceId,
-            printed: instance.printed,
-            pID: `${parentIndex}_${unitIndex}`,
-            originalParent: JSON.parse(JSON.stringify(item)),
-          });
-        }
-      });
-      availableItems.value = initial;
-    }
-
     function openModal(table) {
       currentTable.value = table;
       selectedItems.value = [];
-      availableItems.value = [];
+      availableItems.value = unidadesCesta(table);
       createdTicketId.value = null;
-      initItems(table);
+      mostrarCatalogo.value = false;
       modalOpen.value = true;
+    }
+
+    async function actualizarMesa() {
+      const anterior = currentTable.value;
+      await store.dispatch("Tables/refreshSelectedTable", anterior._id);
+      const mesa = store.state.Tables.selectedTable;
+      if (firmaCesta(anterior) !== firmaCesta(mesa)) {
+        const anteriores = unidadesCesta(anterior);
+        const disponibles = unidadesCesta(mesa);
+        const seleccionAnterior = selectedItems.value;
+        const partesAnteriores = [...availableItems.value, ...seleccionAnterior].filter((item) => item.isSubItem);
+        const seleccion = new Map();
+        const reemplazos = new Map();
+        for (const unidad of anteriores) {
+          const elegida = seleccionAnterior.find((item) => !item.isSubItem && item.pID === unidad.pID);
+          const partes = partesAnteriores.filter((item) => item.parentIndex === unidad.parentIndex && item.unitIndex === unidad.unitIndex);
+          if (!elegida && !partes.length) continue;
+          const nueva = encontrarUnidad(unidad, anteriores, disponibles);
+          if (!nueva || reemplazos.has(nueva.pID)) continue;
+          if (elegida) {
+            seleccion.set(elegida.pID, nueva);
+            reemplazos.set(nueva.pID, []);
+            continue;
+          }
+          const nuevasPartes = await getSubItems(nueva);
+          if (nuevasPartes.length !== partes.length) continue;
+          reemplazos.set(nueva.pID, nuevasPartes.filter((parte) => {
+            const previa = partes.find((item) => item.partIndex === parte.partIndex && claveConfiguracion(item) === claveConfiguracion(parte));
+            if (!previa || !seleccionAnterior.some((item) => item.pID === previa.pID)) return true;
+            seleccion.set(previa.pID, parte);
+            return false;
+          }));
+        }
+        selectedItems.value = seleccionAnterior.map((item) => seleccion.get(item.pID)).filter(Boolean);
+        availableItems.value = disponibles.flatMap((item) => reemplazos.get(item.pID) ?? [item]);
+      }
+      currentTable.value = mesa;
+      return mesa;
+    }
+
+    function cerrarConEscape() {
+      if (!mostrarCatalogo.value) closeModal();
     }
 
     function closeModal() {
@@ -287,7 +324,13 @@ export default {
     }
 
     async function anularCurrentTicket() {
-      await anularCurrentIdTicket();
+      try {
+        await anularCurrentIdTicket();
+        return true;
+      } catch (error) {
+        await Swal.fire("No se pudo anular el ticket", error.message, "error");
+        return false;
+      }
     }
 
     async function checkModificationAllowed() {
@@ -301,8 +344,7 @@ export default {
           cancelButtonText: "Cancelar",
         });
         if (result.isConfirmed) {
-          await anularCurrentTicket();
-          return true;
+          return await anularCurrentTicket();
         }
         return false;
       }
@@ -373,6 +415,7 @@ export default {
             inheritedSupplements = part.suplementosPorArticulo[instanceIndex]?.suplementos || null;
           }
 
+          const partIndex = subItems.length;
           subItems.push({
             ...part,
             instanceId: instance.instanceId || part.instanceId,
@@ -388,7 +431,9 @@ export default {
             precioManual: true,
             unidades: 1,
             parentIndex: item.parentIndex,
-            pID: `${item.pID}_sub_${part.idArticulo}_${unit}`,
+            unitIndex: parentUnitIndex,
+            partIndex,
+            pID: `${item.pID}_sub_${partIndex}`,
             isSubItem: true,
             originalParent: item.originalParent,
             arraySuplementos: inheritedSupplements || part.arraySuplementos || null,
@@ -399,15 +444,16 @@ export default {
       return subItems;
     }
 
-    async function divideItem(item, index) {
+    async function divideItem(item) {
       if (!(await checkModificationAllowed())) return;
       const subItems = await getSubItems(item);
-      if (subItems.length > 0) availableItems.value.splice(index, 1, ...subItems);
+      const posicion = availableItems.value.indexOf(item);
+      if (posicion >= 0 && subItems.length > 0) availableItems.value.splice(posicion, 1, ...subItems);
     }
 
     function cleanForBackend(items) {
       return items.map((item) => {
-        const { parentIndex, pID, isSubItem, originalParent, ...clean } = item;
+        const { parentIndex, pID, isSubItem, originalParent, unitIndex, partIndex, ...clean } = item;
         if (isSubItem) {
           clean.precioManual = true;
           clean.precioTecla = item.subtotal;
@@ -479,15 +525,12 @@ export default {
 
     async function anularCurrentIdTicket() {
       if (!currentIdTicket.value) return;
-      try {
-        await axios.post("tickets/anularTicket", {
-          ticketId: currentIdTicket.value,
-          reason: "Anulacion automática en modal cobro",
-        });
-        currentIdTicket.value = null;
-      } catch (err) {
-        logger.Error(1074, err);
-      }
+      const { data } = await axios.post("tickets/anularTicket", {
+        ticketId: currentIdTicket.value,
+        reason: "Anulacion automática en modal cobro",
+      });
+      if (data !== true && data?.res !== true) throw new Error(data?.msg || "El ticket sigue activo.");
+      currentIdTicket.value = null;
     }
 
     async function cobrarEfectivo(idCesta, tipo) {
@@ -609,6 +652,9 @@ export default {
       isProcessing.value = true;
 
       try {
+        const firmaAnterior = firmaCesta(currentTable.value);
+        const mesa = await actualizarMesa();
+        if (firmaAnterior !== firmaCesta(mesa)) return;
         await getProximoId(method);
         splitBasketId = await createSplitBasket();
         await charge(splitBasketId, method);
@@ -660,6 +706,13 @@ export default {
       datafonoModal,
       isProcessing,
       currentTableName,
+      currentTable,
+      mostrarCatalogo,
+      selectedEmployer,
+      actualizarMesa,
+      checkModificationAllowed,
+      cerrarConEscape,
+      detalleArticulo,
       availableItems,
       selectedItems,
       totalPrice,
@@ -703,6 +756,13 @@ export default {
   background: white;
   border-color: #e2e8f0;
   padding: 16px 20px;
+}
+
+.split-item-detail {
+  display: block;
+  font-size: .77rem;
+  color: #475569;
+  overflow-wrap: anywhere;
 }
 
 .split-title {
@@ -1007,6 +1067,16 @@ export default {
   text-transform: none !important;
 }
 
+.split-add-btn {
+  border-color: #bfdbfe !important;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.split-add-btn:not(:disabled):hover {
+  background: #dbeafe;
+}
+
 .split-processing {
   height: 360px;
   display: flex;
@@ -1256,12 +1326,17 @@ export default {
   }
 
   .split-modal-footer {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr);
     align-items: stretch;
     gap: 6px;
   }
 
   .split-pay-actions {
-    flex: 1;
+    grid-column: 1 / -1;
+  }
+
+  .split-pay-actions {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 6px;

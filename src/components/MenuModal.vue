@@ -100,12 +100,15 @@
       </MDBBtn>
     </MDBModalFooter>
   </div>
-  <SuplementosModal
-    v-model="showSuplModal"
-    :suplArticle="suplArticle"
-    :selectedSuplementos="selectedSuplementosForModal"
-    @confirmarSuplementos="onConfirmarSuplementos"
-  />
+  <Teleport to="body" :disabled="!suplementosEnPortal">
+    <SuplementosModal
+      v-model="showSuplModal"
+      :class="{ 'menu-suplementos-portal': suplementosEnPortal }"
+      :suplArticle="suplArticle"
+      :selectedSuplementos="selectedSuplementosForModal"
+      @confirmarSuplementos="onConfirmarSuplementos"
+    />
+  </Teleport>
 </template>
 <script>
 import { MDBModalHeader, MDBModalBody, MDBModalFooter, MDBBtn, MDBIcon } from "mdb-vue-ui-kit";
@@ -129,6 +132,7 @@ export default {
     menuSelected: Object,
     suplByFamily: Object,
     initialSeleccionadoPorFamilia: Object,
+    suplementosEnPortal: Boolean,
   },
   emits: ["update:modelValue", "confirmarMenu", "aplicarCambios"],
   setup(props, { emit }) {
@@ -327,6 +331,7 @@ export default {
 </script>
 
 <style scoped lang="scss">
+.menu-suplementos-portal { z-index: 1057; }
 .premium-menu-modal {
   background-color: #f8f9fa;
   display: flex;

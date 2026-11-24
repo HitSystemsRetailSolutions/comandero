@@ -9,18 +9,33 @@ export function useSuplementosSelection(suplArticle, initialSelectedSuplementos 
   // Estado local reactivo para los suplementos
   const localSuplArticle = ref([]);
 
-  // Sincroniza el estado local con el prop y marca los suplementos ya seleccionados
+  // Sincroniza el estado local con el prop, marca los seleccionados y los ordena alfabéticamente
   watch(
     [suplArticle, initialSelectedSuplementos],
     ([val, selected]) => {
       const selectedKeys = (selected || []).map((item) => getSupplementKey(item)).filter(Boolean);
 
-      localSuplArticle.value = val
-        ? val.map((s) => ({
-            ...s,
-            selected: selectedKeys.includes(getSupplementKey(s)),
-          }))
-        : [];
+      if (val) {
+        // Mapeamos los elementos
+        const mapped = val.comap 
+          ? val.map((s) => ({
+              ...s,
+              selected: selectedKeys.includes(getSupplementKey(s)),
+            }))
+          : val.map((s) => ({
+              ...s,
+              selected: selectedKeys.includes(getSupplementKey(s)),
+            }));
+
+        // Ordenamos alfabéticamente por 'nombre'
+        mapped.sort((a, b) =>
+          (a.nombre || "").localeCompare(b.nombre || "", "es", { sensitivity: "base" })
+        );
+
+        localSuplArticle.value = mapped;
+      } else {
+        localSuplArticle.value = [];
+      }
     },
     { immediate: true, deep: true },
   );

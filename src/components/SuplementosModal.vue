@@ -42,9 +42,6 @@
               <MDBIcon icon="check" />
             </div>
 
-            <div class="suple-icon-box">
-              <MDBIcon icon="puzzle-piece" />
-            </div>
 
             <span class="suple-name-premium">{{ x.nombre }}</span>
 
@@ -189,8 +186,8 @@ export default {
 
 .supplements-grid-premium {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0px, 1fr));
+  gap: 4px;
 }
 
 .premium-suplement-card {

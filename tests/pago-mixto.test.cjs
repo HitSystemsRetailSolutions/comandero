@@ -39,6 +39,9 @@ function fixture(handler, saved, active = false, es3G = false, options = {}) {
       },
       post: async (url, body) => {
         if (url === "tickets/sesionCobro") return { data: { ok: true } };
+        if (url === "parametros/getParametros") {
+          return { data: { params: options.parametros ? options.parametros() : { habilitarPagoMixto: "Si" } } };
+        }
         requests.push(body);
         return { data: body.accion === "EFECTIVO" ? response("PREPARADO", { efectivoRecibido: true }) : await handler(body) };
       },
@@ -57,6 +60,54 @@ function fixture(handler, saved, active = false, es3G = false, options = {}) {
 const response = (estado, extra = {}) => ({ ok: true, idPago: 'payment-1234567890', estado,
   pago: { efectivo: 4, tarjeta: 6.03, tipoTarjeta: 'TARJETA' }, idTicket: 12345, ...extra });
 const noPending = { ok: true, idPago: null, estado: null };
+
+test('el pago mixto está deshabilitado por defecto y consulta el flag al reabrir el modal', async t => {
+  let parametros = {};
+  const f = fixture(async () => noPending, null, true, false, { parametros: () => parametros });
+  t.after(f.stop);
+  await new Promise(setImmediate);
+  assert.equal(f.events.filter(([name]) => name === 'enabled').at(-1)[1], false);
+  assert.equal(f.events.filter(([name]) => name === 'blocked').at(-1)[1], false);
+  f.api.open();
+  assert.equal(f.api.visible.value, false);
+
+  f.props.active = false;
+  await vue.nextTick();
+  parametros = { habilitarPagoMixto: 'SI' };
+  f.props.active = true;
+  await new Promise(setImmediate);
+  assert.equal(f.events.filter(([name]) => name === 'enabled').at(-1)[1], true);
+  f.api.open();
+  assert.equal(f.api.visible.value, true);
+});
+
+test('apagar el flag con el modal abierto impide preparar un mixto nuevo', async t => {
+  let habilitarPagoMixto = 'Si';
+  const f = fixture(async () => noPending, null, true, false, { parametros: () => ({ habilitarPagoMixto }) });
+  t.after(f.stop);
+  await new Promise(setImmediate);
+  f.api.open();
+  f.api.cash.value = 4;
+  habilitarPagoMixto = 'No';
+  await f.api.run();
+  assert.deepEqual(f.requests.map(({ accion }) => accion), ['PENDIENTE']);
+  assert.equal(f.api.visible.value, false);
+  assert.match(f.api.error.value, /deshabilitado/);
+  assert.equal(f.events.filter(([name]) => name === 'enabled').at(-1)[1], false);
+});
+
+test('un mixto pendiente se recupera y finaliza con el flag apagado', async t => {
+  const f = fixture(async ({ accion }) => response(accion === 'FINALIZAR' ? 'FINALIZADO' : 'EFECTIVO_PENDIENTE'),
+    null, true, false, { parametros: () => ({ habilitarPagoMixto: 'No' }) });
+  t.after(f.stop);
+  await new Promise(setImmediate);
+  assert.equal(f.api.payment.value.estado, 'EFECTIVO_PENDIENTE');
+  assert.equal(f.api.visible.value, true);
+  assert.equal(f.events.filter(([name]) => name === 'enabled').at(-1)[1], false);
+  await f.api.primaryAction();
+  assert.deepEqual(f.requests.map(({ accion }) => accion), ['PENDIENTE', 'ESTADO', 'FINALIZAR']);
+  assert.deepEqual(f.events.find(([name]) => name === 'paid'), ['paid', 12345]);
+});
 
 test('cancelar un reintento de tarjeta actualiza el estado guardado sin repetir el cargo',async()=>{
   const e=comprobadorTarjeta();e.context.estadoComprobacion.value='NO_COBRADO';

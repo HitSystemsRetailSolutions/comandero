@@ -82,8 +82,9 @@ export default {
     proceso: String,
     terminalOperation: Object,
   },
-  emits: ["blocked", "busy", "pending", "paid", "visibility-change"],
+  emits: ["blocked", "busy", "enabled", "pending", "paid", "visibility-change"],
   setup(props, { emit }) {
+    const habilitarPagoMixto = ref(false);
     const visible = ref(false);
     const busy = ref(false);
     const ready = ref(false);
@@ -146,6 +147,7 @@ export default {
       if (["DEVOLUCION_CONFIRMADA","CANCELANDO_TICKET"].includes(payment.value?.estado)) return cancel();
       return run();
     }
+    watch(habilitarPagoMixto, enabled => emit("enabled", enabled), { immediate: true });
     watch([busy, ready, visible, payment, operationActive], () => {
       emit("visibility-change", visible.value);
       emit("busy", busy.value || operationActive.value);
@@ -209,12 +211,24 @@ export default {
       }
       return data;
     }
+    async function actualizarHabilitarPagoMixto() {
+      try {
+        const { data } = await axios.post("parametros/getParametros", {}, { timeout: 5000 });
+        const valor = data?.params?.habilitarPagoMixto;
+        habilitarPagoMixto.value = typeof valor === "string" && valor.toUpperCase() === "SI";
+      } catch {
+        habilitarPagoMixto.value = false;
+      }
+      return habilitarPagoMixto.value;
+    }
     async function recover() {
       if (busy.value) return;
       busy.value = true;
       ready.value = false;
       recovering.value = true;
       error.value = "";
+      habilitarPagoMixto.value = false;
+      const configuracion = actualizarHabilitarPagoMixto();
       try {
         const saved = JSON.parse(localStorage.getItem(key.value) || "null");
         if (saved?.idPago) {
@@ -232,7 +246,8 @@ export default {
         if (payment.value?.estado === "FINALIZADO") { cerrarCobroResuelto(payment.value); ready.value = true; return; }
         if (["CANCELADO", "ARCHIVADO_CIERRE"].includes(payment.value?.estado)) reset();
         if (payment.value) await actualizarSesion();
-        if (!payment.value) {
+        const habilitado = await configuracion;
+        if (!payment.value && habilitado) {
           try {
             // Usa la misma interpretación de parámetros que el TPV (incluye integrado apagado).
             const { data } = await axios.get("datafonoInt/es3G", { timeout: 5000 });
@@ -262,6 +277,11 @@ export default {
       busy.value = true;
       error.value = "";
       try {
+        if (!payment.value && !await actualizarHabilitarPagoMixto()) {
+          visible.value = false;
+          error.value = "El pago mixto está deshabilitado.";
+          return;
+        }
         let disponibilidadComprobada = false;
         if ((!payment.value || payment.value.estado === "PREPARANDO") && terminal.value === "TARJETA") {
           if (!await comprobarDisponibilidadParaCobro()) return;
@@ -380,7 +400,7 @@ export default {
     // MDBModal monta el contenido con active=true al abrirse por primera vez.
     watch(() => props.active, (active) => { if (active) recover(); }, { immediate: true });
     return { visible, busy, recovering, ready, operationActive, primaryLabel, primaryAction, error, cash, terminal, preferredTerminal, terminalOptions, payment, card, valid, message, run, check, cancel, leave, recover,
-      open: () => { if (ready.value && !busy.value) visible.value = true; } };
+      open: () => { if (habilitarPagoMixto.value && ready.value && !busy.value) visible.value = true; } };
   },
 };
 </script>

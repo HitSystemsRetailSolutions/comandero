@@ -69,7 +69,7 @@
           </div>
         </div>
 
-        <button v-if="!paytefLoading && !mixedBlocked && !currentIdTicket" type="button" class="method-card mixed-method"
+        <button v-if="habilitarPagoMixto && !paytefLoading && !mixedBlocked && !currentIdTicket" type="button" class="method-card mixed-method"
           :disabled="!!currentIdTicket" @click="mixedPaymentRef.open()">
           <span class="method-icon-box"><MDBIcon icon="wallet" /></span>
           <span class="method-info"><span class="method-name">Efectivo + tarjeta</span>
@@ -78,6 +78,7 @@
         </button>
         <PagoMixtoPanel ref="mixedPaymentRef" :active="paymentModal" :basket="selectedTable" :worker="SelectEmployer"
           :proceso="procesoDatafono" :terminal-operation="operacionDatafonoActual" @blocked="mixedBlocked = $event" @busy="mixedBusy = $event"
+          @enabled="habilitarPagoMixto = $event"
           @pending="mixedPending = $event" @visibility-change="mixedVisible = $event" @paid="handleMixedPaid" @resolved="handleMixedResolved" />
 
         <div v-if="currentIdTicket && !mixedPending && !paytefLoading" class="mixed-pending-notice" role="status">
@@ -509,6 +510,7 @@ export default {
     const splitPaymentRef = ref(null);
     const paytefLoading = ref(false);
     const mixedPaymentRef = ref(null);
+    const habilitarPagoMixto = ref(false);
     const mixedBlocked = ref(true);
     const mixedBusy = ref(false);
     const mixedPending = ref(false);
@@ -1341,6 +1343,7 @@ export default {
       selectOtherEmployer,
       cobrar,
       mixedPaymentRef,
+      habilitarPagoMixto,
       mixedBlocked,
       mixedBusy,
       mixedPending,
